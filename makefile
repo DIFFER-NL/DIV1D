@@ -12,6 +12,7 @@ OBJECTS = obj/constants.o \
           obj/numerics_parameters.o \
           obj/physics_parameters.o \
           obj/plasma_data.o \
+          obj/reaction_rates.o \
           obj/dvode_f90_m.o \
           obj/rk4.o
 
@@ -41,6 +42,7 @@ obj/physics_parameters.o : src/physics_parameters.f90
 obj/physics_routines.o : src/physics_routines.f90\
                    obj/constants.o \
                    obj/grid_data.o \
+                   obj/reaction_rates.o \
                    obj/physics_parameters.o
 	$(FC) src/physics_routines.f90 $(FOPT) -c -o obj/physics_routines.o
 
@@ -50,6 +52,10 @@ obj/plasma_data.o : src/plasma_data.f90\
                    obj/physics_parameters.o \
                    obj/physics_routines.o
 	$(FC) src/plasma_data.f90 $(FOPT) -c -o obj/plasma_data.o
+
+
+obj/reaction_rates.o : src/reaction_rates.f90
+	$(FC) src/reaction_rates.f90 $(FOPT) -c -o obj/reaction_rates.o
 
 
 obj/dvode_f90_m.o : src/dvode_f90_m.f90

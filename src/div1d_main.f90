@@ -43,15 +43,20 @@ program div1d
    ! if( restart_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
 
    ! write the inital solution to file
+   ! calculate the fluxes
+   call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, pressure, q_parallel, neutral_flux )
+   ! calculate the sources
+   call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_solution( start_time )
 
    ! setting the options for dvode_f90
-   allocate( abstol_vector(3*Nx) )
+   allocate( abstol_vector(4*Nx) )
    abstol_vector(1:Nx) = initial_n * abstol
    abstol_vector(Nx+1:2*Nx) = abstol
    abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
-   options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=227, MXSTEP=100000, NZSWAG=20000)
+   abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
+   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=100000, NZSWAG=20000)
 
    istate = 1
    do istep=1, ntime
@@ -59,12 +64,22 @@ program div1d
       ! we use dvode_f90 for the integration
       ! CALL DVODE_F90(F,NEQ,Y,T,TOUT,ITASK,ISTATE,OPTIONS,J_FCN=JAC,G_FCN=GEX)
       itask = 1 ! for normal computation in dvode_f90 till end_time
-      call dvode_f90( right_hand_side, 3*Nx, y, start_time, end_time, itask, istate, options )
-      ! call rk4( right_hand_side, 3*Nx, y, start_time, end_time )
+      if( method .gt. 0 ) then
+         call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
+      else
+         call rk4( right_hand_side, 4*Nx, y, start_time, end_time )
+      endif
+      ! make sure that the solution respects the minimum density and temperature
+      call y2nvt( Nx, y, density, velocity, temperature, neutral )
+      call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
-      if( istate .ne. 2 ) call error_report(input_error, restart_error, time_step_error)
+      if( istate .ne. 2 .and. method .gt. 0 ) call error_report(input_error, restart_error, time_step_error)
       if( mod( istep, nout ) .eq. 0 ) then
-         call y2nvt( Nx, y, density, velocity, temperature )
+         ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
+         ! calculate the fluxes
+         call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, pressure, q_parallel, neutral_flux )
+         ! calculate the sources
+         call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
          call write_solution( end_time )
       endif
       start_time = end_time
@@ -79,7 +94,7 @@ end program div1d
 subroutine write_solution( time )
 
    use grid_data, only : Nx, x
-   use plasma_data, only : density, velocity, temperature
+   use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, pressure, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none
    integer, parameter :: wp = KIND(1.0D0)
@@ -87,8 +102,10 @@ subroutine write_solution( time )
    real(wp), intent(in) :: time
    
    write( 10, * ) 'time = ', time
-   write( 10, * ) '     X [m]          N [/m^3]         V [m/s]           T [eV] '
-   write( 10, '(4(1PE15.3))' ) ( x(i), density(i), velocity(i), temperature(i), i=1,Nx )
+   write( 10, '(A156)' ) '    X [m]     N [/m^3]    V [m/s]      T [eV]     Nn [/m^3]   Gamma_n      P [Pa]    q_parallel neutral_flux  Source_n    Source_v    Source_Q  source_neut'
+   write( 10, '(13(1PE12.3))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
+   &                                   Gamma_n(i), pressure(i), q_parallel(i), neutral_flux(i), &
+   &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return
 end subroutine write_solution
