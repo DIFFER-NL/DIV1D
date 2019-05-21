@@ -2,7 +2,7 @@ module plasma_data
 ! module defining and handling the plasma data
 
    use numerics_parameters, only : Nx
-   use physics_parameters, only  : initial_n, initial_v, initial_T, initial_a, mass, Gamma_X
+   use physics_parameters, only  : L, initial_n, initial_v, initial_T, initial_a, mass, Gamma_X
    use physics_routines
 
    implicit none
@@ -50,5 +50,58 @@ contains
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       return
    end subroutine initial_values
+   
+   subroutine read_restart_file( restart_error )
+   ! subroutine to read a restart file in order to coninue a run
+      implicit none
+      integer, intent( out ) :: restart_error
+      integer     :: Nx_restart
+      real( wp )  :: L_restart
+      real( wp )  :: mass_restart
+      restart_error = 0
+      ! open the restart file
+      open( UNIT = 10, FILE = 'div1d_restart_old.txt', IOSTAT = restart_error )
+      ! first read numerics parameters and check for consitency
+      read(10,*, IOSTAT = restart_error) Nx_restart
+      if( Nx .ne. Nx_restart ) then
+         write(*,*) 'inconsistent grid size in restart file: Nx_restart =', Nx_restart, '     while Nx =', Nx
+         close(10)
+         return
+      endif
+      ! next read physics parameters that must be identical between runs
+      read(10,*, IOSTAT = restart_error) L_restart, mass_restart
+      if( L .ne. L_restart .or. mass .ne. mass_restart ) then
+         write(*,*) 'inconsistent parameters in restart file: '
+         write(*,*) 'L_restart    =', L_restart,    '     while L    =', L
+         write(*,*) 'mass_restart =', mass_restart, '     while mass =', mass
+         close(10)
+         return
+      endif
+      ! next read the plasma data
+      read(10,*, IOSTAT = restart_error) y
+      close(10)
+      ! reset the density at the X-point boundary to the value in the current input file
+      ! this can be changed from the original run
+      y(1) = initial_n
+      ! set the secondary plasma variables
+      call y2nvt( Nx, y, density, velocity, temperature, neutral )
+      return
+   end subroutine read_restart_file
+
+   subroutine write_restart_file
+   ! subroutine to write a restart file in order to be able to continue this run
+      implicit none
+      ! open the restart file
+      open( UNIT = 10, FILE = 'div1d_restart_new.txt' )
+      ! first write numerics parameter that cannot change between runs
+      write(10,*) Nx
+      ! next write physics parameters that must be identical between runs
+      write(10,*) L, mass
+      ! next write the plasma data
+      write(10,*) y
+      close(10)
+      return
+   end subroutine write_restart_file
+
 
 end module plasma_data
