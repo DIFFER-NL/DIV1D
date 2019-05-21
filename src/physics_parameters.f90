@@ -26,9 +26,10 @@ contains
    subroutine read_physics_parameters( error )
       implicit none
       integer :: error
-      namelist /div1d_physics/ L, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling
+      namelist /div1d_physics/ L, sintheta, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling
       error = 0
       read(*, div1d_physics, IOSTAT = error)
+      write(*,*) 'physics read error =', error
       return
    end subroutine read_physics_parameters
    

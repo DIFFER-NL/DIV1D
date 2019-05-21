@@ -30,7 +30,7 @@ contains
    ! the solution vector is defined as follows
    !    y(      1, ...,   Nx )     = density( 1, ..., Nx )
    !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx )
-   !    y( 2*Nx+1, ..., 3*Nx )     = Energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx ) + 0.5 mass * density * velocity^2 ( 1, ..., Nx )
+   !    y( 2*Nx+1, ..., 3*Nx )     = pressure = 2 * density * e_charge * temperature [eV] ( 1, ..., Nx )
    !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx ) (not yet implemented)
       implicit none
       ! first allocate all arrays
@@ -40,12 +40,13 @@ contains
       density     = initial_n
       velocity    = initial_v
       neutral     = initial_a
+      pressure    = 2.0d+0 * density * temperature
 !      if( Gamma_X .ne. 0.0 ) then
 !         ! initialize velocity at the sound speed and density in accordance with Gamma_X
 !         velocity = sqrt( 2.0d+0 * e_charge * temperature / mass )
 !         density  = Gamma_X / velocity
 !      endif
-      ! transform (density, velocity, temperature) to (density, momentum, energy) in solution vector y
+      ! transform (density, velocity, temperature) to (density, momentum, pressure) in solution vector y
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       return
    end subroutine initial_values

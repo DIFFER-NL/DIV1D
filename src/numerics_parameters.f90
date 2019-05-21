@@ -34,6 +34,7 @@ contains
       &                         switch_charge_exchange, switch_recombination, switch_ionization, viscosity
       error = 0
       read(*, div1d_numerics, IOSTAT = error)
+      write(*,*) 'numerics read error =', error
       return
    end subroutine read_numerics_parameters
    

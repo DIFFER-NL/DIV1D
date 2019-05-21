@@ -16,7 +16,7 @@ contains
    ! subroutine to transform from (density, velocity, temperature) to (density, momentum, energy) in the solution vector y
    !    y(      1, ...,   Nx )     = density( 1, ..., Nx )
    !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx )
-   !    y( 2*Nx+1, ..., 3*Nx )     = Energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx ) + 0.5 mass * density * velocity^2 ( 1, ..., Nx )
+   !    y( 2*Nx+1, ..., 3*Nx )     = pressure = 2 * density * e_charge * temperature [eV] ( 1, ..., Nx )
    !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
       implicit none
       integer,  intent(in)  :: Nx
@@ -27,7 +27,7 @@ contains
       ! momentum
       y(  Nx+1: 2*Nx) = mass * density(1:Nx) * velocity(1:Nx)
       ! energy
-      y(2*Nx+1: 3*Nx) = 3.0d+0 * density(1:Nx) * e_charge * temperature(1:Nx) + 0.5d+0 * mass * density(1:Nx) * velocity(1:Nx) * velocity(1:Nx)
+      y(2*Nx+1: 3*Nx) = 2.0d+0 * density(1:Nx) * e_charge * temperature(1:Nx)
       ! neutral density
       y(3*Nx+1: 4*Nx) = neutral(1:Nx)
       return
@@ -38,20 +38,20 @@ contains
    ! subroutine to transform from the solution vector y containing (density, momentum, energy) to (density, velocity, temperature)
    !    y(      1, ...,   Nx )     = density( 1, ..., Nx )
    !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx )
-   !    y( 2*Nx+1, ..., 3*Nx )     = Energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx ) + 0.5 mass * density * velocity^2 ( 1, ..., Nx )
+   !    y( 2*Nx+1, ..., 3*Nx )     = pressure = 2 * density * e_charge * temperature [eV] ( 1, ..., Nx )
    !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
       implicit none
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: y(4*Nx)
       real(wp), intent(out) :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       ! density
-      density(1:Nx)     =  max(y(1:Nx), minimum_density)
+      density(1:Nx)     =  y(1:Nx)
       ! velocity
       velocity(1:Nx)    =  y(  Nx+1: 2*Nx) / mass / density(1:Nx)
       ! temperature
-      temperature(1:Nx) =  max((y(2*Nx+1: 3*Nx) - 0.5d+0 * mass * density(1:Nx) * velocity(1:Nx) * velocity(1:Nx)) / 3.0d+0 / density(1:Nx) / e_charge, minimum_temperature)
+      temperature(1:Nx) =  y(2*Nx+1: 3*Nx) / 2.0d+0 / density(1:Nx) / e_charge
       ! neutral density
-      neutral(1:Nx)     =  max(y(3*Nx+1: 4*Nx), minimum_density)
+      neutral(1:Nx)     =  y(3*Nx+1: 4*Nx)
       return
    end subroutine y2nvt
 
@@ -205,14 +205,10 @@ contains
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
          ! add the heat flux term in the internal region (including the sheath)
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - 2.0d+0*(q_parallel(2:Nx)-q_parallel(1:Nx-1))/(delta_x(1:Nx-1)+delta_x(2:Nx))
+         ! add the compression term
+         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (pressure(2:Nx)-pressure(1:Nx-1))/delta_x(2:Nx)
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX
          ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-q_parX)/delta_x(1)
-         ! ! apply boundary condition at the sheath entrance, i=Nx: heat flux is given by sheath heat transmission q_par(Nx+1) = gamma * csound * density * k * temperature
-         ! ! sheath sound velocity
-         ! csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
-         ! ! sheath heat transmission
-         ! q_sheath = gamma * csound * (density(Nx)/2.0d+0) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
-         ! ydot(3*Nx) = ydot(3*Nx) - (q_sheath-q_parallel(Nx-1))/delta_x(Nx)
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx)
       ! ydot for the neutral density equation
          ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx)
