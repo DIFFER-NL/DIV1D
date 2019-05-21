@@ -178,6 +178,7 @@ contains
          ! apply boundary condition at the sheath entrance, i=Nx: Flux on target = csound * density(Nx)
          csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
          ydot(Nx) = ydot(Nx) - (csound*density(Nx)-Gamma_n(Nx))/delta_x(Nx)
+         ! ydot(Nx) = ydot(Nx) - (csound*density(Nx)-0.5d+0*(Gamma_n(Nx)+Gamma_n(Nx-1)))/delta_x(Nx)
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx)
       ! ydot for the momentum equation
          ydot(Nx+1:2*Nx) = switch_momentum_source * Source_v(1:Nx)
@@ -227,8 +228,8 @@ contains
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)**2
          ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)**2
-         ! boundary condition at sheath (neutral flux = - density * csound * recycling * (1.0d-0 - redistributed_fraction)
-         ydot(4*Nx) = ydot(4*Nx) + (density(Nx) * csound * recycling * (1.0d-0 - redistributed_fraction)- 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1)*(neutral(Nx)-neutral(Nx-1))))/delta_x(Nx)
+         ! boundary condition at sheath: neutral flux = - density * csound * recycling * (1.0d-0 - redistributed_fraction)
+         ydot(4*Nx) = ydot(4*Nx) + (density(Nx) * csound * recycling * (1.0d-0 - redistributed_fraction)- 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1)))/delta_x(Nx)!!!! ++++ ?????
          ! finally add the neutral sources and losses from redistribution and finite residence time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + density(Nx) * csound * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)

@@ -39,8 +39,8 @@ program div1d
 
    start_time = 0.0
    restart_error = 0
-   ! if( restart ) call read_restart_file( restart_error )
-   ! if( restart_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
+   if( restart ) call read_restart_file( restart_error )
+   if( restart_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
 
    ! write the inital solution to file
    ! calculate the fluxes
@@ -85,7 +85,7 @@ program div1d
       start_time = end_time
    enddo
 
-   ! call write_restart_file
+   call write_restart_file
 
    stop 'div1d completed'
 end program div1d

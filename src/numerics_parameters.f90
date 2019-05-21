@@ -23,6 +23,7 @@ module numerics_parameters
    real( wp )  :: abstol  = 1.0d-4   ! required absolute error in integration (used to multiply with initial condition to set abserr_vector)
    real( wp )  :: reltol  = 1.0d-4   ! required relative error in integration
    real( wp )  :: viscosity = 0.0d0  ! numerical viscosity to damp oscillations in velocity
+   logical     :: restart = .false.  ! switch for starting a continuation run when .true.
 
 contains
 
@@ -31,7 +32,7 @@ contains
       integer :: error
       namelist /div1d_numerics/ Nx, ntime, nout, delta_t, abstol, reltol, method, evolve_density, evolve_momentum, evolve_energy, evolve_neutral, &
       &                         switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
-      &                         switch_charge_exchange, switch_recombination, switch_ionization, viscosity
+      &                         switch_charge_exchange, switch_recombination, switch_ionization, viscosity, restart
       error = 0
       read(*, div1d_numerics, IOSTAT = error)
       return
