@@ -158,8 +158,8 @@ contains
       Source_n = rate_ion - rate_rec
       ! the momentum sources
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
-      ! the energy sources
-      Source_Q = - (0.5d+0 * mass * velocity * velocity + 1.5d+0 * e_charge * temperature) * (rate_cx + rate_rec)
+      ! the energy sources (only internal energy)
+      Source_Q = - (1.5d+0 * e_charge * temperature) * (rate_cx + rate_rec)
       Source_Q = source_Q - rate_ion * e_charge * energy_loss_ion
       ! write(*,*) rate_ion, source_Q
       return
