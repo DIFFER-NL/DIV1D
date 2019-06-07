@@ -129,7 +129,11 @@ contains
          q_parallel(Nx) = gamma * csound * (density(Nx)/1.0d+0) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
       ! the neutral particle diffusion
          ! we do this in the right_hand_side routine itself
-         neutral_flux = 0.0 ! to avoid warning messages at compile time
+         do i = 1, Nx-1
+            neutral_flux(i) = - max(D_neutral(temperature(i),density(i)),D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
+         enddo
+         ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
+         neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
       return
@@ -244,7 +248,7 @@ contains
          ! add the density diffusion in the internal reagion
          ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
          do ix = 1, Nx
-            Diff_neutral(ix) = e_charge * temperature(ix) / mass / (density(ix) * charge_exchange(temperature(ix))) / sintheta**2
+            Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) )
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
          ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * (neutral(3:Nx)-2.0d0*neutral(2:Nx-1)+neutral(1:Nx-2))/delta_x(2:Nx-1)**2
@@ -252,10 +256,10 @@ contains
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)**2
          ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)**2
-         ! boundary condition at sheath: neutral flux = - density * csound * recycling * (1.0d-0 - redistributed_fraction)
-         ydot(4*Nx) = ydot(4*Nx) + (density(Nx) * csound * recycling * (1.0d-0 - redistributed_fraction)- 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1)))/delta_x(Nx)!!!! ++++ ?????
+         ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)- max(Diff_neutral(Nx),Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1)))/delta_x(Nx)!!!! ++++ ?????
          ! finally add the neutral sources and losses from redistribution and finite residence time
-         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + density(Nx) * csound * recycling * redistributed_fraction / L - neutral / neutral_residence_time
+         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)
       ! apply evolution switches
       ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx)
@@ -273,6 +277,16 @@ contains
       kappa_parallel = 2.0d+3 * temperature*temperature*sqrt(temperature)
       return
    end function kappa_parallel
+
+   real(wp) function D_neutral( temperature, density )
+   ! function to calculate the neutral particle diffusion coefficient (Ref. Nakazawa et al. 2000 PPCF 42 401 equation 2.14)
+      implicit none
+      real(wp) :: temperature, density
+      ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
+      !                                               =     kT / m density <sigma v>_cx sin^2theta
+      D_neutral = e_charge * temperature / (mass * density * charge_exchange(temperature) * sintheta**2)
+      return
+   end function D_neutral
 
    real(wp) function MC_limit( fm, fc, fp )
    ! function to implement MC slope limiter (van Leer 1977) as in SD1D
