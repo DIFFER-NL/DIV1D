@@ -146,7 +146,7 @@ contains
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
-      real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_rec(Nx)
+      real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx)
       integer  :: ix
       Source_n = 0.0d+0
       Source_v = 0.0d+0
@@ -154,7 +154,8 @@ contains
       neutral_source = 0.0d+0
       do ix = 1, Nx
          rate_cx(ix)  = density(ix) * neutral(ix) * charge_exchange(temperature(ix))
-         rate_ion(ix) = density(ix) * neutral(ix) * ionization(temperature(ix))
+         rate_ion(ix) = density(ix) * neutral(ix) * ionization(density(ix),temperature(ix))
+         rate_exc(ix) = density(ix) * neutral(ix) * excitation(density(ix),temperature(ix))
          rate_rec(ix) = density(ix) * density(ix) * recombination(density(ix),temperature(ix))
       enddo
       ! the particle sources
@@ -164,8 +165,12 @@ contains
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
       ! the energy sources (only internal energy)
       Source_Q = - (1.5d+0 * e_charge * temperature) * (rate_cx + rate_rec)
-      Source_Q = source_Q - rate_ion * e_charge * energy_loss_ion
-      ! write(*,*) rate_ion, source_Q
+      if ( switch_excitation .eq. 0.0d+0 ) then
+         Source_Q = Source_Q - rate_ion * e_charge * energy_loss_ion
+      else
+         Source_Q = Source_Q - switch_excitation * rate_exc * e_charge
+      endif
+      ! write(*,*) rate_ion, Source_Q
       return
    end subroutine calculate_sources
 

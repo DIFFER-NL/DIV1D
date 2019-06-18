@@ -1,12 +1,18 @@
 module reaction_rates
 ! module containing routines implementing the reaction rates
 
-   use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization
+   use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
+   use physics_parameters,  only : case_AMJUEL
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
-   
-   ! the coefficients for the total hydrogen recombination rate according to AMJUEL
+
+   ! See page XX of AMJUEL for definition of the fit functions and variables (T in eV; density in 10^14 /m^3; resulting rates <sigma v> in cm^3/s
+   ! the coefficients for the charge exchange rate according to AMJUEL 2.1 reaction 0.1T(Total)
+   real(wp), private, dimension(9)   :: cx_coef = (/ &
+                -1.833882000000D+01,  2.368705000000D-01, -1.469575000000D-02, -1.139850000000D-02,  6.379644000000D-04,  3.162724000000D-04, -6.681994000000D-05,  3.812123000000D-06,  8.652321000000D-09 /)
+
+   ! the coefficients for the total hydrogen recombination rate according to AMJUEL 4.4 reaction 2.1.8 total rate including three-body recombination [m^3 / s]
    real(wp), private, dimension(9,9) :: recomb_coef = reshape( (/  &
                 -2.855728479302D+01,  3.488563234375D-02, -2.799644392058D-02,  1.209545317879D-02, -2.436630799820D-03,  2.837893719800D-04, -1.886511169084D-05,  6.752155602894D-07, -1.005893858779D-08, &
                 -7.664042607917D-01, -3.583233366133D-03, -7.452514292790D-03,  2.709299760454D-03, -7.745129766167D-04,  1.142444698207D-04, -9.382783518064D-06,  3.902800099653D-07, -6.387411585521D-09, &
@@ -18,46 +24,119 @@ module reaction_rates
                 -2.770717597683D-06, -4.695982369246D-06,  3.250878872873D-06, -9.387290785993D-07,  1.392391630459D-07, -1.139093288575D-08,  5.178505597480D-10, -9.452402157390D-12, -4.672724022059D-14, &
                  1.038235939800D-07,  2.523166611507D-07, -2.145390398476D-07,  7.381435237585D-08, -1.299713684966D-08,  1.265189576423D-09, -6.854203970018D-11,  1.836615031798D-12, -1.640492364811D-14 /), &
              shape(recomb_coef), order=(/2,1/) )
+   ! the coefficients for the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
+   real(wp), private, dimension(9,9) :: ionize_coef = reshape( (/  &
+                -3.248025330340D+01, -5.440669186583D-02,  9.048888225109D-02, -4.054078993576D-02,  8.976513750477D-03, -1.060334011186D-03,  6.846238436472D-05, -2.242955329604D-06,  2.890437688072D-08, &
+                 1.425332391510D+01, -3.594347160760D-02, -2.014729121556D-02,  1.039773615730D-02, -1.771792153042D-03,  1.237467264294D-04, -3.130184159149D-06, -3.051994601527D-08,  1.888148175469D-09, &
+                -6.632235026785D+00,  9.255558353174D-02, -5.580210154625D-03, -5.902218748238D-03,  1.295609806553D-03, -1.056721622588D-04,  4.646310029498D-06, -1.479612391848D-07,  2.852251258320D-09, &
+                 2.059544135448D+00, -7.562462086943D-02,  1.519595967433D-02,  5.803498098354D-04, -3.527285012725D-04,  3.201533740322D-05, -1.835196889733D-06,  9.474014343303D-08, -2.342505583774D-09, &
+                -4.425370331410D-01,  2.882634019199D-02, -7.285771485050D-03,  4.643389885987D-04,  1.145700685235D-06,  8.493662724988D-07, -1.001032516512D-08, -1.476839184318D-08,  6.047700368169D-10, &
+                 6.309381861496D-02, -5.788686535780D-03,  1.507382955250D-03, -1.201550548662D-04,  6.574487543511D-06, -9.678782818849D-07,  5.176265845225D-08,  1.291551676860D-09, -9.685157340473D-11, &
+                -5.620091829261D-03,  6.329105568040D-04, -1.527777697951D-04,  8.270124691336D-06,  3.224101773605D-08,  4.377402649057D-08, -2.622921686955D-09, -2.259663431436D-10,  1.161438990709D-11, &
+                 2.812016578355D-04, -3.564132950345D-05,  7.222726811078D-06,  1.433018694347D-07, -1.097431215601D-07,  7.789031791949D-09, -4.197728680251D-10,  3.032260338723D-11, -8.911076930014D-13, &
+                -6.011143453374D-06,  8.089651265488D-07, -1.186212683668D-07, -2.381080756307D-08,  6.271173694534D-09, -5.483010244930D-10,  3.064611702159D-11, -1.355903284487D-12,  2.935080031599D-14 /), &
+             shape(ionize_coef), order=(/2,1/) )
+   ! the coefficients for the total hydrogen excitation rate according to AMJUEL 10.2 reaction 2.1.5 effective cooling rate by ionization and radiation [eV m^3 / s]
+   real(wp), private, dimension(9,9) :: excite_coef = reshape( (/  &
+                -2.497580168306D+01,  1.081653961822D-03, -7.358936044605D-04,  4.122398646951D-04, -1.408153300988D-04,  2.469730836220D-05, -2.212823709798D-06,  9.648139704737D-08, -1.611904413846D-09, &
+                 1.004448839974D+01, -3.189474633369D-03,  2.510128351932D-03, -7.707040988954D-04,  1.031309578578D-04, -3.716939423005D-06, -4.249704742353D-07,  4.164960852522D-08, -9.893423877739D-10, &
+                -4.867952931298D+00, -5.852267850690D-03,  2.867458651322D-03, -8.328668093987D-04,  2.056134355492D-04, -3.301570807523D-05,  2.831739755462D-06, -1.164969298033D-07,  1.785440278790D-09, &
+                 1.689422238067D+00,  7.744372210287D-03, -3.087364236497D-03,  4.707676288420D-04, -5.508611815406D-05,  7.305867762241D-06, -6.000115718138D-07,  2.045211951761D-08, -1.790312871690D-10, &
+                -4.103532320100D-01, -3.622291213236D-03,  1.327415215304D-03, -1.424078519508D-04,  3.307339563081D-06,  5.256679519499D-09,  7.597020291557D-10,  1.799505288362D-09, -9.280890205774D-11, &
+                 6.469718387357D-02,  8.268567898126D-04, -2.830939623802D-04,  2.411848024960D-05,  5.707984861100D-07, -1.016945693300D-07,  3.517154874443D-09, -4.453195673947D-10,  2.002478264932D-11, &
+                -6.215861314764D-03, -9.836595524255D-05,  3.017296919092D-05, -1.474253805845D-06, -2.397868837417D-07,  1.518743025531D-08,  4.149084521319D-10, -6.803200444549D-12, -1.151855939531D-12, &
+                 3.289809895460D-04,  5.845697922558D-06, -1.479323780613D-06, -4.633029022577D-08,  3.337390374041D-08, -1.770252084837D-09, -5.289806153651D-11,  3.864394776250D-12, -8.694978774411D-15, &
+                -7.335808238917D-06, -1.367574486885D-07,  2.423236476442D-08,  5.733871119707D-09, -1.512777532459D-09,  8.733801272834D-11,  7.196798841269D-13, -1.441033650378D-13,  1.734769090475D-15 /), &
+             shape(excite_coef), order=(/2,1/) )
 
 contains
 
    real(wp) function charge_exchange( temperature )
-   ! function to calculate the total charge_exchange rate coefficient
-   ! source SD1D manual / Havlickova (2013)
+   ! function to calculate the total charge_exchange rate coefficient [m^3/s]
       implicit none
+      integer  :: j
       real(wp) :: temperature
-      if( temperature .le. 1.0 ) then
-         charge_exchange = 1.0d-14
+      if( case_AMJUEL ) then
+         ! source AMJUEL page 38 2.2 reaction 0.1T
+         charge_exchange = 0.0d+0
+         do j = 1, 9
+            charge_exchange = charge_exchange + cx_coef(j)*log(temperature)**(j-1)
+         enddo
+         charge_exchange = exp(charge_exchange)*1.0d-6
       else
-         charge_exchange = 1.0d-14 * temperature**(1/3)
+         ! source SD1D manual / Havlickova (2013)
+         if( temperature .le. 1.0 ) then
+            charge_exchange = 1.0d-14
+         else
+            charge_exchange = 1.0d-14 * temperature**(1/3)
+         endif
       endif
       charge_exchange = switch_charge_exchange * charge_exchange
       return
    end function charge_exchange
 
-   real(wp) function ionization( temperature )
-   ! function to calculate the total charge_exchange rate coefficient
-   ! source SD1D manual / Havlickova (2013)
-   ! the discuntinuity at 20 eV has been removed by modifying the exponent of the temperature from -3.054 to -2.987
+   real(wp) function ionization( density, temperature )
+   ! function to calculate the total ionization rate coefficient [m^3/s]
    implicit none
+      integer  :: m, n
+      real(wp) :: density
       real(wp) :: temperature
-      if( temperature .le. 1.0d+0 ) then
-         ionization = 7.638d-21 
-      elseif( temperature .lt. 20.0d+0 ) then
-         ionization = 1.0d+1**(-6.0d+0 - 15.72d+0 * exp(-log10(temperature)) + 1.603d+0*exp(-log10(temperature)**2) )* temperature**(-2.987d+0)
+      ionization = 0.0d+0
+      if( case_AMJUEL ) then
+         ! the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
+         do m = 1, 9
+            do n = 1, 9
+               ionization = ionization + ionize_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
+            enddo
+         enddo
       else
-         ionization = 5.875d-12 * temperature**(-0.5151d+0) * 10**( -2.563d+0 / log10(temperature) )
+         ! source SD1D manual / Havlickova (2013)
+         ! the discuntinuity at 20 eV has been removed by modifying the exponent of the temperature from -3.054 to -2.987
+         if( temperature .le. 1.0d+0 ) then
+            ionization = 7.638d-21 
+         elseif( temperature .lt. 20.0d+0 ) then
+            ionization = 1.0d+1**(-6.0d+0 - 15.72d+0 * exp(-log10(temperature)) + 1.603d+0*exp(-log10(temperature)**2) )* temperature**(-2.987d+0)
+         else
+            ionization = 5.875d-12 * temperature**(-0.5151d+0) * 10**( -2.563d+0 / log10(temperature) )
+         endif
       endif
       ionization = switch_ionization * ionization
       return
    end function ionization
 
+   real(wp) function excitation( density, temperature )
+   ! function to calculate the efective excitation rate coefficient [eV m^3/s]
+   ! this is a measure of the effective energy loss per ionization event (so the low density high T limit is 13.6 * ionization rate)
+   ! source SD1D code / Havlickova (2013)
+   implicit none
+      integer  :: m, n
+      real(wp) :: density
+      real(wp) :: temperature, Y
+      excitation = 0.0d+0
+      if( case_AMJUEL ) then
+         ! the total hydrogen effective cooling rate by ionization and radiation according to AMJUEL 10.2 reaction 2.1.5  [eV m^3 / s]
+         do m = 1, 9
+            do n = 1, 9
+               excitation = excitation + excite_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
+            enddo
+         enddo
+      else
+         if( temperature .lt. 1.0d+0 ) then
+            Y = 1.02d+1 / 1.0d+0 
+         else
+            Y = 1.02d+1 / temperature 
+         endif
+      endif
+      excitation = switch_excitation * 4.90d-13 / (0.28d+0+Y) *exp(-Y)*sqrt(Y*(1.0d+0+Y))
+      return
+   end function excitation
+
    real(wp) function recombination( density, temperature )
-   ! function to calculate the total recombination rate coefficient
-   ! fit function from AMJUEL
+   ! function to calculate the total recombination rate coefficient [m^3/s]
+   ! fit function from AMJUEL 4.4 reaction 2.1.8 total rate including three-body recombination
    ! note that in the AMJUEL fits densities are normalized to 10^+14 m^-3
       implicit none
-      integer  :: i, j, m, n
+      integer  :: m, n
       real(wp) :: density
       real(wp) :: temperature
       do m = 1, 9
