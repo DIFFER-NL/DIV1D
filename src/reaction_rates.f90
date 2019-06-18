@@ -89,6 +89,7 @@ contains
                ionization = ionization + ionize_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
             enddo
          enddo
+         ionization = exp(ionization) * 1.0d-6
       else
          ! source SD1D manual / Havlickova (2013)
          ! the discuntinuity at 20 eV has been removed by modifying the exponent of the temperature from -3.054 to -2.987
@@ -120,14 +121,16 @@ contains
                excitation = excitation + excite_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
             enddo
          enddo
+         excitation = exp(excitation) * 1.0d-6
       else
          if( temperature .lt. 1.0d+0 ) then
             Y = 1.02d+1 / 1.0d+0 
          else
             Y = 1.02d+1 / temperature 
          endif
+         excitation = 4.90d-13 / (0.28d+0+Y) *exp(-Y)*sqrt(Y*(1.0d+0+Y))
       endif
-      excitation = switch_excitation * 4.90d-13 / (0.28d+0+Y) *exp(-Y)*sqrt(Y*(1.0d+0+Y))
+      excitation = switch_excitation * excitation
       return
    end function excitation
 
