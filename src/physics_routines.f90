@@ -127,13 +127,13 @@ contains
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
          q_parallel(Nx) = gamma * csound * (density(Nx)/1.0d+0) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
-      ! the neutral particle diffusion
-         ! we do this in the right_hand_side routine itself
-         do i = 1, Nx-1
-            neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
-         enddo
-         ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
-         neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+      ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
+         ! ! we do this in the right_hand_side routine itself
+         ! do i = 1, Nx-1
+         !    neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
+         ! enddo
+         ! ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
+         ! neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
       return

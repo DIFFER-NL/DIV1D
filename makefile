@@ -5,6 +5,7 @@ FC = ifort         # for INTEL fortran compiler
 
 # compiler options
 FOPT =  -module obj -g -O3 # for intel fortran compiler
+# FOPT = -p -module obj -g -O3 # for intel fortran compiler and profiling with gprof
 
 OBJECTS = obj/constants.o \
           obj/physics_routines.o \

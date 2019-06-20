@@ -56,11 +56,15 @@ contains
       implicit none
       integer  :: j
       real(wp) :: temperature
+      real(wp) :: ln_T, xj
       if( case_AMJUEL ) then
          ! source AMJUEL page 38 2.2 reaction 0.1T
+         ln_T = log(temperature)
+         xj = 1.0d+0
          charge_exchange = 0.0d+0
          do j = 1, 9
-            charge_exchange = charge_exchange + cx_coef(j)*log(temperature)**(j-1)
+            charge_exchange = charge_exchange + cx_coef(j)*xj
+            xj = xj * ln_T
          enddo
          charge_exchange = exp(charge_exchange)*1.0d-6
       else
@@ -79,15 +83,21 @@ contains
    ! function to calculate the total ionization rate coefficient [m^3/s]
    implicit none
       integer  :: m, n
-      real(wp) :: density
-      real(wp) :: temperature
+      real(wp) :: density, temperature
+      real(wp) :: ln_n, ln_T, xm, xn
       ionization = 0.0d+0
       if( case_AMJUEL ) then
          ! the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
+         ln_n = log(density*1.0d-14)
+         ln_T = log(temperature)
+         xm = 1.0d+0
          do m = 1, 9
+            xn = 1.0d+0
             do n = 1, 9
-               ionization = ionization + ionize_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
+               ionization = ionization + ionize_coef(n,m) * xm * xn
+               xn = xn * ln_T
             enddo
+            xm = xm * ln_n
          enddo
          ionization = exp(ionization) * 1.0d-6
       else
@@ -111,15 +121,21 @@ contains
    ! source SD1D code / Havlickova (2013)
    implicit none
       integer  :: m, n
-      real(wp) :: density
-      real(wp) :: temperature, Y
+      real(wp) :: density, temperature
+      real(wp) :: ln_n, ln_T, xm, xn, Y
       excitation = 0.0d+0
       if( case_AMJUEL ) then
          ! the total hydrogen effective cooling rate by ionization and radiation according to AMJUEL 10.2 reaction 2.1.5  [eV m^3 / s]
+         ln_n = log(density*1.0d-14)
+         ln_T = log(temperature)
+         xm = 1.0d+0
          do m = 1, 9
+            xn = 1.0d+0
             do n = 1, 9
-               excitation = excitation + excite_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
+               excitation = excitation + excite_coef(n,m) * xm * xn
+               xn = xn * ln_T
             enddo
+            xm = xm * ln_n
          enddo
          excitation = exp(excitation) * 1.0d-6
       else
@@ -140,12 +156,18 @@ contains
    ! note that in the AMJUEL fits densities are normalized to 10^+14 m^-3
       implicit none
       integer  :: m, n
-      real(wp) :: density
-      real(wp) :: temperature
+      real(wp) :: density, temperature
+      real(wp) :: ln_n, ln_T, xm, xn
+      ln_n = log(density*1.0d-14)
+      ln_T = log(temperature)
+      xm = 1.0d+0
       do m = 1, 9
+         xn = 1.0d+0
          do n = 1, 9
-            recombination = recombination + recomb_coef(n,m) * log(density*1.0d-14)**(m-1) * log(temperature)**(n-1);
+            recombination = recombination + recomb_coef(n,m) * xm * xn
+            xn = xn * ln_T
          enddo
+         xm = xm * ln_n
       enddo
       recombination = switch_recombination * exp(recombination) * 1.0d-6
    end function recombination
