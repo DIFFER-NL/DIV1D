@@ -53,7 +53,7 @@ program div1d
    ! setting the options for dvode_f90
    allocate( abstol_vector(4*Nx) )
    abstol_vector(1:Nx) = initial_n * abstol
-   abstol_vector(Nx+1:2*Nx) = abstol
+   abstol_vector(Nx+1:2*Nx) = 1.0
    abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
    abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
    if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=100000, NZSWAG=20000)

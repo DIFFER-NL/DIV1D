@@ -1,7 +1,7 @@
 module physics_routines
 ! module containing general purpose routines implementing the equations
 
-   use grid_data, only : delta_x
+   use grid_data, only : delta_x, delta_xcb
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature
@@ -123,7 +123,7 @@ contains
          call advection(Nx, 5.0d+0 * density * e_charge * temperature, velocity, temperature, q_parallel) 
       ! add the conductive heat flux in the internal region
          do i = 1, Nx-1
-            q_parallel(i) = q_parallel(i) * 1.0d+0 - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i) !!!!!!!!!!!!!!!!!!!!!!!!!
+            q_parallel(i) = q_parallel(i) * 1.0d+0 - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
          q_parallel(Nx) = gamma * csound * (density(Nx)/1.0d+0) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
@@ -214,7 +214,7 @@ contains
          ! add the particle flux term using the flux as calculated in calculate_fluxes
          ! Gamma_n(i) contains the flux at i+1/2
          do ix = 2, Nx
-            ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_x(ix)
+            ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)
          enddo
          ! apply boundary condition at the X-point, i=1: fixed density
          ydot(1) = 0.0
@@ -224,7 +224,7 @@ contains
          ! add the momentum flux term using the flux as calculated in calculate_fluxes
          ! Gamma_mom(i) contains the flux at i+1/2
          do ix = 2, Nx
-            ydot(Nx+ix) = ydot(Nx+ix) - (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_x(ix)
+            ydot(Nx+ix) = ydot(Nx+ix) - (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_xcb(ix)
          enddo
          ! ! apply boundary condition at the X-point, as following from the constant density v(1) = n(2) v(2) / n(1)
          ! ydot(Nx+1) = ydot(Nx+1) - ???
@@ -242,11 +242,11 @@ contains
       ! ydot for the energy equation
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
          ! add the heat flux term in the internal region (including the sheath)
-         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - 2.0d+0*(q_parallel(2:Nx)-q_parallel(1:Nx-1))/(delta_x(1:Nx-1)+delta_x(2:Nx))
+         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)
          ! add the compression term
-         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))/1.5d+0/delta_x(2:Nx)
+         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))/1.5d+0/delta_x(1:Nx-1)
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX
-         ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-q_parX)/delta_x(1)
+         ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-q_parX)/delta_xcb(1)
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx)
       ! ydot for the neutral density equation
          ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx)
@@ -256,14 +256,14 @@ contains
             Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) )
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
-         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * (neutral(3:Nx)-2.0d0*neutral(2:Nx-1)+neutral(1:Nx-2))/delta_x(2:Nx-1)**2
-         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/4.0d0/delta_x(2:Nx-1)**2
-!         ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_x(2:Nx)
+         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * (neutral(3:Nx)-2.0d0*neutral(2:Nx-1)+neutral(1:Nx-2))/delta_xcb(2:Nx-1)**2
+         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/4.0d0/delta_xcb(2:Nx-1)**2
+!         ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)**2
          ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)**2
          ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
-         ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_x(Nx))/delta_x(Nx)!!!! ++++ ?????
+         ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_xcb(Nx))/delta_xcb(Nx)
          ! finally add the neutral sources and losses from redistribution and finite residence time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)
