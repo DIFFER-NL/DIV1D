@@ -2,8 +2,10 @@ module plasma_data
 ! module defining and handling the plasma data
 
    use numerics_parameters, only : Nx
+   use grid_data, only           : x
    use physics_parameters, only  : L, initial_n, initial_v, initial_T, initial_a, mass, Gamma_X
    use physics_routines
+   use interpolation
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -56,6 +58,8 @@ contains
       implicit none
       integer, intent( out ) :: restart_error
       integer     :: Nx_restart
+      real( wp ), allocatable  :: x_restart(:)
+      real( wp ), allocatable  :: y_restart(:)
       real( wp )  :: L_restart
       real( wp )  :: mass_restart
       restart_error = 0
@@ -64,10 +68,11 @@ contains
       ! first read numerics parameters and check for consitency
       read(10,*, IOSTAT = restart_error) Nx_restart
       if( Nx .ne. Nx_restart ) then
-         write(*,*) 'inconsistent grid size in restart file: Nx_restart =', Nx_restart, '     while Nx =', Nx
-         close(10)
-         return
+         write(*,*) 'grid size in restart file: Nx_restart =', Nx_restart, '     not equal to Nx =', Nx
+         write(*,*) 'interpolation is performed between old and new grid'
       endif
+      allocate( x_restart(Nx_restart), y_restart(4*Nx_restart) )
+      read(10,*) x_restart
       ! next read physics parameters that must be identical between runs
       read(10,*, IOSTAT = restart_error) L_restart, mass_restart
       if( L .ne. L_restart .or. mass .ne. mass_restart ) then
@@ -78,8 +83,13 @@ contains
          return
       endif
       ! next read the plasma data
-      read(10,*, IOSTAT = restart_error) y
+      read(10,*, IOSTAT = restart_error) y_restart
       close(10)
+      ! interpolate between restart grid and current grid
+      call interpolate(x_restart, y_restart(             1:  Nx_restart), Nx_restart, x, y(     1:  Nx), Nx)
+      call interpolate(x_restart, y_restart(  Nx_restart+1:2*Nx_restart), Nx_restart, x, y(  Nx+1:2*Nx), Nx)
+      call interpolate(x_restart, y_restart(2*Nx_restart+1:3*Nx_restart), Nx_restart, x, y(2*Nx+1:3*Nx), Nx)
+      call interpolate(x_restart, y_restart(3*Nx_restart+1:4*Nx_restart), Nx_restart, x, y(3*Nx+1:4*Nx), Nx)
       ! reset the density at the X-point boundary to the value in the current input file
       ! this can be changed from the original run
       y(1) = initial_n
@@ -95,6 +105,7 @@ contains
       open( UNIT = 10, FILE = 'div1d_restart_new.txt' )
       ! first write numerics parameter that cannot change between runs
       write(10,*) Nx
+      write(10,*) x
       ! next write physics parameters that must be identical between runs
       write(10,*) L, mass
       ! next write the plasma data

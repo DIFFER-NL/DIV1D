@@ -5,7 +5,7 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature
-   use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, viscosity
+   use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, switch_impurity_radiation, viscosity
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -146,7 +146,7 @@ contains
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
-      real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx)
+      real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_imp(Nx)
       integer  :: ix
       Source_n = 0.0d+0
       Source_v = 0.0d+0
@@ -157,6 +157,7 @@ contains
          rate_ion(ix) = density(ix) * neutral(ix) * ionization(density(ix),temperature(ix))
          rate_exc(ix) = density(ix) * neutral(ix) * excitation(density(ix),temperature(ix))
          rate_rec(ix) = density(ix) * density(ix) * recombination(density(ix),temperature(ix))
+         rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix))
       enddo
       ! the particle sources
       neutral_source = rate_rec - rate_ion
@@ -170,6 +171,7 @@ contains
       else
          Source_Q = Source_Q - switch_excitation * rate_exc * e_charge
       endif
+      Source_Q = Source_Q - switch_impurity_radiation * rate_imp
       ! write(*,*) rate_ion, Source_Q
       return
    end subroutine calculate_sources
