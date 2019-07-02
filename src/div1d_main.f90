@@ -40,7 +40,7 @@ program div1d
    start_time = 0.0
    restart_error = 0
    if( restart ) call read_restart_file( restart_error )
-   if( restart_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
+   if( restart .and. restart_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
 
    ! write the inital solution to file
    ! calculate the fluxes

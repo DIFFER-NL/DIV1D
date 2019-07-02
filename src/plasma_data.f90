@@ -33,10 +33,10 @@ contains
    !    y(      1, ...,   Nx )     = density( 1, ..., Nx )
    !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx )
    !    y( 2*Nx+1, ..., 3*Nx )     = pressure = 2 * density * e_charge * temperature [eV] ( 1, ..., Nx )
-   !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx ) (not yet implemented)
+   !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
       implicit none
       ! first allocate all arrays
-      allocate( y(3*Nx), ydot(3*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
+      allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
       allocate( Gamma_n(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
       temperature = initial_T
       density     = initial_n
