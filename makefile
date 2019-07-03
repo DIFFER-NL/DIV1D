@@ -4,6 +4,7 @@
 FC = ifort         # for INTEL fortran compiler
 
 # compiler options
+FOPT_DVODE =  -module obj -g -O3 # for intel fortran compiler
 # FOPT =  -module obj -g -O3 # for intel fortran compiler
 FOPT =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
 # FOPT = -p -module obj -g -O3 # for intel fortran compiler and profiling with gprof
@@ -67,7 +68,7 @@ obj/interpolation.o : src/interpolation.f90
 
 
 obj/dvode_f90_m.o : src/dvode_f90_m.f90
-	$(FC) src/dvode_f90_m.f90 $(FOPT) -c -o obj/dvode_f90_m.o
+	$(FC) src/dvode_f90_m.f90 $(FOPT_DVODE) -c -o obj/dvode_f90_m.o
 
 
 obj/rk4.o : src/rk4.f90

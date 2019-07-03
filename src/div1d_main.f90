@@ -56,7 +56,7 @@ program div1d
    abstol_vector(Nx+1:2*Nx) = 1.0
    abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
    abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
-   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=100000, NZSWAG=20000)
+   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=100000, NZSWAG=20000, MA28_ELBOW_ROOM=10)
 
    istate = 1
    do istep=1, ntime
@@ -103,7 +103,7 @@ subroutine write_solution( time )
    
    write( 10, * ) 'time = ', time
    write( 10, '(A156)' ) '    X [m]     N [/m^3]    V [m/s]      T [eV]     Nn [/m^3]   Gamma_n      P [Pa]    q_parallel neutral_flux  Source_n    Source_v    Source_Q  source_neut'
-   write( 10, '(13(1PE12.3))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
+   write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
    &                                   Gamma_n(i), pressure(i), q_parallel(i), neutral_flux(i), &
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    

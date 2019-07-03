@@ -159,6 +159,7 @@ contains
       integer  :: m, n
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
+      recombination = 0.0d+0
       ln_n = log(density*1.0d-14)
       ln_T = log(temperature)
       xm = 1.0d+0

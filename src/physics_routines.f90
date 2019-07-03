@@ -107,6 +107,7 @@ contains
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: Gamma_n(Nx), Gamma_mom(Nx), q_parallel(Nx), neutral_flux(Nx)
+      real(wp)              :: momentum(Nx), enthalpy(Nx)
       real(wp)              :: csound, average_velocity
       integer               :: i
       ! the particle flux = density velocity
@@ -116,11 +117,13 @@ contains
          csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
          Gamma_n(Nx) = density(Nx) * max(velocity(Nx),csound)
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
-         call advection(Nx, density * mass * velocity, velocity, temperature, Gamma_mom)
+         momentum = density * mass * velocity
+         call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
          Gamma_mom(Nx) = density(Nx) * mass * max(velocity(Nx),csound)**2
-      ! convective heat flux = 5 density k temperature velocity (i.e. 5 pressure
-         call advection(Nx, 5.0d+0 * density * e_charge * temperature, velocity, temperature, q_parallel) 
+      ! convective heat flux = 5 density k temperature velocity (i.e. 5 pressure)
+         enthalpy = 5.0d+0 * density * e_charge * temperature
+         call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
       ! add the conductive heat flux in the internal region
          do i = 1, Nx-1
             q_parallel(i) = q_parallel(i) * 1.0d+0 - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
@@ -128,12 +131,12 @@ contains
          ! boundary condition at the sheath: given by the sheath heat transmission
          q_parallel(Nx) = gamma * csound * (density(Nx)/1.0d+0) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
-         ! ! we do this in the right_hand_side routine itself
-         ! do i = 1, Nx-1
-         !    neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
-         ! enddo
-         ! ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
-         ! neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         ! we do this in the right_hand_side routine itself
+         do i = 1, Nx-1
+            neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
+         enddo
+         ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
+         neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
       return
@@ -260,11 +263,11 @@ contains
          ! write(*,*) 'Diff_neutral =', Diff_neutral
          ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * (neutral(3:Nx)-2.0d0*neutral(2:Nx-1)+neutral(1:Nx-2))/delta_xcb(2:Nx-1)**2
          ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/4.0d0/delta_xcb(2:Nx-1)**2
-!         ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
+         ! ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)**2
          ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)**2
-         ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         ! ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_xcb(Nx))/delta_xcb(Nx)
          ! finally add the neutral sources and losses from redistribution and finite residence time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
