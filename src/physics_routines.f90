@@ -170,11 +170,11 @@ contains
       ! the energy sources (only internal energy)
       Source_Q = - (1.5d+0 * e_charge * temperature) * (rate_cx + rate_rec)
       if ( switch_excitation .eq. 0.0d+0 ) then
-         Source_Q = Source_Q - rate_ion * e_charge * energy_loss_ion
+         Source_Q = Source_Q - rate_ion * e_charge * energy_loss_ion ! note energy loss per ionization is in eV
       else
-         Source_Q = Source_Q - switch_excitation * rate_exc * e_charge
+         Source_Q = Source_Q - switch_excitation * rate_exc * e_charge ! note excitation rate is in eV m^3 / s
       endif
-      Source_Q = Source_Q - switch_impurity_radiation * rate_imp
+      Source_Q = Source_Q - switch_impurity_radiation * rate_imp * e_charge ! note impurity radiation loss rate is in eV m^3 / s
       ! write(*,*) rate_ion, Source_Q
       return
    end subroutine calculate_sources
@@ -261,14 +261,14 @@ contains
             Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) )
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
-         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * (neutral(3:Nx)-2.0d0*neutral(2:Nx-1)+neutral(1:Nx-2))/delta_xcb(2:Nx-1)**2
-         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/4.0d0/delta_xcb(2:Nx-1)**2
+         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * ((neutral(3:Nx)-neutral(2:Nx-1))/delta_x(2:Nx-1)-(neutral(2:Nx-1)-neutral(1:Nx-2))/delta_x(1:Nx-2))/delta_xcb(2:Nx-1)
+         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/(delta_x(2:Nx-1)+delta_x(1:Nx-2))**2
          ! ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
-         ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)**2
-         ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)**2
+         ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)/delta_xcb(1)
+         ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)/delta_x(1)
          ! ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
-         ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_xcb(Nx))/delta_xcb(Nx)
+         ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_x(Nx-1))/delta_xcb(Nx)
          ! finally add the neutral sources and losses from redistribution and finite residence time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)

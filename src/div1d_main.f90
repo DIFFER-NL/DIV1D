@@ -102,7 +102,7 @@ subroutine write_solution( time )
    real(wp), intent(in) :: time
    
    write( 10, * ) 'time = ', time
-   write( 10, '(A156)' ) '    X [m]     N [/m^3]    V [m/s]      T [eV]     Nn [/m^3]   Gamma_n      P [Pa]    q_parallel neutral_flux  Source_n    Source_v    Source_Q  source_neut'
+   write( 10, '(A156)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n         P [Pa]       q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut'
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
    &                                   Gamma_n(i), pressure(i), q_parallel(i), neutral_flux(i), &
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )

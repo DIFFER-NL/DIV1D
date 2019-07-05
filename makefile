@@ -5,8 +5,8 @@ FC = ifort         # for INTEL fortran compiler
 
 # compiler options
 FOPT_DVODE =  -module obj -g -O3 # for intel fortran compiler
-# FOPT =  -module obj -g -O3 # for intel fortran compiler
-FOPT =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
+FOPT =  -module obj -g -O3 # for intel fortran compiler
+# FOPT =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
 # FOPT = -p -module obj -g -O3 # for intel fortran compiler and profiling with gprof
 
 OBJECTS = obj/constants.o \
