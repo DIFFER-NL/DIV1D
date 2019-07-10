@@ -185,11 +185,11 @@ contains
          ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
          log_T = log10(temperature/1.0d+3)
          if( temperature .lt. 2.0d+1 ) then
-            carbon_radiation = ( 1.965300d3 +log_T*( 4.572039d3 +log_T*( 4.159590d3 +log_T*( 1.871560d3 +log_T*( 4.173889d2 +log_T* 3.699382d1 )))));
+            carbon_radiation = ( 1.965300d3 +log_T*( 4.572039d3 +log_T*( 4.159590d3 +log_T*( 1.871560d3 +log_T*( 4.173889d2 +log_T* 3.699382d1 )))))
          elseif( temperature .lt. 2.0d+2 ) then
-            carbon_radiation = ( 7.467599d1 +log_T*( 4.549038d2 +log_T*( 8.372937d2 +log_T*( 7.402515d2 +log_T*( 3.147607d2 +log_T* 5.164578d1 )))));
+            carbon_radiation = ( 7.467599d1 +log_T*( 4.549038d2 +log_T*( 8.372937d2 +log_T*( 7.402515d2 +log_T*( 3.147607d2 +log_T* 5.164578d1 )))))
          elseif( temperature .lt. 2.0d+3 ) then
-            carbon_radiation = (-2.120151d1 +log_T*(-3.668933d-1+log_T*( 7.295099d-1+log_T*(-1.944827d-1+log_T*(-1.263576d-1-log_T* 1.491027d-1)))));
+            carbon_radiation = (-2.120151d1 +log_T*(-3.668933d-1+log_T*( 7.295099d-1+log_T*(-1.944827d-1+log_T*(-1.263576d-1-log_T* 1.491027d-1)))))
          endif
          ! transform from erg and cm to eV and m
          carbon_radiation = (1.0d-13/e_charge)*1.0d+1**carbon_radiation

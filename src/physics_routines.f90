@@ -4,7 +4,7 @@ module physics_routines
    use grid_data, only : delta_x, delta_xcb
    use constants, only : e_charge
    use reaction_rates
-   use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature
+   use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, switch_impurity_radiation, viscosity
 
    implicit none
@@ -221,8 +221,8 @@ contains
          do ix = 2, Nx
             ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)
          enddo
-         ! apply boundary condition at the X-point, i=1: fixed density
-         ydot(1) = 0.0
+         ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate
+         ydot(1) = density_ramp_rate
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx)
       ! ydot for the momentum equation
          ydot(Nx+1:2*Nx) = switch_momentum_source * Source_v(1:Nx)
