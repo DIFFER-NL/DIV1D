@@ -44,7 +44,7 @@ program div1d
 
    ! write the inital solution to file
    ! calculate the fluxes
-   call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, pressure, q_parallel, neutral_flux )
+   call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
    ! calculate the sources
    call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
    open( UNIT=10, FILE='div1d_output.txt' )
@@ -77,7 +77,7 @@ program div1d
       if( mod( istep, nout ) .eq. 0 ) then
          ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
          ! calculate the fluxes
-         call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, pressure, q_parallel, neutral_flux )
+         call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
          ! calculate the sources
          call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
          call write_solution( end_time )
@@ -94,7 +94,7 @@ end program div1d
 subroutine write_solution( time )
 
    use grid_data, only : Nx, x
-   use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, pressure, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
+   use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none
    integer, parameter :: wp = KIND(1.0D0)
@@ -102,9 +102,9 @@ subroutine write_solution( time )
    real(wp), intent(in) :: time
    
    write( 10, * ) 'time = ', time
-   write( 10, '(A156)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n         P [Pa]       q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut'
+   write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]    q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut'
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
-   &                                   Gamma_n(i), pressure(i), q_parallel(i), neutral_flux(i), &
+   &                                   Gamma_n(i), Gamma_mom(i), q_parallel(i), neutral_flux(i), &
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return

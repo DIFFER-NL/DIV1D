@@ -145,7 +145,7 @@ contains
          else
             Y = 1.02d+1 / temperature 
          endif
-         excitation = 4.90d-13 / (0.28d+0+Y) *exp(-Y)*sqrt(Y*(1.0d+0+Y))
+         excitation = 4.90d-13 / (0.28d+0+Y) *exp(-Y)*sqrt(Y*(1.0d+0+Y)) + 13.6d+0 * ionization(density, temperature) ! added to be consistent with SD1D
       endif
       excitation = switch_excitation * excitation
       return
@@ -176,23 +176,27 @@ contains
 
    real(wp) function impurity_radiation( temperature )
    ! function to calculate the effective loss rate due to inpurity radiation rate coefficient [eV m^3/s]
-   ! fit function Post et al. 1977
       implicit none
       real(wp) :: temperature, log_T, carbon_radiation
       impurity_radiation = 0.0d+0
       ! case Carbon
       carbon_radiation = 0.0d+0
-      ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
-      log_T = log10(temperature/1.0d+3)
-      if( temperature .lt. 2.0d+1 ) then
-         carbon_radiation = ( 1.965300d3 +log_T*( 4.572039d3 +log_T*( 4.159590d3 +log_T*( 1.871560d3 +log_T*( 4.173889d2 +log_T* 3.699382d1 )))));
-      elseif( temperature .lt. 2.0d+2 ) then
-         carbon_radiation = ( 7.467599d1 +log_T*( 4.549038d2 +log_T*( 8.372937d2 +log_T*( 7.402515d2 +log_T*( 3.147607d2 +log_T* 5.164578d1 )))));
-      elseif( temperature .lt. 2.0d+3 ) then
-         carbon_radiation = (-2.120151d1 +log_T*(-3.668933d-1+log_T*( 7.295099d-1+log_T*(-1.944827d-1+log_T*(-1.263576d-1-log_T* 1.491027d-1)))));
+      if( case_AMJUEL ) then
+         ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
+         log_T = log10(temperature/1.0d+3)
+         if( temperature .lt. 2.0d+1 ) then
+            carbon_radiation = ( 1.965300d3 +log_T*( 4.572039d3 +log_T*( 4.159590d3 +log_T*( 1.871560d3 +log_T*( 4.173889d2 +log_T* 3.699382d1 )))));
+         elseif( temperature .lt. 2.0d+2 ) then
+            carbon_radiation = ( 7.467599d1 +log_T*( 4.549038d2 +log_T*( 8.372937d2 +log_T*( 7.402515d2 +log_T*( 3.147607d2 +log_T* 5.164578d1 )))));
+         elseif( temperature .lt. 2.0d+3 ) then
+            carbon_radiation = (-2.120151d1 +log_T*(-3.668933d-1+log_T*( 7.295099d-1+log_T*(-1.944827d-1+log_T*(-1.263576d-1-log_T* 1.491027d-1)))));
+         endif
+         ! transform from erg and cm to eV and m
+         carbon_radiation = (1.0d-13/e_charge)*1.0d+1**carbon_radiation
+      else
+         ! use the fit function from SD1D
+         carbon_radiation = 2.0d-31/e_charge * (temperature/1.0d+1)**3 / (1.0d+0 + (temperature/1.0d+1)**4.5d+0)
       endif
-      ! transform from erg and cm to eV and m
-      carbon_radiation = (1.0d-13/e_charge)*1.0d+1**carbon_radiation
       impurity_radiation = carbon_radiation*carbon_concentration
       return
    end function impurity_radiation

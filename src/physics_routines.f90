@@ -168,7 +168,7 @@ contains
       ! the momentum sources
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
       ! the energy sources (only internal energy)
-      Source_Q = - (1.5d+0 * e_charge * temperature) * (rate_cx + rate_rec)
+      Source_Q = - (1.5d+0 * e_charge * temperature) * (rate_cx + 2.0d+0*rate_rec) ! the factor 2 for the recombination rate accounts for the loss of both an ion and an electron
       if ( switch_excitation .eq. 0.0d+0 ) then
          Source_Q = Source_Q - rate_ion * e_charge * energy_loss_ion ! note energy loss per ionization is in eV
       else
@@ -304,7 +304,7 @@ contains
    ! the arguments are the values of the variable at i-1, i, i+1, respectively
       implicit none
       real(wp) :: fm, fc, fp
-      MC_limit = minmod( 2.0d+0*(fp-fc), 0.5d+0*(fp-fm), 2.0d+0*(fc-fm) )
+      MC_limit = minmod( (fp-fc), 0.5d+0*(fp-fm), (fc-fm) )
       return
    end function MC_limit
 

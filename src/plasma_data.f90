@@ -17,6 +17,7 @@ module plasma_data
    real( wp ), allocatable :: temperature(:)  ! vector holding the solution for the plasma temperature [eV]
    real( wp ), allocatable :: neutral(:)      ! vector holding the solution for the neutral density [/m^3]
    real( wp ), allocatable :: Gamma_n(:)      ! vector holding the solution for the plasma particle flux [/m^2s]
+   real( wp ), allocatable :: Gamma_mom(:)    ! vector holding the solution for the plasma momentum flux [Pa]
    real( wp ), allocatable :: pressure(:)     ! vector holding the solution for the plasma pressure [Pa]
    real( wp ), allocatable :: q_parallel(:)   ! vector holding the solution for the plasma heat flux [W/m^2]
    real( wp ), allocatable :: neutral_flux(:) ! vector holding the solution for the plasma particle flux [/m^2s]
@@ -37,7 +38,7 @@ contains
       implicit none
       ! first allocate all arrays
       allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
-      allocate( Gamma_n(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
+      allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
       temperature = initial_T
       density     = initial_n
       velocity    = initial_v
