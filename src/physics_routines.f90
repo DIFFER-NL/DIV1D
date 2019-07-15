@@ -5,7 +5,8 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate
-   use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, switch_impurity_radiation, viscosity
+   use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
+                                   switch_convective_heat, switch_impurity_radiation, viscosity
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -58,7 +59,7 @@ contains
 
    subroutine advection(Nx, variable, velocity, temperature, flux)
    ! this subroutine calculates the advected flux of a variable with a given velocity field
-   ! the temperature is needed to calculate the sound velcoty
+   ! the temperature is needed to calculate the sound velocity
    ! the variable and velcoty field are given on the (equidistant) grid centers
    ! the flux is returned at the grid boundaries i + 1/2
       implicit none
@@ -115,21 +116,22 @@ contains
          call advection(Nx, density, velocity, temperature, Gamma_n)
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
-         Gamma_n(Nx) = density(Nx) * max(velocity(Nx),csound)
+         Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
-         Gamma_mom(Nx) = density(Nx) * mass * max(velocity(Nx),csound)**2
-      ! convective heat flux = 5 density k temperature velocity (i.e. 5 pressure)
+         Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound)**2
+         ! Gamma_mom(Nx) = density(Nx) * mass * velocity(Nx)**2
+      ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
       ! add the conductive heat flux in the internal region
          do i = 1, Nx-1
-            q_parallel(i) = q_parallel(i) * 1.0d+0 - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
+            q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound * (density(Nx)/1.0d+0) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
+         q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
          do i = 1, Nx-1
@@ -241,8 +243,9 @@ contains
             ydot(Nx+ix) = ydot(Nx+ix) + viscosity*(velocity(ix+1) + velocity(ix-1)-2.0d0*velocity(ix))
          enddo
          ! apply boundary condition at the sheath entrance, i=Nx: 
-         ! for now, assume zero temperture/density gradient across the sheath, so only numerical viscosity remains
-         ydot(2*Nx) = ydot(2*Nx) + viscosity*(csound + velocity(Nx-1)-2.0d0*velocity(Nx))
+         ! assume zero temperture and extrapolate density and pressure to the sheath, add numerical viscosity (linearly extrapolate velocity beyond the sheath)
+         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))/1.5d+0/delta_x(Nx)
+         ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound + velocity(Nx-1)-3.0d0*velocity(Nx))
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx)
       ! ydot for the energy equation
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
