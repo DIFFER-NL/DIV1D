@@ -17,7 +17,7 @@ program div1d
    real(wp) :: start_time, end_time
    integer :: input_error, input_error_numerics, input_error_physics
    integer :: restart_error, time_step_error
-   integer :: istep
+   integer :: istep, ix
    ! external right_hand_side
    
    ! the following is needed for dvode_f90
@@ -71,6 +71,11 @@ program div1d
       endif
       ! make sure that the solution respects the minimum density and temperature
       call y2nvt( Nx, y, density, velocity, temperature, neutral )
+      do ix = 1, Nx
+         if( temperature(ix) .lt. minimum_temperature) temperature(ix) = minimum_temperature
+         if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
+         if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
+      enddo
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
       if( istate .ne. 2 .and. method .gt. 0 ) call error_report(input_error, restart_error, time_step_error)

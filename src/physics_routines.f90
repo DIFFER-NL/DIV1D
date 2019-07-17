@@ -117,12 +117,13 @@ contains
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
          Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
+         if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
          Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound)**2
-         ! Gamma_mom(Nx) = density(Nx) * mass * velocity(Nx)**2
+         if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
       ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
@@ -131,7 +132,8 @@ contains
             q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * Temperature(Nx) ! we have equated the density in the sheath to 0.5 * density (Nx) because of the pressure balance, i.e. density_target = 0.5 * density(Nx)
+         q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * Temperature(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
+         if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
          do i = 1, Nx-1
@@ -255,6 +257,14 @@ contains
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))/1.5d+0/delta_x(1:Nx-1)
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX
          ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-q_parX)/delta_xcb(1)
+         ! limit ydot(2*Nx+1:3*Nx) to prevent temperature below minimum_temperature (assuming a time step of 1.0d-6)
+         ! do ix = 1, Nx
+         !    ! ydot(2*Nx+ix) = max(ydot(2*Nx+ix), (3.0d+0*density(ix)*e_charge*minimum_temperature - y(2*Nx+ix))/1.0d-9)
+         !    if( 3.0d+0*density(ix)*e_charge*minimum_temperature .gt. y(2*Nx+ix) ) then
+         !       ydot(2*Nx+ix) = max(ydot(2*Nx+ix), (3.0d+0*density(ix)*e_charge*minimum_temperature - y(2*Nx+ix))/1.0d-4)
+         !       write(*,*) 'temperature limited', ix, time, y(2*Nx+ix)/density(ix)/e_charge/3.0d+0
+         !    endif
+         ! enddo
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx)
       ! ydot for the neutral density equation
          ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx)
