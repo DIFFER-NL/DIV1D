@@ -8,6 +8,8 @@ module numerics_parameters
    integer     :: ntime   = 1000     ! number of time steps
    integer     :: nout    = 100      ! output is written to file every nout time steps
    integer     :: method  = 0        ! selection of integrator ( 0 = rk4,  >0 = dvode with method_flag = method)
+   integer     :: max_step= 100000   ! maximum number of internal steps in dvode
+   integer     :: nzswag  = 200000   ! estimated number of nonzero elements in Jacobian (dvode)
    integer     :: evolve_density  = 1   ! evaluate density evolution 1 = yes, 0 = no (multiplier of ydot(1:Nx))
    integer     :: evolve_momentum = 1   ! evaluate momentum evolution 1 = yes, 0 = no (multiplier of ydot(1*Nx+1:2*Nx))
    integer     :: evolve_energy   = 1   ! evaluate energy evolution 1 = yes, 0 = no (multiplier of ydot(2*Nx+1:3*Nx))
@@ -37,7 +39,8 @@ contains
       namelist /div1d_numerics/ Nx, dxmin, ntime, nout, delta_t, abstol, reltol, method, evolve_density, evolve_momentum, evolve_energy, evolve_neutral, &
       &                         switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
       &                         switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_impurity_radiation, &
-      &                         switch_convective_heat, viscosity, restart
+      &                         switch_convective_heat, viscosity, restart, &
+      &                         max_step, nzswag
       error = 0
       read(*, div1d_numerics, IOSTAT = error)
       write(*,*) 'numerics read error =', error

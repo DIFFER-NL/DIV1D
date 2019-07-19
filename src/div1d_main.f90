@@ -17,12 +17,13 @@ program div1d
    real(wp) :: start_time, end_time
    integer :: input_error, input_error_numerics, input_error_physics
    integer :: restart_error, time_step_error
-   integer :: istep, ix
+   integer :: istep, ix!, itol, iopt, ml, mu, lrw, liw
    ! external right_hand_side
    
    ! the following is needed for dvode_f90
    integer :: itask, istate
-   real(wp), allocatable :: abstol_vector(:)
+   ! integer,  allocatable :: iwork(:)
+   real(wp), allocatable :: abstol_vector(:)!, rwork(:)
    type (VODE_OPTS) :: options
 
    ! read non-default input parameters
@@ -48,24 +49,55 @@ program div1d
    ! calculate the sources
    call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
    open( UNIT=10, FILE='div1d_output.txt' )
+   call write_header
    call write_solution( start_time )
 
-   ! setting the options for dvode_f90
+   ! setting the absolute error tolerance for dvode_f90 or dlsode
    allocate( abstol_vector(4*Nx) )
    abstol_vector(1:Nx) = initial_n * abstol
    abstol_vector(Nx+1:2*Nx) = 1.0
    abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
    abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
-   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=100000, NZSWAG=20000, MA28_ELBOW_ROOM=10)
+
+   ! setting the options fo dvode_f90
+   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=10)
+
+!   if( method .lt. 0 ) then
+!      ! allocate arrays needed by dlsode
+!      ! RWORK :WORK   Real work array of length at least:
+!      !        20 + 16*NEQ                    for MF = 10,
+!      !        22 +  9*NEQ + NEQ**2           for MF = 21 or 22,
+!      !        22 + 10*NEQ + (2*ML + MU)*NEQ  for MF = 24 or 25.
+!      ! LRW   :IN     Declared length of RWORK (in user's DIMENSION statement).
+!      ! IWORK :WORK   Integer work array of length at least:
+!      !        20        for MF = 10,
+!      !        20 + NEQ  for MF = 21, 22, 24, or 25.
+!      ! If MF = 24 or 25, input in IWORK(1),IWORK(2) the lower and upper Jacobian half-bandwidths ML,MU.
+!      ! LIW   :IN     Declared length of IWORK (in user's DIMENSION statement).
+!      ml = 2
+!      mu = 2
+!      lrw = 22 + (10+2*ml+mu)*4*Nx
+!      liw = 20 + 4*Nx
+!      allocate( rwork(lrw), iwork(liw) )
+!      iwork(1) = ml
+!      iwork(2) = mu
+!   endif
 
    istate = 1
    do istep=1, ntime
       end_time = start_time+delta_t
-      ! we use dvode_f90 for the integration
-      ! CALL DVODE_F90(F,NEQ,Y,T,TOUT,ITASK,ISTATE,OPTIONS,J_FCN=JAC,G_FCN=GEX)
-      itask = 1 ! for normal computation in dvode_f90 till end_time
       if( method .gt. 0 ) then
+         ! we use dvode_f90 for the integration
+         ! CALL DVODE_F90(F,NEQ,Y,T,TOUT,ITASK,ISTATE,OPTIONS,J_FCN=JAC,G_FCN=GEX)
+         itask = 1 ! for normal computation in dvode_f90 till end_time
          call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
+!      elseif( method .lt. 0 ) then
+!         ! we use dlsode.f for the integration
+!         itask = 1 ! for normal computation in dvode_f90 till end_time
+!         itol = 2 ! the absolute error tolerance is specified in an array
+!         iopt = 1 ! optional inputs (upper and lower half bandwidths of the Jacobian)
+!         ! CALL DLSODE(F,               NEQ, Y,          T,     TOUT, ITOL,   RTOL,          ATOL, ITASK, ISTATE, IOPT, RWORK, LRW, IWORK, LIW, JAC, MF)
+!         call dlsode( right_hand_side, 4*Nx, y, start_time, end_time, itol, reltol, abstol_vector, itask, istate, iopt, rwork, lrw, iwork, liw, jac, abs(method) )
       else
          call rk4( right_hand_side, 4*Nx, y, start_time, end_time )
       endif
@@ -96,9 +128,33 @@ program div1d
 end program div1d
 
 
+subroutine write_header
+
+   use numerics_parameters
+   use physics_parameters
+
+   implicit none
+   integer, parameter :: wp = KIND(1.0D0)
+
+   ! note these lists should still be completed
+   write( 10, * ) 'numerics parameters:'
+   write( 10, * ) '   Nx         = ', Nx
+   write( 10, * ) '   ntime      = ', ntime
+   write( 10, * ) '   nout       = ', nout
+   write( 10, * ) '   dxmin      = ', dxmin
+   write( 10, * ) 'physics parameters:'
+   write( 10, * ) '   L          = ', L
+   write( 10, * ) '   q_parX     = ', q_parX
+   write( 10, * ) '   initial_n  = ', initial_n
+
+   return
+end subroutine write_header
+
+
 subroutine write_solution( time )
 
-   use grid_data, only : Nx, x
+   use numerics_parameters, only : Nx
+   use grid_data, only : x
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none

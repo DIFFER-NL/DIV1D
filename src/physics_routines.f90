@@ -333,5 +333,11 @@ contains
       return
    end function minmod
 
+   SUBROUTINE JAC (NEQ, T, Y, ML, MU, PD, NROWPD)
+      !dummy subroutine for calculation of Jacobian (dlsode option 21 or 24)
+      INTEGER  NEQ, ML, MU, NROWPD
+      DOUBLE PRECISION  T, Y(*), PD(NROWPD,*)
+      RETURN
+   END SUBROUTINE JAC
    
 end module physics_routines

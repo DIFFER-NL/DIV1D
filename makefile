@@ -2,12 +2,15 @@
 
 # Fortran compiler used
 FC = ifort         # for INTEL fortran compiler
+# FC = gfortran      # for GNU   fortran compiler
 
 # compiler options
-# FOPT_DVODE =  -module obj -g -O3 # for intel fortran compiler
-FOPT_DVODE =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
-# FOPT =  -module obj -g -O3 # for intel fortran compiler
-FOPT =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
+FOPT_DVODE =  -module obj -g -O3 # for intel fortran compiler
+# FOPT_DVODE =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
+# FOPT_DVODE =  -Jobj -ffree-line-length-none -g -fbacktrace # for GNU fortran compiler with all checks and debugging info
+FOPT =  -module obj -g -O3 # for intel fortran compiler
+# FOPT =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
+# FOPT =  -Jobj -ffree-line-length-none -g -fbacktrace # for GNU fortran compiler with all checks and debugging info
 # FOPT = -p -module obj -g -O3 # for intel fortran compiler and profiling with gprof
 
 OBJECTS = obj/constants.o \
@@ -19,6 +22,9 @@ OBJECTS = obj/constants.o \
           obj/reaction_rates.o \
           obj/interpolation.o \
           obj/dvode_f90_m.o \
+          obj/dlsode.o \
+          obj/opkda1.o \
+          obj/opkda2.o \
           obj/rk4.o
 
 
@@ -70,6 +76,20 @@ obj/interpolation.o : src/interpolation.f90
 
 obj/dvode_f90_m.o : src/dvode_f90_m.f90
 	$(FC) src/dvode_f90_m.f90 $(FOPT_DVODE) -c -o obj/dvode_f90_m.o
+
+
+obj/dlsode.o : src/dlsode.f\
+                   obj/opkda1.o \
+                   obj/opkda2.o
+	$(FC) src/dlsode.f $(FOPT) -c -o obj/dlsode.o
+
+
+obj/opkda1.o : src/opkda1.f
+	$(FC) src/opkda1.f $(FOPT) -c -o obj/opkda1.o
+
+
+obj/opkda2.o : src/opkda2.f
+	$(FC) src/opkda2.f $(FOPT) -c -o obj/opkda2.o
 
 
 obj/rk4.o : src/rk4.f90
