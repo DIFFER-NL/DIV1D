@@ -53,11 +53,13 @@ program div1d
    call write_solution( start_time )
 
    ! setting the absolute error tolerance for dvode_f90 or dlsode
+   ! note that the solution vector y is normalized so the absolute error tolarance in all elements of y can be made equal
    allocate( abstol_vector(4*Nx) )
-   abstol_vector(1:Nx) = initial_n * abstol
-   abstol_vector(Nx+1:2*Nx) = 1.0
-   abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
-   abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
+   abstol_vector(1:4*Nx) = abstol
+   ! abstol_vector(1:Nx) = initial_n * abstol
+   ! abstol_vector(Nx+1:2*Nx) = 1.0
+   ! abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
+   ! abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
 
    ! setting the options fo dvode_f90
    if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=10)

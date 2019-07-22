@@ -6,7 +6,7 @@ module physics_routines
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
-                                   switch_convective_heat, switch_impurity_radiation, viscosity
+                                   switch_convective_heat, switch_impurity_radiation, viscosity, density_norm, momentum_norm, energy_norm
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -24,35 +24,36 @@ contains
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: y(4*Nx)
       ! density
-      y(     1:   Nx) = density(1:Nx)
+      y(     1:   Nx) = density(1:Nx) / density_norm
       ! momentum
-      y(  Nx+1: 2*Nx) = mass * density(1:Nx) * velocity(1:Nx)
+      y(  Nx+1: 2*Nx) = mass * density(1:Nx) * velocity(1:Nx) / momentum_norm
       ! energy
-      y(2*Nx+1: 3*Nx) = 3.0d+0 * density(1:Nx) * e_charge * temperature(1:Nx)
+      y(2*Nx+1: 3*Nx) = 3.0d+0 * density(1:Nx) * e_charge * temperature(1:Nx) / energy_norm
       ! neutral density
-      y(3*Nx+1: 4*Nx) = neutral(1:Nx)
+      y(3*Nx+1: 4*Nx) = neutral(1:Nx) / density_norm
       return
    end subroutine nvt2y
 
 
    subroutine y2nvt( Nx, y, density, velocity, temperature, neutral )
    ! subroutine to transform from the solution vector y containing (density, momentum, energy) to (density, velocity, temperature)
-   !    y(      1, ...,   Nx )     = density( 1, ..., Nx )
-   !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx )
-   !    y( 2*Nx+1, ..., 3*Nx )     = internal energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx )
+   ! note that the solution vector y is normalized
+   !    y(      1, ...,   Nx )     = density( 1, ..., Nx ) / density_norm
+   !    y(   Nx+1, ..., 2*Nx )     = Momentum / momentum_norm = mass * density/density_norm * velocity/velocity_norm ( 1, ..., Nx ) 
+   !    y( 2*Nx+1, ..., 3*Nx )     = internal energy / energy_norm = 3 * density/density_norm * e_charge * temperature/temperature_norm ( 1, ..., Nx )
    !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
       implicit none
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: y(4*Nx)
       real(wp), intent(out) :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       ! density
-      density(1:Nx)     =  y(1:Nx)
+      density(1:Nx)     =  y(1:Nx) * density_norm
       ! velocity
-      velocity(1:Nx)    =  y(  Nx+1: 2*Nx) / mass / density(1:Nx)
+      velocity(1:Nx)    =  y(  Nx+1: 2*Nx) * momentum_norm / mass / density(1:Nx)
       ! temperature
-      temperature(1:Nx) =  y(2*Nx+1: 3*Nx) / 3.0d+0 / density(1:Nx) / e_charge
+      temperature(1:Nx) =  y(2*Nx+1: 3*Nx) * energy_norm / 3.0d+0 / density(1:Nx) / e_charge
       ! neutral density
-      neutral(1:Nx)     =  y(3*Nx+1: 4*Nx)
+      neutral(1:Nx)     =  y(3*Nx+1: 4*Nx) * density_norm
       return
    end subroutine y2nvt
 
@@ -186,6 +187,7 @@ contains
 
    subroutine right_hand_side( neq, time, y, ydot )
    ! this subroutine calculates the right hand side ydot of the discretized conservation equations
+   ! note that y and ydor are normalized, but the arrays density, velocity, temperature, and neutral are not!
       implicit none
       integer,  intent(in)  :: neq
       real(wp), intent(in)  :: time, y(neq) !time is not used
@@ -238,15 +240,15 @@ contains
          ! ! apply boundary condition at the X-point, as following from the constant density v(1) = n(2) v(2) / n(1)
          ! ydot(Nx+1) = ydot(Nx+1) - ???
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
-         ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))/1.5d+0/delta_x(1)
+         ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
-            ydot(Nx+ix) = ydot(Nx+ix) - (y(2*Nx+ix+1)-y(2*Nx+ix))/1.5d+0/delta_x(ix)
+            ydot(Nx+ix) = ydot(Nx+ix) - (y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix)
             ! add effect of numerical viscosity
             ydot(Nx+ix) = ydot(Nx+ix) + viscosity*(velocity(ix+1) + velocity(ix-1)-2.0d0*velocity(ix))
          enddo
          ! apply boundary condition at the sheath entrance, i=Nx: 
          ! assume zero temperture and extrapolate density and pressure to the sheath, add numerical viscosity (linearly extrapolate velocity beyond the sheath)
-         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))/1.5d+0/delta_x(Nx)
+         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx)
          ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound + velocity(Nx-1)-3.0d0*velocity(Nx))
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx)
       ! ydot for the energy equation
@@ -254,7 +256,7 @@ contains
          ! add the heat flux term in the internal region (including the sheath)
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)
          ! add the compression term
-         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))/1.5d+0/delta_x(1:Nx-1)
+         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))*energy_norm/1.5d+0/delta_x(1:Nx-1)
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX
          ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-q_parX)/delta_xcb(1)
          ! limit ydot(2*Nx+1:3*Nx) to prevent temperature below minimum_temperature (assuming a time step of 1.0d-6)
@@ -286,10 +288,10 @@ contains
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)
       ! apply evolution switches
-      ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx)
-      ydot(  Nx+1:2*Nx) = evolve_momentum * ydot(  Nx+1:2*Nx)
-      ydot(2*Nx+1:3*Nx) = evolve_energy   * ydot(2*Nx+1:3*Nx)
-      ydot(3*Nx+1:4*Nx) = evolve_neutral  * ydot(3*Nx+1:4*Nx)
+      ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx) / density_norm
+      ydot(  Nx+1:2*Nx) = evolve_momentum * ydot(  Nx+1:2*Nx) / momentum_norm
+      ydot(2*Nx+1:3*Nx) = evolve_energy   * ydot(2*Nx+1:3*Nx) / energy_norm
+      ydot(3*Nx+1:4*Nx) = evolve_neutral  * ydot(3*Nx+1:4*Nx) / density_norm
       return
    end subroutine right_hand_side
 

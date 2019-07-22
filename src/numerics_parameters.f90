@@ -14,6 +14,11 @@ module numerics_parameters
    integer     :: evolve_momentum = 1   ! evaluate momentum evolution 1 = yes, 0 = no (multiplier of ydot(1*Nx+1:2*Nx))
    integer     :: evolve_energy   = 1   ! evaluate energy evolution 1 = yes, 0 = no (multiplier of ydot(2*Nx+1:3*Nx))
    integer     :: evolve_neutral  = 1   ! evaluate neutral density evolution 1 = yes, 0 = no (multiplier of ydot(3*Nx+1:4*Nx))
+   real( wp )  :: density_norm            = 0.0d+0   ! normalization of demsities    (when = 0 initial_n is used) only used in normalization of solution vector y
+   real( wp )  :: temperature_norm        = 0.0d+0   ! normalization of temperatures (when = 0 1 eV is used) only used to normalize solution vector y
+   real( wp )  :: velocity_norm           = 0.0d+0   ! normalization of velocities   (when = 0 sound speed at 1 eV is used) only used in to normalize solution vector y
+   real( wp )  :: momentum_norm           = 0.0d+0   ! normalization of momentum (2nd part of y) = mass density_norm velocity_norm
+   real( wp )  :: energy_norm             = 0.0d+0   ! normalization of energies (3rd part of y) = density_norm e_charge temperature_norm
    real( wp )  :: switch_density_source   = 1.0d+0   ! multiplier of plasma particle source term
    real( wp )  :: switch_momentum_source  = 1.0d+0   ! multiplier of momentum source term
    real( wp )  :: switch_energy_source    = 1.0d+0   ! multiplier of energy particle source term
@@ -37,6 +42,7 @@ contains
       implicit none
       integer :: error
       namelist /div1d_numerics/ Nx, dxmin, ntime, nout, delta_t, abstol, reltol, method, evolve_density, evolve_momentum, evolve_energy, evolve_neutral, &
+      &                         density_norm, temperature_norm, velocity_norm, &
       &                         switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
       &                         switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_impurity_radiation, &
       &                         switch_convective_heat, viscosity, restart, &

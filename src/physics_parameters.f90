@@ -1,5 +1,9 @@
 module physics_parameters
 ! module defining the physics parameters and their default values
+! when the div1d_physics namelist is read the normalizations are defined
+
+   use numerics_parameters, only : density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm
+   use constants, only : e_charge
 
    implicit none
 
@@ -35,6 +39,14 @@ contains
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
+      
+      ! correct the desired normalizations
+      if( density_norm .eq. 0.0d+0 ) density_norm = initial_n
+      if( temperature_norm .eq. 0.0d+0 ) temperature_norm = 1.0e+0
+      if( velocity_norm .eq. 0.0d+0 ) velocity_norm = sqrt( 2.0d+0 * temperature_norm / mass )
+      momentum_norm = mass * density_norm * velocity_norm
+      energy_norm = density_norm * e_charge * temperature_norm
+      
       return
    end subroutine read_physics_parameters
    
