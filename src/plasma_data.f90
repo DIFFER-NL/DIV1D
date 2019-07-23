@@ -3,7 +3,7 @@ module plasma_data
 
    use numerics_parameters, only : Nx
    use grid_data, only           : x
-   use physics_parameters, only  : L, initial_n, initial_v, initial_T, initial_a, mass, Gamma_X
+   use physics_parameters, only  : L, initial_n, initial_v, initial_T, initial_a, mass, q_parX, Gamma_X, gamma
    use physics_routines
    use interpolation
 
@@ -53,6 +53,49 @@ contains
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       return
    end subroutine initial_values
+
+   subroutine init_simple_sol
+   ! subroutine to initialize the plasma data according to the simple sol model
+      implicit none
+      real(wp) :: density_X, temperature_X, temperature_target, temperature_target_new, kappa_0, diff
+      ! first allocate all arrays
+      allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
+      allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
+!     set the velocity and neutral density arrays as defined in input
+      velocity    = initial_v
+      neutral     = initial_a
+!     define kappa_0
+      kappa_0     = 2.0d+3
+!     set the X-point density as given on input
+      density_X = initial_n
+!     solve 2PM by iteration starting from temperature_target = 0
+      diff = 1.0d+0
+      temperature_target = 0.0d+0
+      write(*,*) q_parX, L, kappa_0
+      do while ( diff .gt. 0.01d+0 )
+         temperature_X = (temperature_target**(7.d+0/2.d+0) + 7.0d+0 * q_parX * L / 2.0d+0 / kappa_0)**(2.d+0/7.d+0)
+         temperature_target_new = (mass / e_charge) * 2.0d+0 * q_parX**2 / temperature_X**2 / (gamma * e_charge * density_X)**2
+         diff = abs(temperature_target_new - temperature_target)
+         write(*,*) temperature_target, temperature_target_new, temperature_X
+         temperature_target = 0.1d+0*temperature_target_new+0.9d+0*temperature_target
+      end do
+      write(*,*) 'Initialization from simple 2 Point Model'
+      write(*,*) 'inputs:'
+      write(*,*) '        upstream density n_X =', density_X, 'm^-3, upstream heat flux q_parallel,X =', q_parX, 'W/m^2, length of divertor leg L =', L, 'm'
+      write(*,*) 'results:'
+      write(*,*) '        Xpoint temperature 2PM T_X =', temperature_X, 'eV'
+      write(*,*) '        target temperature 2PM T_L =', temperature_target, 'eV'
+
+!     now set the temperature solution
+      temperature = (temperature_target**(7/2) + 7.0 * q_parX * (L-x) / 2.0d+0 / kappa_0)**(2/7)
+!     set the density solution according to constant pressure (acceleration to sound speed must occur in sheath)
+      density = initial_n * temperature_X / temperature
+      pressure    = 2.0d+0 * density * temperature
+      ! transform (density, velocity, temperature) to (density, momentum, pressure) in solution vector y
+      call nvt2y( Nx, density, velocity, temperature, neutral, y )
+      return
+   end subroutine init_simple_sol
+
    
    subroutine read_restart_file( restart_error )
    ! subroutine to read a restart file in order to coninue a run

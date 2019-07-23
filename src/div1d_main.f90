@@ -17,13 +17,13 @@ program div1d
    real(wp) :: start_time, end_time
    integer :: input_error, input_error_numerics, input_error_physics
    integer :: restart_error, time_step_error
-   integer :: istep, ix!, itol, iopt, ml, mu, lrw, liw
+   integer :: istep, ix, itol, iopt, ml, mu, lrw, liw
    ! external right_hand_side
    
    ! the following is needed for dvode_f90
    integer :: itask, istate
-   ! integer,  allocatable :: iwork(:)
-   real(wp), allocatable :: abstol_vector(:)!, rwork(:)
+   integer,  allocatable :: iwork(:)
+   real(wp), allocatable :: abstol_vector(:), rwork(:)
    type (VODE_OPTS) :: options
 
    ! read non-default input parameters
@@ -36,7 +36,11 @@ program div1d
    call initialize_grid
 
    ! set the initial value of the solution vector
-   call initial_values
+   if( simple_sol ) then 
+      call init_simple_sol
+   else
+      call initial_values
+   endif
 
    start_time = 0.0
    restart_error = 0
@@ -64,26 +68,27 @@ program div1d
    ! setting the options fo dvode_f90
    if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=10)
 
-!   if( method .lt. 0 ) then
-!      ! allocate arrays needed by dlsode
-!      ! RWORK :WORK   Real work array of length at least:
-!      !        20 + 16*NEQ                    for MF = 10,
-!      !        22 +  9*NEQ + NEQ**2           for MF = 21 or 22,
-!      !        22 + 10*NEQ + (2*ML + MU)*NEQ  for MF = 24 or 25.
-!      ! LRW   :IN     Declared length of RWORK (in user's DIMENSION statement).
-!      ! IWORK :WORK   Integer work array of length at least:
-!      !        20        for MF = 10,
-!      !        20 + NEQ  for MF = 21, 22, 24, or 25.
-!      ! If MF = 24 or 25, input in IWORK(1),IWORK(2) the lower and upper Jacobian half-bandwidths ML,MU.
-!      ! LIW   :IN     Declared length of IWORK (in user's DIMENSION statement).
-!      ml = 2
-!      mu = 2
-!      lrw = 22 + (10+2*ml+mu)*4*Nx
-!      liw = 20 + 4*Nx
-!      allocate( rwork(lrw), iwork(liw) )
-!      iwork(1) = ml
-!      iwork(2) = mu
-!   endif
+   if( method .lt. 0 ) then
+      ! allocate arrays needed by dlsode
+      ! RWORK :WORK   Real work array of length at least:
+      !        20 + 16*NEQ                    for MF = 10,
+      !        22 +  9*NEQ + NEQ**2           for MF = 21 or 22,
+      !        22 + 10*NEQ + (2*ML + MU)*NEQ  for MF = 24 or 25.
+      ! LRW   :IN     Declared length of RWORK (in user's DIMENSION statement).
+      ! IWORK :WORK   Integer work array of length at least:
+      !        20        for MF = 10,
+      !        20 + NEQ  for MF = 21, 22, 24, or 25.
+      ! If MF = 24 or 25, input in IWORK(1),IWORK(2) the lower and upper Jacobian half-bandwidths ML,MU.
+      ! LIW   :IN     Declared length of IWORK (in user's DIMENSION statement).
+      ml = 2
+      mu = 2
+      lrw = 22 + (20+2*ml+mu)*4*Nx
+      liw = 20 + 4*Nx
+      allocate( rwork(lrw), iwork(liw) )
+      iwork(1) = ml
+      iwork(2) = mu
+      iwork(6) = max_step ! maximum number of internal iterations
+   endif
 
    istate = 1
    do istep=1, ntime
@@ -93,13 +98,13 @@ program div1d
          ! CALL DVODE_F90(F,NEQ,Y,T,TOUT,ITASK,ISTATE,OPTIONS,J_FCN=JAC,G_FCN=GEX)
          itask = 1 ! for normal computation in dvode_f90 till end_time
          call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
-!      elseif( method .lt. 0 ) then
-!         ! we use dlsode.f for the integration
-!         itask = 1 ! for normal computation in dvode_f90 till end_time
-!         itol = 2 ! the absolute error tolerance is specified in an array
-!         iopt = 1 ! optional inputs (upper and lower half bandwidths of the Jacobian)
-!         ! CALL DLSODE(F,               NEQ, Y,          T,     TOUT, ITOL,   RTOL,          ATOL, ITASK, ISTATE, IOPT, RWORK, LRW, IWORK, LIW, JAC, MF)
-!         call dlsode( right_hand_side, 4*Nx, y, start_time, end_time, itol, reltol, abstol_vector, itask, istate, iopt, rwork, lrw, iwork, liw, jac, abs(method) )
+      elseif( method .lt. 0 ) then
+         ! we use dlsode.f for the integration
+         itask = 1 ! for normal computation in dvode_f90 till end_time
+         itol = 2 ! the absolute error tolerance is specified in an array
+         iopt = 1 ! optional inputs (upper and lower half bandwidths of the Jacobian)
+         ! CALL DLSODE(F,               NEQ, Y,          T,     TOUT, ITOL,   RTOL,          ATOL, ITASK, ISTATE, IOPT, RWORK, LRW, IWORK, LIW, JAC, MF)
+         call dlsode( right_hand_side, 4*Nx, y, start_time, end_time, itol, reltol, abstol_vector, itask, istate, iopt, rwork, lrw, iwork, liw, jac, abs(method) )
       else
          call rk4( right_hand_side, 4*Nx, y, start_time, end_time )
       endif
