@@ -87,7 +87,7 @@ contains
       write(*,*) '        target temperature 2PM T_L =', temperature_target, 'eV'
 
 !     now set the temperature solution
-      temperature = (temperature_target**(7/2) + 7.0 * q_parX * (L-x) / 2.0d+0 / kappa_0)**(2/7)
+      temperature = (temperature_target**(7.d+0/2.d+0) + 7.0d+0 * q_parX * (L-x) / 2.0d+0 / kappa_0)**(2.d+0/7.d+0)
 !     set the density solution according to constant pressure (acceleration to sound speed must occur in sheath)
       density = initial_n * temperature_X / temperature
       pressure    = 2.0d+0 * density * temperature
