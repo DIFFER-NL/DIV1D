@@ -134,9 +134,7 @@ contains
       call interpolate(x_restart, y_restart(  Nx_restart+1:2*Nx_restart), Nx_restart, x, y(  Nx+1:2*Nx), Nx)
       call interpolate(x_restart, y_restart(2*Nx_restart+1:3*Nx_restart), Nx_restart, x, y(2*Nx+1:3*Nx), Nx)
       call interpolate(x_restart, y_restart(3*Nx_restart+1:4*Nx_restart), Nx_restart, x, y(3*Nx+1:4*Nx), Nx)
-      ! reset the density at the X-point boundary to the value in the current input file
-      ! this can be changed from the original run
-      y(1) = initial_n
+      ! since the y vector is normalized all quantities are automatically rescaled in accordance with the value of initial_n / density_norm in the current input file
       ! set the secondary plasma variables
       call y2nvt( Nx, y, density, velocity, temperature, neutral )
       return

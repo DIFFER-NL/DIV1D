@@ -66,7 +66,7 @@ program div1d
    ! abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
 
    ! setting the options fo dvode_f90
-   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=10)
+   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=200)
 
    if( method .lt. 0 ) then
       ! allocate arrays needed by dlsode

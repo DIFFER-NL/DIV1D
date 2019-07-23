@@ -117,14 +117,16 @@ contains
          call advection(Nx, density, velocity, temperature, Gamma_n)
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
-         Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
-         if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
+         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
+         Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * csound
+         ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
-         Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound)**2
-         if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
+         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound)**2
+         Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * csound**2
+         ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
       ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
@@ -134,7 +136,7 @@ contains
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
          q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * Temperature(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
-         if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
+         ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
          do i = 1, Nx-1
