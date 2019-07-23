@@ -9654,7 +9654,11 @@
         IF (SIZE(IGP) /= NP1) THEN
            DEALLOCATE (IAN,STAT=IER)
            CALL CHECK_STAT(IER,680)
+           DEALLOCATE (IGP,STAT=IER) !EW!
+           CALL CHECK_STAT(IER,680)
            ALLOCATE (IAN(NP1),STAT=IER)
+           CALL CHECK_STAT(IER,690)
+           ALLOCATE (IGP(NP1),STAT=IER) !EW!
            CALL CHECK_STAT(IER,690)
         END IF
 
