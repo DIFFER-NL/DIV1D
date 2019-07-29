@@ -6,7 +6,7 @@ module physics_routines
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
-                                   switch_convective_heat, switch_impurity_radiation, viscosity, density_norm, momentum_norm, energy_norm
+                                   switch_convective_heat, switch_impurity_radiation, viscosity, density_norm, momentum_norm, energy_norm, filter_sources
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -183,6 +183,13 @@ contains
       endif
       Source_Q = Source_Q - switch_impurity_radiation * rate_imp * e_charge ! note impurity radiation loss rate is in eV m^3 / s
       ! write(*,*) rate_ion, Source_Q
+      ! remove spikes that cause problems during integration of the ODE
+      if( filter_sources ) then
+          call spike_filter( Nx, neutral_source )
+          call spike_filter( Nx, Source_n )
+          call spike_filter( Nx, Source_v )
+          call spike_filter( Nx, Source_Q )
+      endif
       return
    end subroutine calculate_sources
 
@@ -312,7 +319,7 @@ contains
       real(wp) :: temperature, density
       ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
       !                                               =     kT / m density <sigma v>_cx sin^2theta
-      D_neutral = e_charge * temperature / (mass * density * charge_exchange(temperature) * sintheta**2)
+      D_neutral = e_charge * max(temperature,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
       return
    end function D_neutral
 
@@ -336,6 +343,38 @@ contains
       endif
       return
    end function minmod
+   
+   subroutine spike_filter(N, array)
+   ! simple routine to remove spikes in data arrays
+      implicit none
+      integer, intent(in)     :: N
+      real(wp), intent(inout) :: array(N)
+      integer                 :: i
+      real(wp)                :: array_input(N)
+      array_input = array
+      do i = 2, N-1
+         array(i) = midvalue( array_input(i-1), array_input(i), array_input(i+1) )
+      enddo
+      array(1) = midvalue( array_input(1), array_input(2), array_input(3) )
+      array(N) = midvalue( array_input(N), array_input(N-1), array_input(N-2) )
+      return
+   end subroutine spike_filter
+   
+   
+   real(wp) function midvalue( a, b, c )
+   ! function returning the median value
+      implicit none
+      real(wp) :: a, b, c
+      if( (a-b)*(b-c) .ge. 0 ) then
+         midvalue = b
+      elseif( abs(a-b) .le. abs(b-c) ) then
+         midvalue = a
+      else
+         midvalue = c
+      endif
+      return
+   end function midvalue
+   
 
    SUBROUTINE JAC (NEQ, T, Y, ML, MU, PD, NROWPD)
       !dummy subroutine for calculation of Jacobian (dlsode option 21 or 24)

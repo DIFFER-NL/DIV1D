@@ -2,7 +2,7 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
-   use physics_parameters,  only : case_AMJUEL, carbon_concentration
+   use physics_parameters,  only : case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density
    use constants,           only : e_charge
 
    implicit none
@@ -60,7 +60,7 @@ contains
       real(wp) :: ln_T, xj
       if( case_AMJUEL ) then
          ! source AMJUEL page 38 2.2 reaction 0.1T
-         ln_T = log(temperature)
+         ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xj = 1.0d+0
          charge_exchange = 0.0d+0
          do j = 1, 9
@@ -90,7 +90,7 @@ contains
       if( case_AMJUEL ) then
          ! the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
-         ln_T = log(temperature)
+         ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
          do m = 1, 9
             xn = 1.0d+0
@@ -128,7 +128,7 @@ contains
       if( case_AMJUEL ) then
          ! the total hydrogen effective cooling rate by ionization and radiation according to AMJUEL 10.2 reaction 2.1.5  [eV m^3 / s]
          ln_n = log(density*1.0d-14)
-         ln_T = log(temperature)
+         ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
          do m = 1, 9
             xn = 1.0d+0
@@ -161,7 +161,8 @@ contains
       real(wp) :: ln_n, ln_T, xm, xn
       recombination = 0.0d+0
       ln_n = log(density*1.0d-14)
-      ln_T = log(temperature)
+      ln_T = log(max(temperature,minimum_temperature,0.1d+0))
+      if( .not. case_AMJUEL ) ln_T = log(max(temperature,1.0d+0))
       xm = 1.0d+0
       do m = 1, 9
          xn = 1.0d+0
@@ -183,7 +184,7 @@ contains
       carbon_radiation = 0.0d+0
       if( case_AMJUEL ) then
          ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
-         log_T = log10(temperature/1.0d+3)
+         log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)
          if( temperature .lt. 2.0d+1 ) then
             carbon_radiation = ( 1.965300d3 +log_T*( 4.572039d3 +log_T*( 4.159590d3 +log_T*( 1.871560d3 +log_T*( 4.173889d2 +log_T* 3.699382d1 )))))
          elseif( temperature .lt. 2.0d+2 ) then
@@ -195,7 +196,7 @@ contains
          carbon_radiation = (1.0d-13/e_charge)*1.0d+1**carbon_radiation
       else
          ! use the fit function from SD1D
-         carbon_radiation = 2.0d-31/e_charge * (temperature/1.0d+1)**3 / (1.0d+0 + (temperature/1.0d+1)**4.5d+0)
+         carbon_radiation = 2.0d-31/e_charge * (max(temperature,1.0d+0)/1.0d+1)**3 / (1.0d+0 + (max(temperature,1.0d+0)/1.0d+1)**4.5d+0)
       endif
       impurity_radiation = carbon_radiation*carbon_concentration
       return

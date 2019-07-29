@@ -112,8 +112,8 @@ program div1d
       call y2nvt( Nx, y, density, velocity, temperature, neutral )
       do ix = 1, Nx
          if( temperature(ix) .lt. minimum_temperature) temperature(ix) = minimum_temperature
-         if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
-         if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
+         ! if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
+         ! if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
       enddo
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
