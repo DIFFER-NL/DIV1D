@@ -23,6 +23,8 @@ program div1d
    ! the following is needed for dvode_f90
    integer :: itask, istate
    integer,  allocatable :: iwork(:)
+   integer,  allocatable :: bounded_components(:)
+   real(wp), allocatable :: lower_bounds(:), upper_bounds(:)
    real(wp), allocatable :: abstol_vector(:), rwork(:)
    type (VODE_OPTS) :: options
 
@@ -64,9 +66,26 @@ program div1d
    ! abstol_vector(Nx+1:2*Nx) = 1.0
    ! abstol_vector(2*Nx+1:3*Nx) = initial_T * abstol
    ! abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
+   
+   ! enforce nonnegative densities and energies by lower bounds in dvode_f90
+   allocate( bounded_components(3*Nx), lower_bounds(3*Nx), upper_bounds(3*Nx) )
+   ! plasma density
+   do ix = 1, Nx
+      bounded_components(ix) = ix
+   enddo
+   ! energy
+   bounded_components(  Nx+1:2*Nx) = bounded_components(1:Nx) + 2 * Nx
+   ! neutral density
+   bounded_components(2*Nx+1:3*Nx) = bounded_components(1:Nx) + 3 * Nx
+   ! set lower bounds to zero
+   lower_bounds = 0.0d+0
+   ! set artifically high upper bounds
+   upper_bounds = 1.0d+50
 
    ! setting the options fo dvode_f90
-   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=200)
+   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, &
+                                          CONSTRAINED=bounded_components, CLOWER=lower_bounds, CUPPER=upper_bounds,  &
+                                          METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=200)
 
    if( method .lt. 0 ) then
       ! allocate arrays needed by dlsode

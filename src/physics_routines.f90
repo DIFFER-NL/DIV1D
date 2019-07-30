@@ -118,14 +118,14 @@ contains
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
          ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
-         Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * csound
+         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound)
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
          ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound)**2
-         Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * csound**2
+         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound)**2
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
       ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
@@ -257,7 +257,7 @@ contains
          enddo
          ! apply boundary condition at the sheath entrance, i=Nx: 
          ! assume zero temperture and extrapolate density and pressure to the sheath, add numerical viscosity (linearly extrapolate velocity beyond the sheath)
-         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx)
+         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)
          ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound + velocity(Nx-1)-3.0d0*velocity(Nx))
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx)
       ! ydot for the energy equation
@@ -276,6 +276,11 @@ contains
          !       write(*,*) 'temperature limited', ix, time, y(2*Nx+ix)/density(ix)/e_charge/3.0d+0
          !    endif
          ! enddo
+         ! do ix = 1, Nx
+         !    if( temperature(ix) .le. minimum_temperature ) then
+         !       ydot(2*Nx+ix) = max(ydot(2*Nx+ix), 0.0d+0)
+         !    endif
+         ! enddo
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx)
       ! ydot for the neutral density equation
          ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx)
@@ -285,14 +290,14 @@ contains
             Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) )
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
-         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * ((neutral(3:Nx)-neutral(2:Nx-1))/delta_x(2:Nx-1)-(neutral(2:Nx-1)-neutral(1:Nx-2))/delta_x(1:Nx-2))/delta_xcb(2:Nx-1)
-         ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/(delta_x(2:Nx-1)+delta_x(1:Nx-2))**2
-         ! ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
+         ! ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * ((neutral(3:Nx)-neutral(2:Nx-1))/delta_x(2:Nx-1)-(neutral(2:Nx-1)-neutral(1:Nx-2))/delta_x(1:Nx-2))/delta_xcb(2:Nx-1)
+         ! ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/(delta_x(2:Nx-1)+delta_x(1:Nx-2))**2
+         ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)/delta_xcb(1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)/delta_x(1)
          ! ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
-         ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_x(Nx-1))/delta_xcb(Nx)
+         ! ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_x(Nx-1))/delta_xcb(Nx)
          ! finally add the neutral sources and losses from redistribution and finite residence time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)
@@ -319,7 +324,7 @@ contains
       real(wp) :: temperature, density
       ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
       !                                               =     kT / m density <sigma v>_cx sin^2theta
-      D_neutral = e_charge * max(temperature,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
+      D_neutral = e_charge * max(temperature,1.0d+0,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
       return
    end function D_neutral
 

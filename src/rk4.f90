@@ -15,24 +15,20 @@ subroutine rk4( rhs, neq, y, start_time, end_time )
 
    ! step one
    call rhs( neq, start_time, y, dy1 )
-   ! write(*,*) 'dy1 =', dy1
    yt = y + dt2*dy1
 
    ! step two
    call rhs( neq, start_time+dt2, yt, dyt )
    yt = y + dt2*dyt
-   ! write(*,*) 'dyt =', dyt
 
    ! step three
    call rhs( neq, start_time+dt2, yt, dym )
    yt = y + delta_t*dym
    dym = dyt + dym
-   ! write(*,*) 'dym =', dym
 
    ! step four
    call rhs( neq, start_time+delta_t, yt, dyt )
    y = y + dt6 * (dy1 + dyt + 2.0d+0*dym)
-   ! write(*,*) 'dyt =', dyt
 
    return
 end subroutine rk4

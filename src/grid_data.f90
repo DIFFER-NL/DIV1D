@@ -60,7 +60,7 @@ contains
       ! calculate the step size between grid cell centres
       delta_x(1:Nx-1) = x(2:Nx) - x(1:Nx)
       ! extrapolate for step size into the target
-      delta_x(Nx) = 4.0d+0*(L-x(Nx))-delta_x(Nx-1)
+      delta_x(Nx) = 2.0d+0*(L-x(Nx))
       return
    end subroutine non_uniform_grid
 
