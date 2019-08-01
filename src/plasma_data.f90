@@ -76,7 +76,7 @@ contains
          temperature_X = (temperature_target**(7.d+0/2.d+0) + 7.0d+0 * q_parX * L / 2.0d+0 / kappa_0)**(2.d+0/7.d+0)
          temperature_target_new = (mass / e_charge) * 2.0d+0 * q_parX**2 / temperature_X**2 / (gamma * e_charge * density_X)**2
          diff = abs(temperature_target_new - temperature_target)
-         write(*,*) temperature_target, temperature_target_new, temperature_X
+         ! write(*,*) temperature_target, temperature_target_new, temperature_X
          temperature_target = 0.1d+0*temperature_target_new+0.9d+0*temperature_target
       end do
       write(*,*) 'Initialization from simple 2 Point Model'

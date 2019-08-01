@@ -73,6 +73,7 @@ contains
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
       do i = 1, Nx-1
          csound = sqrt( 2.0d+0 * e_charge * max(temperature(i),temperature(i+1)) / mass )
+         ! csound = sqrt(          e_charge *    (temperature(i)+temperature(i+1)) / mass )
          average_velocity = 0.5d+0 * (velocity(i)+velocity(i+1))
          if( average_velocity .gt. csound ) then
             if( i .eq. 1 ) then

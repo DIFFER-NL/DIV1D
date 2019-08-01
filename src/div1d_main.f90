@@ -17,7 +17,7 @@ program div1d
    real(wp) :: start_time, end_time
    integer :: input_error, input_error_numerics, input_error_physics
    integer :: restart_error, time_step_error
-   integer :: istep, ix, itol, iopt, ml, mu, lrw, liw
+   integer :: istep, ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
    ! external right_hand_side
    
    ! the following is needed for dvode_f90
@@ -83,9 +83,11 @@ program div1d
    upper_bounds = 1.0d+50
 
    ! setting the options fo dvode_f90
+   ! rough estimate of maximum number of nonzeros in Jacobian
+   nzswag_input = 44 * Nx
    if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, &
                                           CONSTRAINED=bounded_components, CLOWER=lower_bounds, CUPPER=upper_bounds,  &
-                                          METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag, MA28_ELBOW_ROOM=200)
+                                          METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag_input, MA28_ELBOW_ROOM=200)
 
    if( method .lt. 0 ) then
       ! allocate arrays needed by dlsode
@@ -99,8 +101,8 @@ program div1d
       !        20 + NEQ  for MF = 21, 22, 24, or 25.
       ! If MF = 24 or 25, input in IWORK(1),IWORK(2) the lower and upper Jacobian half-bandwidths ML,MU.
       ! LIW   :IN     Declared length of IWORK (in user's DIMENSION statement).
-      ml = 2
-      mu = 2
+      ml = 1
+      mu = 1
       lrw = 22 + (20+2*ml+mu)*4*Nx
       liw = 20 + 4*Nx
       allocate( rwork(lrw), iwork(liw) )
@@ -136,7 +138,17 @@ program div1d
       enddo
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
-      if( istate .ne. 2 .and. method .gt. 0 ) call error_report(input_error, restart_error, time_step_error)
+      if( istate .ne. 2 .and. method .gt. 0 ) then
+         ! first try calling dvode again with istate = 1
+         write(*,*) 'trying to continue integration'
+         istate = 1
+         call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
+         if( istate .ne. 2 ) then 
+            call error_report(input_error, restart_error, time_step_error)
+         else
+            write(*,*) 'success on second attempt. continuing'
+         endif
+      endif
       if( mod( istep, nout ) .eq. 0 ) then
          ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
          ! calculate the fluxes
