@@ -101,8 +101,8 @@ program div1d
       !        20 + NEQ  for MF = 21, 22, 24, or 25.
       ! If MF = 24 or 25, input in IWORK(1),IWORK(2) the lower and upper Jacobian half-bandwidths ML,MU.
       ! LIW   :IN     Declared length of IWORK (in user's DIMENSION statement).
-      ml = 1
-      mu = 1
+      ml = 3*Nx
+      mu = 3*Nx
       lrw = 22 + (20+2*ml+mu)*4*Nx
       liw = 20 + 4*Nx
       allocate( rwork(lrw), iwork(liw) )

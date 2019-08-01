@@ -207,7 +207,7 @@ contains
       real(wp)              :: Gamma_n(neq/4), Gamma_mom(neq/4), q_parallel(neq/4), neutral_flux(neq/4)
       real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4)
       real(wp)              :: Diff_neutral(neq/4)
-      real(wp)              :: csound, q_sheath
+      real(wp)              :: csound, q_sheath, v0, Gmom0
       Nx = neq/4
       ! write(*,*) 'RHS called at t =', time
       ! write(*,*) 'y =', y
@@ -247,8 +247,12 @@ contains
          do ix = 2, Nx
             ydot(Nx+ix) = ydot(Nx+ix) - (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_xcb(ix)
          enddo
-         ! ! apply boundary condition at the X-point, as following from the constant density v(1) = n(2) v(2) / n(1)
-         ! ydot(Nx+1) = ydot(Nx+1) - ???
+         ! apply boundary condition at the X-point, as following from the constant density n(1)
+         ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) deltax_cb(1) / n(1)
+         v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1)
+         ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
+         Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0
+         ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
          ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
