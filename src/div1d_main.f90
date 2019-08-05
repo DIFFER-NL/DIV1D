@@ -22,6 +22,7 @@ program div1d
    
    ! the following is needed for dvode_f90
    integer :: itask, istate
+   integer :: attempt
    integer,  allocatable :: iwork(:)
    integer,  allocatable :: bounded_components(:)
    real(wp), allocatable :: lower_bounds(:), upper_bounds(:)
@@ -68,15 +69,15 @@ program div1d
    ! abstol_vector(3*Nx+1:4*Nx) = initial_n * abstol
    
    ! enforce nonnegative densities and energies by lower bounds in dvode_f90
-   allocate( bounded_components(3*Nx), lower_bounds(3*Nx), upper_bounds(3*Nx) )
-   ! plasma density
+   allocate( bounded_components(Nx), lower_bounds(Nx), upper_bounds(Nx) )
+   ! plasma density / only energy for now
    do ix = 1, Nx
-      bounded_components(ix) = ix
+      bounded_components(ix) = ix + 2*Nx
    enddo
    ! energy
-   bounded_components(  Nx+1:2*Nx) = bounded_components(1:Nx) + 2 * Nx
+   ! bounded_components(  Nx+1:2*Nx) = bounded_components(1:Nx) + 2 * Nx
    ! neutral density
-   bounded_components(2*Nx+1:3*Nx) = bounded_components(1:Nx) + 3 * Nx
+   ! bounded_components(2*Nx+1:3*Nx) = bounded_components(1:Nx) + 3 * Nx
    ! set lower bounds to zero
    lower_bounds = 0.0d+0
    ! set artifically high upper bounds
@@ -113,6 +114,7 @@ program div1d
 
    istate = 1
    do istep=1, ntime
+      write(*,*) 'start integration step nr.', istep
       end_time = start_time+delta_t
       if( method .gt. 0 ) then
          ! we use dvode_f90 for the integration
@@ -139,14 +141,18 @@ program div1d
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
       if( istate .ne. 2 .and. method .gt. 0 ) then
-         ! first try calling dvode again with istate = 1
-         write(*,*) 'trying to continue integration'
-         istate = 1
-         call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
+         attempt = 0
+         do while( istate .ne. 2 .and. attempt .le. max_attempts )
+            ! first try calling dvode again with istate = 1
+            attempt = attempt + 1
+            write(*,*) 'trying to continue integration. attempt nr.', attempt
+            istate = 1
+            call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
+         enddo
          if( istate .ne. 2 ) then 
             call error_report(input_error, restart_error, time_step_error)
          else
-            write(*,*) 'success on second attempt. continuing'
+            write(*,*) 'success on ', attempt, 'th attempt. continuing'
          endif
       endif
       if( mod( istep, nout ) .eq. 0 ) then

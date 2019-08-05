@@ -15,22 +15,22 @@ contains
 
    subroutine nvt2y( Nx, density, velocity, temperature, neutral, y )
    ! subroutine to transform from (density, velocity, temperature) to (density, momentum, energy) in the solution vector y
-   !    y(      1, ...,   Nx )     = density( 1, ..., Nx )
-   !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx )
-   !    y( 2*Nx+1, ..., 3*Nx )     = internal energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx )
-   !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
+   !    y(      1, ...,   Nx )     = log( density( 1, ..., Nx ) / density_norm )
+   !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx ) / momentum_norm
+   !    y( 2*Nx+1, ..., 3*Nx )     = internal energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx ) / energy_norm
+   !    y( 3*Nx+1, ..., 4*Nx )     = log( neutral density( 1, ..., Nx ) / density_norm )
       implicit none
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: y(4*Nx)
       ! density
-      y(     1:   Nx) = density(1:Nx) / density_norm
+      y(     1:   Nx) = log(density(1:Nx) / density_norm)
       ! momentum
       y(  Nx+1: 2*Nx) = mass * density(1:Nx) * velocity(1:Nx) / momentum_norm
       ! energy
       y(2*Nx+1: 3*Nx) = 3.0d+0 * density(1:Nx) * e_charge * temperature(1:Nx) / energy_norm
       ! neutral density
-      y(3*Nx+1: 4*Nx) = neutral(1:Nx) / density_norm
+      y(3*Nx+1: 4*Nx) = log(neutral(1:Nx) / density_norm)
       return
    end subroutine nvt2y
 
@@ -38,22 +38,22 @@ contains
    subroutine y2nvt( Nx, y, density, velocity, temperature, neutral )
    ! subroutine to transform from the solution vector y containing (density, momentum, energy) to (density, velocity, temperature)
    ! note that the solution vector y is normalized
-   !    y(      1, ...,   Nx )     = density( 1, ..., Nx ) / density_norm
-   !    y(   Nx+1, ..., 2*Nx )     = Momentum / momentum_norm = mass * density/density_norm * velocity/velocity_norm ( 1, ..., Nx ) 
-   !    y( 2*Nx+1, ..., 3*Nx )     = internal energy / energy_norm = 3 * density/density_norm * e_charge * temperature/temperature_norm ( 1, ..., Nx )
-   !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
+   !    y(      1, ...,   Nx )     = log( density( 1, ..., Nx ) / density_norm )
+   !    y(   Nx+1, ..., 2*Nx )     = Momentum = mass * density * velocity ( 1, ..., Nx ) / momentum_norm
+   !    y( 2*Nx+1, ..., 3*Nx )     = internal energy = 3 * density * e_charge * temperature [eV] ( 1, ..., Nx ) / energy_norm
+   !    y( 3*Nx+1, ..., 4*Nx )     = log( neutral density( 1, ..., Nx ) / density_norm )
       implicit none
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: y(4*Nx)
       real(wp), intent(out) :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       ! density
-      density(1:Nx)     =  y(1:Nx) * density_norm
+      density(1:Nx)     =  exp(y(1:Nx)) * density_norm
       ! velocity
       velocity(1:Nx)    =  y(  Nx+1: 2*Nx) * momentum_norm / mass / density(1:Nx)
       ! temperature
       temperature(1:Nx) =  y(2*Nx+1: 3*Nx) * energy_norm / 3.0d+0 / density(1:Nx) / e_charge
       ! neutral density
-      neutral(1:Nx)     =  y(3*Nx+1: 4*Nx) * density_norm
+      neutral(1:Nx)     =  exp(y(3*Nx+1: 4*Nx)) * density_norm
       return
    end subroutine y2nvt
 
@@ -72,7 +72,7 @@ contains
       flux = 0.0
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
       do i = 1, Nx-1
-         csound = sqrt( 2.0d+0 * e_charge * max(temperature(i),temperature(i+1)) / mass )
+         csound = sqrt( 2.0d+0 * e_charge * max(temperature(i),temperature(i+1),minimum_temperature) / mass )
          ! csound = sqrt(          e_charge *    (temperature(i)+temperature(i+1)) / mass )
          average_velocity = 0.5d+0 * (velocity(i)+velocity(i+1))
          if( average_velocity .gt. csound ) then
@@ -117,9 +117,11 @@ contains
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
          call advection(Nx, density, velocity, temperature, Gamma_n)
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
-         csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
+         csound = sqrt( 2.0d+0 * e_charge * max(temperature(Nx),minimum_temperature) / mass )
+         ! write(*,*) 'flux', e_charge, mass, temperature(Nx)
          ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
          Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound)
+         ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
@@ -131,12 +133,13 @@ contains
       ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
+         ! write(*,*) 'advection', q_parallel
       ! add the conductive heat flux in the internal region
          do i = 1, Nx-1
             q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * Temperature(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
+         q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * temperature(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
          ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
@@ -229,7 +232,7 @@ contains
       ! write(*,*) 'Source_Q =', Source_Q
       ! write(*,*) 'neutral_source =', neutral_source
       ! sound velocity at the target
-      csound = sqrt( 2.0d+0 * e_charge * temperature(Nx) / mass )
+      csound = sqrt( 2.0d+0 * e_charge * max(temperature(Nx),minimum_temperature) / mass )
       ! ydot for the density equation
          ydot(1:Nx) = switch_density_source * Source_n(1:Nx)
          ! add the particle flux term using the flux as calculated in calculate_fluxes
@@ -307,10 +310,12 @@ contains
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)
       ! apply evolution switches
-      ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx) / density_norm
+      ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx) / density(1:Nx)
       ydot(  Nx+1:2*Nx) = evolve_momentum * ydot(  Nx+1:2*Nx) / momentum_norm
       ydot(2*Nx+1:3*Nx) = evolve_energy   * ydot(2*Nx+1:3*Nx) / energy_norm
-      ydot(3*Nx+1:4*Nx) = evolve_neutral  * ydot(3*Nx+1:4*Nx) / density_norm
+      ydot(3*Nx+1:4*Nx) = evolve_neutral  * ydot(3*Nx+1:4*Nx) / neutral(1:Nx)
+      ! write(*,*) 'time =', time, 'ydot(Nx) =', ydot(Nx), 'density(Nx) =', density(Nx), 'Source_n(Nx) =', Source_n(Nx), Gamma_n(Nx)
+      ! write(*,*) 'ydot =', ydot
       return
    end subroutine right_hand_side
 
@@ -319,7 +324,7 @@ contains
       implicit none
       real(wp) :: temperature
       ! use expression from Stangeby page 187 (Chapter 4.10.1)
-      kappa_parallel = 2.0d+3 * temperature*temperature*sqrt(temperature)
+      kappa_parallel = 2.0d+3 * temperature*temperature*sqrt(max(temperature,minimum_temperature))
       return
    end function kappa_parallel
 
