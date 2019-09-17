@@ -8,6 +8,7 @@ module numerics_parameters
    integer     :: ntime   = 1000     ! number of time steps
    integer     :: nout    = 100      ! output is written to file every nout time steps
    integer     :: method  = 0        ! selection of integrator ( 0 = rk4,  >0 = dvode with method_flag = method)
+   integer     :: istate_mod = 0     ! number of time steps before restart of dvode with istate = 1
    integer     :: max_step= 100000   ! maximum number of internal steps in dvode
    integer     :: max_attempts = 100 ! maximum number of restarts of dvode after failed integration
    integer     :: nzswag  = 200000   ! estimated number of nonzero elements in Jacobian (dvode)
@@ -49,8 +50,9 @@ contains
       &                         switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
       &                         switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_impurity_radiation, &
       &                         switch_convective_heat, viscosity, restart, simple_sol, filter_sources, &
-      &                         max_step, max_attempts, nzswag
+      &                         max_step, max_attempts, nzswag, istate_mod
       error = 0
+      if( istate_mod .eq. 0 ) istate_mod = ntime
       read(*, div1d_numerics, IOSTAT = error)
       write(*,*) 'numerics read error =', error
       return

@@ -164,6 +164,8 @@ program div1d
          call write_solution( end_time )
       endif
       start_time = end_time
+      ! reset istate to 1 every so often
+      if( modulo( istep, istate_mod ) .eq. 0 ) istate = 1
    enddo
 
    call write_restart_file
