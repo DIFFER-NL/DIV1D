@@ -324,7 +324,7 @@ contains
       implicit none
       real(wp) :: temperature
       ! use expression from Stangeby page 187 (Chapter 4.10.1)
-      kappa_parallel = 2.0d+3 * temperature*temperature*sqrt(max(temperature,minimum_temperature))
+      kappa_parallel = 2.0d+3 * max(temperature,minimum_temperature)*max(temperature,minimum_temperature)*sqrt(max(temperature,minimum_temperature))
       return
    end function kappa_parallel
 

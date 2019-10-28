@@ -6,6 +6,7 @@ FC = ifort         # for INTEL fortran compiler
 
 # compiler options
 FOPT_DVODE =  -module obj -g -O3 # for intel fortran compiler
+# FOPT_DVODE = -p -module obj -g -O3 # for intel fortran compiler
 # FOPT_DVODE =  -module obj -g -check all -debug all # for intel fortran compiler with all checks and debugging info
 # FOPT_DVODE =  -Jobj -ffree-line-length-none -g -fbacktrace # for GNU fortran compiler with all checks and debugging info
 FOPT =  -module obj -g -O3 # for intel fortran compiler

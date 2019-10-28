@@ -16,6 +16,10 @@ module numerics_parameters
    integer     :: evolve_momentum = 1   ! evaluate momentum evolution 1 = yes, 0 = no (multiplier of ydot(1*Nx+1:2*Nx))
    integer     :: evolve_energy   = 1   ! evaluate energy evolution 1 = yes, 0 = no (multiplier of ydot(2*Nx+1:3*Nx))
    integer     :: evolve_neutral  = 1   ! evaluate neutral density evolution 1 = yes, 0 = no (multiplier of ydot(3*Nx+1:4*Nx))
+   integer, allocatable :: IAUSER(:)    ! array specifying nonzero elements of jacobian (used by dvode)
+   integer     :: NIAUSER = 0           ! dimension of array IAUSER (must be set to Number of odes + 1)
+   integer, allocatable :: JAUSER(:)    ! array specifying nonzero elements of the jacobian (used by dvode)
+   integer     :: NJAUSER = 0           ! dimension of array JAUSER (must be equal to Number of nonzeros in Jacobian)
    real( wp )  :: density_norm            = 0.0d+0   ! normalization of demsities    (when = 0 initial_n is used) only used in normalization of solution vector y
    real( wp )  :: temperature_norm        = 0.0d+0   ! normalization of temperatures (when = 0 1 eV is used) only used to normalize solution vector y
    real( wp )  :: velocity_norm           = 0.0d+0   ! normalization of velocities   (when = 0 sound speed at 1 eV is used) only used in to normalize solution vector y
@@ -57,5 +61,105 @@ contains
       write(*,*) 'numerics read error =', error
       return
    end subroutine read_numerics_parameters
+   
+   subroutine set_jacobian_sparsity_structure
+      implicit none
+      integer :: icolumn, jrow, nnonzero
+
+      ! set the dimension of IAUSER to 4*Nx + 1 (the number of equations + 1)
+      NIAUSER = 4 * Nx + 1
+      ! allocate the array IAUSER
+      allocate( IAUSER( NIAUSER ) )
+
+      ! set the total number of nonzero elements in Jacobian = 48*Nx - 32
+      NJAUSER = 48*Nx - 32
+      ! allocate the array JAUSER
+      allocate( JAUSER( NJAUSER ) )
+      
+      ! set the array IAUSER starting from IAUSER(1) = 1
+      IAUSER( 1 ) = 1
+      ! for the first 4 columns add each time 8 nonzero elements
+      do icolumn = 1, 4
+         IAUSER( icolumn + 1 ) = IAUSER( icolumn ) + 8
+      enddo
+      ! for the next 4*(Nx-2) columns add 12 nonzero elements each
+      do icolumn = 5, 4*(Nx-1) 
+         IAUSER( icolumn + 1 ) = IAUSER( icolumn ) + 12
+      enddo
+      ! for the final 4 columns add each time 8 nonzero elements
+      do icolumn = 4*Nx-3, 4*Nx
+         IAUSER( icolumn + 1 ) = IAUSER( icolumn ) + 8
+      enddo
+
+      ! set the array JAUSER specifying the row of the nonzero element
+      ! initialize the nonzero element counter to zero
+      nnonzero = 0
+      ! for the first 4 columns the first 8 rows are nonzero
+      do icolumn = 1, 4
+         do jrow = 1, 8
+            nnonzero = nnonzero + 1
+            JAUSER( nnonzero ) = jrow
+         enddo
+      enddo
+      ! for the next 4*(Nx-2) columns locate the 12 rows with nonzero elements as ...
+      do icolumn = 5, 4*(Nx-1) 
+         do jrow = 4*((icolumn-1)/4) - 3, 4*((icolumn-1)/4) + 8
+            nnonzero = nnonzero + 1
+            JAUSER( nnonzero ) = jrow
+         enddo
+      enddo
+      ! for the final 4 columns the final 8 rows contain nonzero elements
+      do icolumn = 4*Nx-3, 4*Nx
+         do jrow = 4*Nx - 7, 4*Nx
+            nnonzero = nnonzero + 1
+            JAUSER( nnonzero ) = jrow
+         enddo
+      enddo
+
+      ! check the number of nonzero elements
+      if( nnonzero .ne. NJAUSER ) then
+         write(*,*) 'error in routine set_jacobian_sparsity_structure', nnonzero, NJAUSER
+         stop
+      endif
+
+      return
+   end subroutine set_jacobian_sparsity_structure
+   
+   subroutine set_diagonal_jacobian
+      implicit none
+      integer :: icolumn, jrow, nnonzero
+
+      ! set the dimension of IAUSER to 4*Nx + 1 (the number of equations + 1)
+      NIAUSER = 4 * Nx + 1
+      ! allocate the array IAUSER
+      allocate( IAUSER( NIAUSER ) )
+
+      ! set the total number of nonzero elements in Jacobian = 4*Nx (the diagonal only)
+      NJAUSER = 4*Nx
+      ! allocate the array JAUSER
+      allocate( JAUSER( NJAUSER ) )
+      
+      ! set the array IAUSER starting from IAUSER(1) = 1
+      IAUSER( 1 ) = 1
+      ! for the all columns add a single nonzero element each
+      do icolumn = 1, 4*Nx
+         IAUSER( icolumn + 1 ) = IAUSER( icolumn ) + 1
+      enddo
+
+      ! set the array JAUSER specifying the row of the nonzero element
+      nnonzero = 4*Nx
+      ! for the row number equals the column number for all nonzero elements (i.e. diagonal only)
+      do icolumn = 1, 4*Nx
+         JAUSER( icolumn ) = icolumn
+      enddo
+
+      ! check the number of nonzero elements
+      if( nnonzero .ne. NJAUSER ) then
+         write(*,*) 'error in routine set_jacobian_sparsity_structure', nnonzero, NJAUSER
+         stop
+      endif
+
+      return
+   end subroutine set_diagonal_jacobian
    
 end module numerics_parameters

@@ -85,12 +85,16 @@ program div1d
 
    ! setting the options fo dvode_f90
    ! rough estimate of maximum number of nonzeros in Jacobian
-   nzswag_input = 44 * Nx
-   if( method .gt. 0 ) options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, &
-                                          CONSTRAINED=bounded_components, CLOWER=lower_bounds, CUPPER=upper_bounds,  &
-                                          METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag_input, MA28_ELBOW_ROOM=200)
+   nzswag_input = 48 * Nx
+   if( method .gt. 0 ) then 
+      options = set_opts(RELERR=reltol, ABSERR_VECTOR=abstol_vector, &
+                         CONSTRAINED=bounded_components, CLOWER=lower_bounds, CUPPER=upper_bounds,  &
+                         METHOD_FLAG=method, MXSTEP=max_step, NZSWAG=nzswag_input, MA28_ELBOW_ROOM=200, MA28_RPS=.TRUE.)
+      ! ! call set_jacobian_sparsity_structure
+      ! call set_diagonal_jacobian
+      ! call USERSETS_IAJA(IAUSER,NIAUSER,JAUSER,NJAUSER)
 
-   if( method .lt. 0 ) then
+   elseif( method .lt. 0 ) then
       ! allocate arrays needed by dlsode
       ! RWORK :WORK   Real work array of length at least:
       !        20 + 16*NEQ                    for MF = 10,
