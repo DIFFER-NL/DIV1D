@@ -26,6 +26,9 @@ module physics_parameters
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
    real( wp ) :: carbon_concentration   = 1.0d-2      ! the concentration of carbon impurity ions
+   real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
+   real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
+   real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source
    logical    :: case_AMJUEL            = .true.      ! use collision rates from AMJUEL data base
 
 contains
@@ -35,7 +38,7 @@ contains
       integer :: error
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, case_AMJUEL, &
-                               minimum_temperature, minimum_density
+                               minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error

@@ -49,6 +49,9 @@ program div1d
    restart_error = 0
    if( restart ) call read_restart_file( restart_error )
    if( restart .and. restart_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
+   
+   ! initialize the gas_puff
+   call initialize_gas_puff(Nx)
 
    ! write the inital solution to file
    ! calculate the fluxes

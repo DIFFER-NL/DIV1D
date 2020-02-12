@@ -1,15 +1,17 @@
 module physics_routines
 ! module containing general purpose routines implementing the equations
 
-   use grid_data, only : delta_x, delta_xcb
+   use grid_data, only : delta_x, delta_xcb, x
    use constants, only : e_charge
    use reaction_rates
-   use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate
+   use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
+                                  gas_puff_source, gas_puff_location, gas_puff_width
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, density_norm, momentum_norm, energy_norm, filter_sources
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
+   real( wp ), allocatable, private :: gas_puff(:)     ! vector holding the gas puff source [/m^3s]
 
 contains
 
@@ -154,6 +156,27 @@ contains
    end subroutine calculate_fluxes
 
 
+   subroutine initialize_gas_puff(Nx)
+      implicit none
+      integer,  intent(in)  :: Nx
+      real(wp) gas_puff_normalization
+      
+      ! allocate and initialize the gas puff to zero
+      allocate( gas_puff(Nx) )
+      gas_puff = 0.0
+      if(gas_puff_source .eq. 0.0d+0) return
+      
+      ! calculate the Gaussian profile of the source and the corresponding normalization factor
+      gas_puff = exp( - (x - gas_puff_location)**2 / gas_puff_width**2 )
+      gas_puff_normalization = sum(gas_puff * delta_xcb)
+      
+      ! set the unnormalized gas puff source
+      gas_puff = gas_puff_source * gas_puff / gas_puff_normalization
+      
+      return
+   end subroutine initialize_gas_puff
+
+
    subroutine calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, neutral_source )
    ! this subroutine calculates the source terms of the discretized conservation equations
       implicit none
@@ -174,7 +197,7 @@ contains
          rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix))
       enddo
       ! the particle sources
-      neutral_source = rate_rec - rate_ion
+      neutral_source = rate_rec - rate_ion + gas_puff
       Source_n = rate_ion - rate_rec
       ! the momentum sources
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
