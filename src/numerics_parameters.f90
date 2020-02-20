@@ -40,6 +40,7 @@ module numerics_parameters
    real( wp )  :: abstol  = 1.0d-4   ! required absolute error in integration (used to multiply with initial condition to set abserr_vector)
    real( wp )  :: reltol  = 1.0d-4   ! required relative error in integration
    real( wp )  :: viscosity = 0.0d0  ! numerical viscosity to damp oscillations in velocity
+   real( wp )  :: central_differencing = 0.5d0  ! fraction of central differencing contribution in pressure gradient term
    logical     :: filter_sources = .false.  ! switch for spike filtering of source profiles when .true.
    logical     :: simple_sol = .false.  ! switch for starting from the simple SOL solution when .true.
    logical     :: restart = .false.  ! switch for starting a continuation run when .true.
@@ -53,7 +54,7 @@ contains
       &                         density_norm, temperature_norm, velocity_norm, &
       &                         switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
       &                         switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_impurity_radiation, &
-      &                         switch_convective_heat, viscosity, restart, simple_sol, filter_sources, &
+      &                         switch_convective_heat, viscosity, central_differencing, restart, simple_sol, filter_sources, &
       &                         max_step, max_attempts, nzswag, istate_mod
       error = 0
       if( istate_mod .eq. 0 ) istate_mod = ntime

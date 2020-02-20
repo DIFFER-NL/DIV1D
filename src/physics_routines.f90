@@ -7,7 +7,7 @@ module physics_routines
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
                                   gas_puff_source, gas_puff_location, gas_puff_width
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
-                                   switch_convective_heat, switch_impurity_radiation, viscosity, density_norm, momentum_norm, energy_norm, filter_sources
+                                   switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -282,7 +282,7 @@ contains
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
          ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
-            ydot(Nx+ix) = ydot(Nx+ix) - (y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix)
+            ydot(Nx+ix) = ydot(Nx+ix) - (1.0d+0-central_differencing)*(y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix) - central_differencing*(y(2*Nx+ix+1)-y(2*Nx+ix-1))*energy_norm/3.0d+0/delta_xcb(ix)
             ! add effect of numerical viscosity
             ydot(Nx+ix) = ydot(Nx+ix) + viscosity*(velocity(ix+1) + velocity(ix-1)-2.0d0*velocity(ix))
          enddo
