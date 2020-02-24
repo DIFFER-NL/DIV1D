@@ -113,24 +113,24 @@ contains
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: Gamma_n(Nx), Gamma_mom(Nx), q_parallel(Nx), neutral_flux(Nx)
       real(wp)              :: momentum(Nx), enthalpy(Nx)
-      real(wp)              :: csound, average_velocity
+      real(wp)              :: csound_target, average_velocity
       integer               :: i
       ! the particle flux = density velocity
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
          call advection(Nx, density, velocity, temperature, Gamma_n)
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
-         csound = sqrt( 2.0d+0 * e_charge * max(temperature(Nx),minimum_temperature) / mass )
+         csound_target = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
          ! write(*,*) 'flux', e_charge, mass, temperature(Nx)
-         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound)
-         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound)
-         ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound
+         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target)
+         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target)
+         ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound_target
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
-         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound)**2
-         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound)**2
+         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2
+         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
       ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
@@ -141,7 +141,7 @@ contains
             q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound * (1.5*density(Nx)-0.5*density(Nx-1)) * e_charge * temperature(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
+         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) ! we have extrapolated the density linear towards x = L, i.e. the sheath
          ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
@@ -233,7 +233,7 @@ contains
       real(wp)              :: Gamma_n(neq/4), Gamma_mom(neq/4), q_parallel(neq/4), neutral_flux(neq/4)
       real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4)
       real(wp)              :: Diff_neutral(neq/4)
-      real(wp)              :: csound, q_sheath, v0, Gmom0
+      real(wp)              :: csound_target, q_sheath, v0, Gmom0
       Nx = neq/4
       ! write(*,*) 'RHS called at t =', time
       ! write(*,*) 'y =', y
@@ -255,7 +255,7 @@ contains
       ! write(*,*) 'Source_Q =', Source_Q
       ! write(*,*) 'neutral_source =', neutral_source
       ! sound velocity at the target
-      csound = sqrt( 2.0d+0 * e_charge * max(temperature(Nx),minimum_temperature) / mass )
+      csound_target = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
       ! ydot for the density equation
          ydot(1:Nx) = switch_density_source * Source_n(1:Nx)
          ! add the particle flux term using the flux as calculated in calculate_fluxes
@@ -274,7 +274,7 @@ contains
             ydot(Nx+ix) = ydot(Nx+ix) - (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_xcb(ix)
          enddo
          ! apply boundary condition at the X-point, as following from the constant density n(1)
-         ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) deltax_cb(1) / n(1)
+         ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
          v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1)
          ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
          Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0
@@ -282,14 +282,15 @@ contains
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
          ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
-            ydot(Nx+ix) = ydot(Nx+ix) - (1.0d+0-central_differencing)*(y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix) - central_differencing*(y(2*Nx+ix+1)-y(2*Nx+ix-1))*energy_norm/3.0d+0/delta_xcb(ix)
+            ydot(Nx+ix) = ydot(Nx+ix) - (1.0d+0-central_differencing)*(y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix) - central_differencing*(y(2*Nx+ix+1)-y(2*Nx+ix-1))*energy_norm/1.5d+0/(x(ix+1)-x(ix-1))
             ! add effect of numerical viscosity
             ydot(Nx+ix) = ydot(Nx+ix) + viscosity*(velocity(ix+1) + velocity(ix-1)-2.0d0*velocity(ix))
          enddo
          ! apply boundary condition at the sheath entrance, i=Nx: 
-         ! assume zero temperture and extrapolate density and pressure to the sheath, add numerical viscosity (linearly extrapolate velocity beyond the sheath)
+         ! extrapolate temperature and density to the sheath, add numerical viscosity (linearly extrapolate velocity beyond the sheath)
          ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)
-         ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound + velocity(Nx-1)-3.0d0*velocity(Nx))
+         ! ydot(2*Nx) = ydot(2*Nx) + (0.5d+0*(y(3*Nx)+y(3*Nx-1))*energy_norm/1.5d+0-(3.0d+0*density(Nx)-density(Nx-1))*e_charge*temperature(Nx))/delta_xcb(Nx)
+         ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target + velocity(Nx-1)-3.0d0*velocity(Nx))
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx)
       ! ydot for the energy equation
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
