@@ -2,7 +2,7 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
-   use physics_parameters,  only : case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density
+   use physics_parameters,  only : case_AMJUEL_cx, case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density
    use constants,           only : e_charge
 
    implicit none
@@ -58,7 +58,7 @@ contains
       integer  :: j
       real(wp) :: temperature
       real(wp) :: ln_T, xj
-      if( case_AMJUEL ) then
+      if( case_AMJUEL_cx ) then
          ! source AMJUEL page 38 2.2 reaction 0.1T
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xj = 1.0d+0
