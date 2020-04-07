@@ -358,7 +358,8 @@ contains
       real(wp) :: temperature, density
       ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
       !                                               =     kT / m density <sigma v>_cx sin^2theta
-      D_neutral = e_charge * max(temperature,1.0d+0,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
+      ! D_neutral = e_charge * max(temperature,1.0d+0,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
+      D_neutral = e_charge * max(temperature,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
       return
    end function D_neutral
 

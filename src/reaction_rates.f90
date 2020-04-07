@@ -2,7 +2,7 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
-   use physics_parameters,  only : case_AMJUEL_cx, case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density
+   use physics_parameters,  only : case_AMJUEL_cx, case_AMJUEL_ion, case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density, mass
    use constants,           only : e_charge
 
    implicit none
@@ -58,9 +58,10 @@ contains
       integer  :: j
       real(wp) :: temperature
       real(wp) :: ln_T, xj
+      ! note that the temperature must be rescaled with the ratio of proton mass over ion mass used
       if( case_AMJUEL_cx ) then
          ! source AMJUEL page 38 2.2 reaction 0.1T
-         ln_T = log(max(temperature,minimum_temperature,0.1d+0))
+         ln_T = log(max((1.6726d-27/mass)*temperature,minimum_temperature,0.1d+0))
          xj = 1.0d+0
          charge_exchange = 0.0d+0
          do j = 1, 9
@@ -70,10 +71,10 @@ contains
          charge_exchange = exp(charge_exchange)*1.0d-6
       else
          ! source SD1D manual / Havlickova (2013)
-         if( temperature .le. 1.0 ) then
+         if( (1.6726d-27/mass)*temperature .le. 1.0 ) then
             charge_exchange = 1.0d-14
          else
-            charge_exchange = 1.0d-14 * temperature**(1/3)
+            charge_exchange = 1.0d-14 * ((1.6726d-27/mass)*temperature)**(1/3)
          endif
       endif
       charge_exchange = switch_charge_exchange * charge_exchange
@@ -87,7 +88,7 @@ contains
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       ionization = 0.0d+0
-      if( case_AMJUEL ) then
+      if( case_AMJUEL_ion ) then
          ! the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))

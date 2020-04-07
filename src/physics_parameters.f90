@@ -31,6 +31,7 @@ module physics_parameters
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source
    logical    :: case_AMJUEL            = .true.      ! use collision rates from AMJUEL data base
    logical    :: case_AMJUEL_cx         = .true.      ! use charge exchange reaction rates from AMJUEL data base
+   logical    :: case_AMJUEL_ion        = .true.      ! use ionization reaction rates from AMJUEL data base
 
 contains
 
@@ -38,7 +39,8 @@ contains
       implicit none
       integer :: error
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
-                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, case_AMJUEL, case_AMJUEL_cx, &
+                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, &
+                               case_AMJUEL, case_AMJUEL_cx, case_AMJUEL_ion, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width
       error = 0
       read(*, div1d_physics, IOSTAT = error)
