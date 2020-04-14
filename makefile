@@ -33,6 +33,10 @@ obj/div1d.exe : src/div1d_main.f90 $(OBJECTS)
 	$(FC) src/div1d_main.f90 $(OBJECTS)  $(FOPT) -o obj/div1d.exe
 
 
+obj/div1d_test.exe : src/div1d_test.f90 $(OBJECTS)
+	$(FC) src/div1d_test.f90 $(OBJECTS)  $(FOPT) -o obj/div1d_test.exe
+
+
 obj/constants.o : src/constants.f90
 	$(FC) src/constants.f90 $(FOPT) -c -o obj/constants.o
 
@@ -99,4 +103,4 @@ obj/rk4.o : src/rk4.f90
 
 
 clean:
-	rm obj/*.o obj/*.mod obj/div1d.exe
+	rm obj/*.o obj/*.mod obj/div1d.exe obj/div1d_test.exe

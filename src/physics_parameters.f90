@@ -30,8 +30,9 @@ module physics_parameters
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source
    logical    :: case_AMJUEL            = .true.      ! use collision rates from AMJUEL data base
-   logical    :: case_AMJUEL_cx         = .true.      ! use charge exchange reaction rates from AMJUEL data base
-   logical    :: case_AMJUEL_ion        = .true.      ! use ionization reaction rates from AMJUEL data base
+   character*10 :: charge_exchange_model= "AMJUEL"    ! use charge exchange reaction rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
+   character*10 :: ionization_model     = "AMJUEL"    ! use ionization rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
+   character*10 :: recombination_model  = "AMJUEL"    ! use recombination rates from "AMJUEL" data base, or "Nakazawa" (combining radiative rec. from Gordeev with 3 body rec. from Hinnov et al)
 
 contains
 
@@ -40,7 +41,7 @@ contains
       integer :: error
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, &
-                               case_AMJUEL, case_AMJUEL_cx, case_AMJUEL_ion, &
+                               case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width
       error = 0
       read(*, div1d_physics, IOSTAT = error)

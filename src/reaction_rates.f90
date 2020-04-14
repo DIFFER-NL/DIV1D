@@ -2,7 +2,7 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
-   use physics_parameters,  only : case_AMJUEL_cx, case_AMJUEL_ion, case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density, mass
+   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density, mass
    use constants,           only : e_charge
 
    implicit none
@@ -10,7 +10,7 @@ module reaction_rates
 
    ! See page XX of AMJUEL for definition of the fit functions and variables (T in eV; density in 10^14 /m^3; resulting rates <sigma v> in cm^3/s
    ! the coefficients for the charge exchange rate according to AMJUEL 2.1 reaction 0.1T(Total)
-   real(wp), private, dimension(9)   :: cx_coef = (/ &
+   real(wp), private, dimension(9)   :: cxa_coef = (/ &
                 -1.833882000000D+01,  2.368705000000D-01, -1.469575000000D-02, -1.139850000000D-02,  6.379644000000D-04,  3.162724000000D-04, -6.681994000000D-05,  3.812123000000D-06,  8.652321000000D-09 /)
 
    ! the coefficients for the total hydrogen recombination rate according to AMJUEL 4.4 reaction 2.1.8 total rate including three-body recombination [m^3 / s]
@@ -25,6 +25,7 @@ module reaction_rates
                 -2.770717597683D-06, -4.695982369246D-06,  3.250878872873D-06, -9.387290785993D-07,  1.392391630459D-07, -1.139093288575D-08,  5.178505597480D-10, -9.452402157390D-12, -4.672724022059D-14, &
                  1.038235939800D-07,  2.523166611507D-07, -2.145390398476D-07,  7.381435237585D-08, -1.299713684966D-08,  1.265189576423D-09, -6.854203970018D-11,  1.836615031798D-12, -1.640492364811D-14 /), &
              shape(recomb_coef), order=(/2,1/) )
+
    ! the coefficients for the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
    real(wp), private, dimension(9,9) :: ionize_coef = reshape( (/  &
                 -3.248025330340D+01, -5.440669186583D-02,  9.048888225109D-02, -4.054078993576D-02,  8.976513750477D-03, -1.060334011186D-03,  6.846238436472D-05, -2.242955329604D-06,  2.890437688072D-08, &
@@ -37,6 +38,7 @@ module reaction_rates
                  2.812016578355D-04, -3.564132950345D-05,  7.222726811078D-06,  1.433018694347D-07, -1.097431215601D-07,  7.789031791949D-09, -4.197728680251D-10,  3.032260338723D-11, -8.911076930014D-13, &
                 -6.011143453374D-06,  8.089651265488D-07, -1.186212683668D-07, -2.381080756307D-08,  6.271173694534D-09, -5.483010244930D-10,  3.064611702159D-11, -1.355903284487D-12,  2.935080031599D-14 /), &
              shape(ionize_coef), order=(/2,1/) )
+
    ! the coefficients for the total hydrogen excitation rate according to AMJUEL 10.2 reaction 2.1.5 effective cooling rate by ionization and radiation [eV m^3 / s]
    real(wp), private, dimension(9,9) :: excite_coef = reshape( (/  &
                 -2.497580168306D+01,  1.081653961822D-03, -7.358936044605D-04,  4.122398646951D-04, -1.408153300988D-04,  2.469730836220D-05, -2.212823709798D-06,  9.648139704737D-08, -1.611904413846D-09, &
@@ -50,6 +52,14 @@ module reaction_rates
                 -7.335808238917D-06, -1.367574486885D-07,  2.423236476442D-08,  5.733871119707D-09, -1.512777532459D-09,  8.733801272834D-11,  7.196798841269D-13, -1.441033650378D-13,  1.734769090475D-15 /), &
              shape(excite_coef), order=(/2,1/) )
 
+   ! the coefficients for the charge exchange rate from Freeman and Jones CLM-R-137 Table 3
+   real(wp), private, dimension(9)   :: cxf_coef = (/ &
+                -1.841757d+01, 5.282950d-01, -2.200477d-01, 9.750192d-02, -1.749183d-02, 4.954296d-04, 2.174910d-04, -2.530206d-05, 8.230751d-07 /)
+
+   ! the coefficients for the ionization rate from Freeman and Jones CLM-R-137 Table 3
+   real(wp), private, dimension(7)   :: ifj_coef = (/ &
+                -0.3173850d+2, 0.1143818d+2, -0.3833998d+1, 0.7046692d+0, -0.7431486d-1, 0.4153749d-2, -0.9486967d-4 /)
+
 contains
 
    real(wp) function charge_exchange( temperature )
@@ -59,24 +69,35 @@ contains
       real(wp) :: temperature
       real(wp) :: ln_T, xj
       ! note that the temperature must be rescaled with the ratio of proton mass over ion mass used
-      if( case_AMJUEL_cx ) then
+      select case (charge_exchange_model)
+      case ("AMJUEL")
          ! source AMJUEL page 38 2.2 reaction 0.1T
          ln_T = log(max((1.6726d-27/mass)*temperature,minimum_temperature,0.1d+0))
          xj = 1.0d+0
          charge_exchange = 0.0d+0
          do j = 1, 9
-            charge_exchange = charge_exchange + cx_coef(j)*xj
+            charge_exchange = charge_exchange + cxa_coef(j)*xj
             xj = xj * ln_T
          enddo
          charge_exchange = exp(charge_exchange)*1.0d-6
-      else
+      case ("Havlickova")
          ! source SD1D manual / Havlickova (2013)
          if( (1.6726d-27/mass)*temperature .le. 1.0 ) then
             charge_exchange = 1.0d-14
          else
             charge_exchange = 1.0d-14 * ((1.6726d-27/mass)*temperature)**(1/3)
          endif
-      endif
+      case ("Freeman")
+         ! source Freeman and Jones CLM-R-137 Table 3
+         ln_T = log(max((1.6726d-27/mass)*temperature,minimum_temperature,0.1d+0))
+         xj = 1.0d+0
+         charge_exchange = 0.0d+0
+         do j = 1, 9
+            charge_exchange = charge_exchange + cxf_coef(j)*xj
+            xj = xj * ln_T
+         enddo
+         charge_exchange = exp(charge_exchange)*1.0d-6
+      end select
       charge_exchange = switch_charge_exchange * charge_exchange
       return
    end function charge_exchange
@@ -88,7 +109,8 @@ contains
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       ionization = 0.0d+0
-      if( case_AMJUEL_ion ) then
+      select case (ionization_model)
+      case ("AMJUEL")
          ! the total hydrogen ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
@@ -102,7 +124,7 @@ contains
             xm = xm * ln_n
          enddo
          ionization = exp(ionization) * 1.0d-6
-      else
+      case ("Havlickova")
          ! source SD1D manual / Havlickova (2013)
          ! the discuntinuity at 20 eV has been removed by modifying the exponent of the temperature from -3.054 to -2.987
          if( temperature .le. 1.0d+0 ) then
@@ -112,7 +134,17 @@ contains
          else
             ionization = 5.875d-12 * temperature**(-0.5151d+0) * 10**( -2.563d+0 / log10(temperature) )
          endif
-      endif
+      case ("Freeman")
+         ! source Freeman and Jones CLM-R-137 Table 3
+         ln_T = log(max(temperature,minimum_temperature,0.1d+0))
+         xn = 1.0d+0
+         ionization = 0.0d+0
+         do n = 1, 7
+            ionization = ionization + ifj_coef(n)*xn
+            xn = xn * ln_T
+         enddo
+         ionization = exp(ionization)*1.0d-6
+      end select
       ionization = switch_ionization * ionization
       return
    end function ionization
@@ -161,19 +193,27 @@ contains
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       recombination = 0.0d+0
-      ln_n = log(density*1.0d-14)
-      ln_T = log(max(temperature,minimum_temperature,0.1d+0))
-      if( .not. case_AMJUEL ) ln_T = log(max(temperature,1.0d+0))
-      xm = 1.0d+0
-      do m = 1, 9
-         xn = 1.0d+0
-         do n = 1, 9
-            recombination = recombination + recomb_coef(n,m) * xm * xn
-            xn = xn * ln_T
+      select case (ionization_model)
+      case ("AMJUEL")
+         ln_n = log(density*1.0d-14)
+         ln_T = log(max(temperature,minimum_temperature,0.1d+0))
+         xm = 1.0d+0
+         do m = 1, 9
+            xn = 1.0d+0
+            do n = 1, 9
+               recombination = recombination + recomb_coef(n,m) * xm * xn
+               xn = xn * ln_T
+            enddo
+            xm = xm * ln_n
          enddo
-         xm = xm * ln_n
-      enddo
-      recombination = switch_recombination * exp(recombination) * 1.0d-6
+         recombination = switch_recombination * exp(recombination) * 1.0d-6
+      case ("Nakazawa")
+         ! use radiative recombination rate from Gordeev et al. 1977 JETP 25 204 (ref 18 of Nakazawa)
+         recombination = 1.27d-19 * (13.6d+0/temperature)**1.5d+0 / ((13.6d+0/temperature) + 0.59d+0)
+         ! plus the 3 body recombination rate from Hinnov et al. 1962 Phys Rev 125 795 (ref 19 of Nakazawa)
+         recombination = recombination + 5.6d-39 * temperature**(-4.5d+0) * density
+         recombination = switch_recombination * recombination
+      end select
    end function recombination
 
    real(wp) function impurity_radiation( temperature )
