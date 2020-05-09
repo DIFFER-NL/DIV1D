@@ -8,10 +8,11 @@ module physics_routines
                                   gas_puff_source, gas_puff_location, gas_puff_width
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources
+   use experiments, only: simulate_elm
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
-   real( wp ), allocatable, private :: gas_puff(:)     ! vector holding the gas puff source [/m^3s]
+   real( wp ), allocatable :: gas_puff(:)     ! vector holding the gas puff source [/m^3s]
 
 contains
 
@@ -176,7 +177,6 @@ contains
       return
    end subroutine initialize_gas_puff
 
-
    subroutine calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, neutral_source )
    ! this subroutine calculates the source terms of the discretized conservation equations
       implicit none
@@ -234,6 +234,8 @@ contains
       real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4)
       real(wp)              :: Diff_neutral(neq/4)
       real(wp)              :: csound_target, q_sheath, v0, Gmom0
+      ! input variables for the elm simulation
+      real(wp)              :: elm_heat_load, elm_density_change
       Nx = neq/4
       ! write(*,*) 'RHS called at t =', time
       ! write(*,*) 'y =', y
@@ -247,6 +249,8 @@ contains
       call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
       ! calculate the sources
       call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, neutral_source )
+      ! calculate the ELM heat flux and particle flux
+      call simulate_elm(elm_heat_load, elm_density_change, time)
       ! write(*,*) 'Gamma_n =', Gamma_n
       ! write(*,*) 'Gamma_mom =', Gamma_mom
       ! write(*,*) 'q_parallel =', q_parallel
@@ -264,7 +268,8 @@ contains
             ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)
          enddo
          ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate
-         ydot(1) = density_ramp_rate
+      
+         ydot(1) = density_ramp_rate + elm_density_change
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx)
       ! ydot for the momentum equation
          ydot(Nx+1:2*Nx) = switch_momentum_source * Source_v(1:Nx)
@@ -298,8 +303,8 @@ contains
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)
          ! add the compression term
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))*energy_norm/1.5d+0/delta_x(1:Nx-1)
-         ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX
-         ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-q_parX)/delta_xcb(1)
+         ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load
+         ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-(q_parX+elm_heat_load))/delta_xcb(1)
          ! limit ydot(2*Nx+1:3*Nx) to prevent temperature below minimum_temperature (assuming a time step of 1.0d-6)
          ! do ix = 1, Nx
          !    ! ydot(2*Nx+ix) = max(ydot(2*Nx+ix), (3.0d+0*density(ix)*e_charge*minimum_temperature - y(2*Nx+ix))/1.0d-9)

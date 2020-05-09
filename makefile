@@ -26,7 +26,8 @@ OBJECTS = obj/constants.o \
           obj/dlsode.o \
           obj/opkda1.o \
           obj/opkda2.o \
-          obj/rk4.o
+          obj/rk4.o\
+		  obj/experiments.o
 
 
 obj/div1d.exe : src/div1d_main.f90 $(OBJECTS)
@@ -59,7 +60,8 @@ obj/physics_routines.o : src/physics_routines.f90\
                    obj/constants.o \
                    obj/grid_data.o \
                    obj/reaction_rates.o \
-                   obj/physics_parameters.o
+                   obj/physics_parameters.o \
+                   obj/experiments.o
 	$(FC) src/physics_routines.f90 $(FOPT) -c -o obj/physics_routines.o
 
 
@@ -95,11 +97,14 @@ obj/opkda1.o : src/opkda1.f
 
 obj/opkda2.o : src/opkda2.f
 	$(FC) src/opkda2.f $(FOPT) -c -o obj/opkda2.o
-
+	
 
 obj/rk4.o : src/rk4.f90
 	$(FC) src/rk4.f90 $(FOPT) -c -o obj/rk4.o
 
+
+obj/experiments.o : src/experiments.f90
+	$(FC) src/experiments.f90 $(FOPT) -c -o obj/experiments.o
 
 
 clean:

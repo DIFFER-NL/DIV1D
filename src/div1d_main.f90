@@ -11,6 +11,7 @@ program div1d
    use plasma_data
    use physics_routines
    use dvode_f90_m
+   use experiments
 
    implicit none
    integer, parameter :: wp = KIND(1.0D0)
