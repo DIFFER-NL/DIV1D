@@ -20,7 +20,7 @@ module numerics_parameters
    integer     :: NIAUSER = 0           ! dimension of array IAUSER (must be set to Number of odes + 1)
    integer, allocatable :: JAUSER(:)    ! array specifying nonzero elements of the jacobian (used by dvode)
    integer     :: NJAUSER = 0           ! dimension of array JAUSER (must be equal to Number of nonzeros in Jacobian)
-   real( wp )  :: density_norm            = 0.0d+0   ! normalization of demsities    (when = 0 initial_n is used) only used in normalization of solution vector y
+   real( wp )  :: density_norm            = 0.0d+0   ! normalization of densities    (when = 0 initial_n is used) only used in normalization of solution vector y
    real( wp )  :: temperature_norm        = 0.0d+0   ! normalization of temperatures (when = 0 1 eV is used) only used to normalize solution vector y
    real( wp )  :: velocity_norm           = 0.0d+0   ! normalization of velocities   (when = 0 sound speed at 1 eV is used) only used in to normalize solution vector y
    real( wp )  :: momentum_norm           = 0.0d+0   ! normalization of momentum (2nd part of y) = mass density_norm velocity_norm
