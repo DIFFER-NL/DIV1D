@@ -21,10 +21,10 @@ Abstract goes here.
 
 \section{Introduction}
 
-This manual describes the {\tt DIV1D} code for the quick simulation of the 1D plasma and neutral behaviour along a flux tube in a tokamak divertor from the X-point up to the target. The code is inspired by similar works described in the papers by Nakazawa et al.~\cite{nakazawa2000} and Dudson et al.~\cite{dudson2019, SD1D}. In fact, the numerical implementation borrows heavily from the methods used in the SD1D code.
+This manual describes the {\tt DIV1D} code for the quick simulation of the 1D plasma and neutral behaviour along a flux tube in a tokamak divertor from the X-point up to the target. The code is inspired by similar works described in the papers by Nakazawa et al.~\cite{nakazawa2000} and Dudson et al.~\cite{dudson2019, SD1D}. In fact, the numerical implementation borrows heavily from the methods used in the SD1D code. The code is maintained on a SVN repository at DIFFER (https://www.differ.nl/svn/shared/div1d). This document describes the basic model equations in Section~\ref{basic_equations} including the boundary conditions and the sources and sinks. Section~\ref{rates} contains a full description of the different choices that are implemented to calculate the various atomic processes like charge exchange, ionization, recombination, and impurity rafiation. Some notes on the discretization and the numerical implementation are given in Section~\ref{numerics}.
 
 
-\section{Equations}
+\section{Equations}\label{basic_equations}
 
 The equations solved are: the particle balance equation, the plasma momentum balance, the plasma energy balance, and an equation for the evolution of the neutral particle density. As in Nakazawa et al.~\cite{nakazawa2000} the neutral momentum and energy are ignored.
 
@@ -42,7 +42,7 @@ where $m$ is the mass of the dominant ion species (default Deuterium $m = 3.3436
 
 \noindent Ion and electron temperatures are considered equal such that only one energy balance needs to be solved. The internal energy ($3 n k T$) balance of the plasma is then given by
 \begin{equation}\label{energy_balance}
-    {\partial 3 n e T \over \partial t} = - {\partial \over \partial x} q_\parallel + v {\partial \over \partial x} p + Q,
+    {\partial 3 n e T \over \partial t} = - {\partial \over \partial x} q_\parallel + v_\parallel {\partial \over \partial x} p + Q,
 \end{equation}
 where the heat flux $q_\parallel$ is given by the equation
 \begin{equation}\label{heat_flux}
@@ -52,49 +52,49 @@ where the first term on the right hand side represents the total enthalpy flux a
 
 \noindent The neutral particle balance is given by
 \begin{equation}\label{neutral_particle_balance}
-    {\partial n_n \over \partial t} = {\partial \over \partial x} D {\partial \over \partial x} n_n - S_n,
+    {\partial n_n \over \partial t} = {\partial \over \partial x} D {\partial \over \partial x} n_n + S_{\rm neutral},
 \end{equation}
 where $n_n$ is the neutral particle density and D is the neutral particle diffusion coefficient which is given by \cite{nakazawa2000}
 \begin{equation}\label{neutral_diffusion_coefficient}
     D = { eT \over m \nu_{\rm cx} \sin^2\theta }
 \end{equation}
-where $\theta$ is the angle at which the magnetic field hits the target, and $\nu_{\rm cx} = n <\sigma_{\rm cx} v>$ is the charge exchange collision frequency for the neutrals and the average charge exchange rate $<\sigma_{\rm cx} v>$ is specified below.
+where $\theta$ is the angle at which the magnetic field hits the target, and $\nu_{\rm cx} = n \langle\sigma_{\rm cx} v\rangle$ is the charge exchange collision frequency for the neutrals and the average charge exchange rate $\langle\sigma_{\rm cx} v\rangle$ is specified below. The factor $\sin^2\theta$ appears in the equation for the neutral diffusion because the neutrals are free to move across magnetic field lines, such that their motion perpendicular to the target surface results in an effective parallel velocity that is increased by a factor $1/\sin\theta$.
 
 
-\section{Boundary Conditions}
+\subsection{Boundary Conditions}
 
 Each of these equations requires boundary conditions at the X-point $x=0$ and at the target $x=L$, where $L$ is the given length of the flux tube. At the X-point we use the following boundary conditions:
 the plasma density at the X-point is given: $n(x=0) = n_{\rm X}$; the plasma momentum flux at the X-point assumed to be constant: the parallel heat flux at the X-point is given:  $q_\parallel(x=0) = q_{\parallel,\rm X}$; and finally, the neutral particle density is assumed to have zero gradient.
 
-The boundary conditions at the target are given by the usual sheath boundary conditions assuming that density and temperature are constant across the sheath, while the plasma particle flux and momentum are given by the Bohm condition, $\Gamma_n(x=L) \ge n c_s$ and  where $c_s = \sqrt{2eT/m}$ is the plasma sound speed, and the the heat flux on the target is given by the sheath heat transmission factor $\gamma$ which must be specified at input:
+The boundary conditions at the target are given by the usual sheath boundary conditions assuming that density and temperature are constant across the sheath, while the plasma particle flux and momentum are given by the Bohm condition, $\Gamma_n(x=L) \ge n c_{\rm s}$ and  where $c_{\rm s} = \sqrt{2eT/m}$ is the plasma sound speed, and the the heat flux on the target is given by the sheath heat transmission factor $\gamma$ which must be specified at input:
 \begin{equation}\label{sheath_heat_transmission}
-    q_\parallel(x=L) = \gamma n e T c_s.
+    q_\parallel(x=L) = \gamma n e T c_{\rm s}.
 \end{equation}
 The neutral particle flux coming from the target is determined by the recycling coefficient $R$ given at input, i.e. $\Gamma_{\rm neutral}(x=L) = - R \Gamma_n(x=L)$. Note that when $R=1$ the total number of particles should be conserved requiring a zero plasma inflow velocity at the target in case of a steady state solution.
 
 
-\section{Sources and Sinks}
+\subsection{Sources and Sinks}
 
 The various sources and sinks are determined mostly by atomic processes like charge exchange, ionization, excitation, and recombination. In addition a neutral particle loss term can be specified in terms of an average residence time for the neutral in the flux tube to account for cross field neutral particle transport losses. For the plasma density the sources and sinks are given by ionization and recombination, respectively:
 \begin{equation}\label{particle_source}
-    S_n = + n n_n <\sigma_{\rm ion} v> - n^2 <\sigma_{\rm rec} v>.
+    S_n = + n n_n \langle\sigma_{\rm ion} v\rangle - n^2 \langle\sigma_{\rm rec} v\rangle.
 \end{equation}
 Because the neutral particle momentum is neglected there is no momentum source, while the momentum sinks are induced by charge exchange and recombination
 \begin{equation}\label{momentum_source}
-    S_{\rm mom} = - n m v_\parallel \left(n_n <\sigma_{\rm cx} v> + n <\sigma_{\rm rec} v> \right).
+    S_{\rm mom} = - n m v_\parallel \left(n_n \langle\sigma_{\rm cx} v\rangle + n \langle\sigma_{\rm rec} v\rangle \right).
 \end{equation}
 Similarly there are only heat sinks in the energy equation, with additional sinks coming from excitation (including ionization) and impurity radiation
 \begin{equation}\label{energy_source}
-    Q = - 1.5 n e T \left(n_n <\sigma_{\rm cx} v> + 2 n <\sigma_{\rm rec} v> \right) - n n_n <\sigma_{\rm exc} v> - n^2 \xi_Z L_Z(T)
+    Q = - 1.5 n e T \left(n_n \langle\sigma_{\rm cx} v\rangle + 2 n \langle\sigma_{\rm rec} v\rangle \right) - n n_n \langle\sigma_{\rm exc} v\rangle - n^2 \xi_Z L_Z(T)
 \end{equation}
 where $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$. What is a sink for the plasma density is a source for the neutral particles and vice versa, such that
 \begin{equation}\label{neutral_source}
-    S_{neutral} = - S_n - {n_n \over \tau_n}
+    S_{\rm neutral} = - S_n + S_{\rm puff} - {n_n \over \tau_n}
 \end{equation}
-where $\tau_n$ is a finite residence time of the neutral particles. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in the next paragraph where also the impurity radiative cooling rates are be given.
+where $S_{\rm puff}$ is the neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in the next paragraph where also the impurity radiative cooling rates are be given.
 
 
-\section{Atomic Rates}
+\section{Atomic Rates}\label{rates}
 
 A number of different options is available to calculate the atomic rates. For each of the rates a number of options is provided for different expressions that have been used in the literature. These include approximate formulas which are used amongts others in the SD1D code \cite{SD1D} of which the origin is however not always fully clear. The to our knowledge more accurate rates are obtained from the AMJUEL data base that is also being used for the EIRENE neutral particle Monte Carlo code and which can be found at the web site of the code \cite{EIRENE}. By default the rates from the AMJUEL data base are selected.
 
@@ -103,14 +103,14 @@ A number of different options is available to calculate the atomic rates. For ea
 
 The charge exchange rate as implemented in SD1D originates from the work by Havlickova \cite{havlickova2013} and is given by \cite{SD1D}
 \begin{equation}\label{charge_exchange_SD1D}
-    <\sigma_{\rm cx} v> = \begin{cases} 1.0 \times 10^{-14} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
+    \langle\sigma_{\rm cx} v\rangle = \begin{cases} 1.0 \times 10^{-14} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
                                         1.0 \times 10^{-14} T^{1/3} {\rm m}^3/{\rm s} & \mbox{for } T >   1 {\rm eV}. \end{cases}
 \end{equation}
 This option is selected by setting {\tt case\_cx = "Havlickova"}.
 
 Another expression that has been used for example in the work by Nakazawa et al. \cite{nakazawa2000}, comes from Table 3 of the report by Freeman and Jones \cite{freeman1974} in which case the charge exchange rate is given by the fit function
 \begin{equation}\label{charge_exchange_FJ}
-    <\sigma_{\rm cx} v> = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
+    \langle\sigma_{\rm cx} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
 with fitting coefficients $b_i$ given as
 \begin{small}\begin{verbatim}
@@ -122,7 +122,7 @@ This option is selected by setting {\tt case\_cx = "Freeman"}. The validity rang
 
 When using the AMJUEL option the charge exchange rate is calculated using the same fit function as above
 \begin{equation}\label{charge_exchange_AMJUEL}
-    <\sigma_{\rm cx} v> = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
+    \langle\sigma_{\rm cx} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
 with the fitting constants $b_i$ as defined in section 2.1 reaction 0.1T of the AMJUEL document for the total charge exchange rate of Hydrogen~\cite{EIRENE}
 \begin{small}\begin{verbatim}
@@ -139,7 +139,7 @@ Charge exchange rates for the Hydrogen isotopes like Deuterium and Tritium are o
 
 The ionization rate as implemented in SD1D again originates from the work by Havlickova \cite{havlickova2013}. It is slightly modified to remove the discontinuity at 20~eV and is given by \cite{SD1D}
 \begin{equation}\label{ionization_SD1D}
-    <\sigma_{\rm ion} v> = \begin{cases} 7.638 \times 10^{-21} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
+    \langle\sigma_{\rm ion} v\rangle = \begin{cases} 7.638 \times 10^{-21} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
                                         10^{-6.0d+0} T^{-2.987} 10^{-15.72 \exp(-\log_{10}T) + 1.603*exp(-\log_{10}^2T)} {\rm m}^3/{\rm s} & \mbox{for } 1 {\rm eV} < T \le 20 {\rm eV} \\
                                         5.875 \times 10^{-12} T^{-0.5151} 10^{-2.563/\log_{10}T} {\rm m}^3/{\rm s}. \end{cases}
 \end{equation}
@@ -147,7 +147,7 @@ This option is selected by setting {\tt case\_ion = "Havlickova"}
 
 Nakazawa et al.~\cite{nakazawa2000} in their 1D code use the ionization rate given in Table 3 of the report by Freeman and Jones. They provide a fit to the electron impact ionization given by
 \begin{equation}\label{charge_exchange_FJ}
-    <\sigma_{\rm ion} v> = 10^{-6} \exp\left( \sum_{i=0}^6 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
+    \langle\sigma_{\rm ion} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^6 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
 with fitting coefficients $b_i$ given by
 \begin{small}\begin{verbatim}
@@ -159,7 +159,7 @@ This option is selected by setting {\tt case\_ion = "Freeman"}
 
 When using the AMJUEL option the effective ionization rate is calculated using the double fit function
 \begin{equation}\label{ionization_AMJUEL}
-    <\sigma_{\rm ion} v> = 10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{ij} (\ln \bar n)^j (\ln T)^i \right)  {\rm m}^3/{\rm s}
+    \langle\sigma_{\rm ion} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{ij} (\ln \bar n)^j (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
 where the density is normalized as $\bar n \equiv n / 10^{14}$ and the fitting coefficients $\alpha_{ij}$ are given in section 4.3 reaction 2.1.5 of the AMJUEL document for the case of the total ionization rate (including all excited states of the neutral hydrogen atoms)
 \begin{small}\begin{verbatim}
@@ -209,7 +209,7 @@ N2MAX =   1.00000D 16 1/CM3
 
 Energy losses from ionization and due to excitation radiation are accounted for either as an effective energy loss constant per ionization (typically $E_{ion} = 30$~eV as in Nakazawa et al. \cite{nakazawa2000}) which can be specified at input er by an effective excitation rate which accounts for the temperature and density dependent total energy loss from ionization and excitation radiation. In the SD1D code the latter is given by a simple fit function as
 \begin{equation}\label{excitation_SD1D}
-    <\sigma_{\rm exc} v> = {4.90 \times 10^{-13} \over 0.28 + Y} \exp(-Y) \sqrt{Y (1.0 + Y)} {\rm eV} {\rm m}^3/{\rm s},
+    \langle\sigma_{\rm exc} v\rangle = {4.90 \times 10^{-13} \over 0.28 + Y} \exp(-Y) \sqrt{Y (1.0 + Y)} {\rm eV} {\rm m}^3/{\rm s},
 \end{equation}
 where $Y = 10.2 / \max( 1, T)$. Added to this is the 13.6~eV of energy loss per ionization.
 
@@ -261,11 +261,11 @@ N2MAX =   1.00000D 16 1/CM3
 
 In their 1D code Nakazawa et al.~\cite{nakazawa2000} use a combination of the radiative recombination rate from Gordeev et al. plus the three body recombination rate given by Hinnov et al., where the former is given by the expression~\cite{gordeev1977}
 \begin{equation}\label{radiative_recombination}
-    <\sigma_{\rm rad.rec} v> = 1.27 \times 10^{-19} {(13.6./T)^{1.5} \over (13.6/T) + 0.59} {\rm m}^3 / s,
+    \langle\sigma_{\rm rad.rec} v\rangle = 1.27 \times 10^{-19} {(13.6./T)^{1.5} \over (13.6/T) + 0.59} {\rm m}^3 / s,
 \end{equation}
 and the latter is expressed as~\cite{hinnov1962}
 \begin{equation}\label{three_body_recombination}
-    <\sigma_{\rm 3bodyrec} v> = 5.6 \times 10^{-39} \; T^{-4.5} n {\rm m}^3 / s.
+    \langle\sigma_{\rm 3bodyrec} v\rangle = 5.6 \times 10^{-39} \; T^{-4.5} n {\rm m}^3 / s.
 \end{equation}
 This model is selected by setting {\tt case\_rec = "Nakazawa"}.
 
@@ -321,7 +321,7 @@ The impurity radiation losses are typically given in the form of a radiative coo
 \end{equation}
 where $\xi_Z$ is the concentration of the impurity. Post et al.\cite{post1977} tabulate fit functions for the most relevant impurities in fusion plasmas using the general functional form of \cite{post1977}
 \begin{equation}\label{cooling_rate}
-    \log_{10} L_Z = \sum_{i=0}^5 \; A(i) (\log_{10} T_{\rm keV})^i [{\rm cm}^3 {\rm erg/s}
+    \log_{10} L_Z = \sum_{i=0}^5 \; A(i) (\log_{10} T_{\rm keV})^i [{\rm cm}^3 {\rm erg/s}]
 \end{equation}
 where $T_{\rm keV}$ is the temperature in keV.
 
@@ -340,7 +340,7 @@ An alternative for the cooling rate of Carbon according to Post et al. is provid
 \end{equation}
 for $T$ in eV.
 
-\section{Discretization and numerical implementation}
+\section{Discretization and numerical implementation}\label{numerics}
 
 The equations are discretized on a nonequidistant grid as employed also in the SD1D code \cite{SD1D}. For  $N$ grid cells the boundaries $x_{{\rm cb},i}$ counting from $i = 0$ at the X-point on the left to $i =N$ at the target on the right are given by \cite{SD1D}
 \begin{equation}\label{cell_boundaries}
@@ -376,6 +376,86 @@ where $c_{\rm norm} = \sqrt{2 k T_{\rm norm}/m}$ is the sound speed at the norma
 The advected part of the fluxes are calculated according to the numerical scheme as used in SD1D \cite{SD1D}. First the parallel velocities on the cell boundaries are obtained from a simple average of the parallel velocities at the adjacent cell centres. The advected quantity is the obtained using a slope limiter and a upwind scheme scheme in case of supersonic flow. For subsonic flow a Lax flux is used to damp discontinuities. For details see Dudson et al. \cite{dudson2019} and references therein. Pressure gradients are discretized using a downwind scheme.
 
 
+\section{Input and Output}\label{IO}
+
+Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~2.
+
+\begin{table}[h]
+\begin{center}
+  \caption{{\bf Namelist {\tt div1d\_numerics} setting parameters controlling the numerical implementation}.}
+  \label{tab:input_numerics}
+  \begin{tabular}{|| l  | l ||}
+    \hline\hline
+    variable name                & description \\ \hline\hline
+    {\tt Nx}                     & integer: number of points in the grid along the field line (default: 1000) \\ \hline
+    {\tt ntime}                  & integer: number of times steps (default: 1000)  \\ \hline
+    {\tt delta\_t}               & real: time step size (default: 1.0D-06)  \\ \hline
+    {\tt nout}                   & integer: output period in time steps (default: 100) \\ \hline
+    {\tt method}                 & integer: set method flag for {\tt dvode} integrator (default: 227)   \\ \hline
+	{\tt istate\_mod}            & integer: number of time steps between calls to {\tt dvode} with {\tt istate = 1} (default: 0) \\ \hline
+	{\tt max\_step}              & integer: maximum number of internal steps in {\tt dvode} (default: 100000) \\ \hline
+	{\tt max\_attempts}          & integer: maximum number of restarts of {\tt dvode} after failed integration (default: 1000) \\ \hline
+    {\tt abstol}                 & real: absolute value of tolerance in numerical integration (default: 1.0D-4)  \\ \hline
+    {\tt reltol}                 & real: ralitive value of tolerance in numerical integration (default: 1.0D-4)  \\ \hline
+	{\tt evolve\_density}        & integer: multiplier for density evolution (default: 1) \\ \hline
+	{\tt evolve\_momentum}       & integer: multiplier for momentum evolution (default: 1) \\ \hline
+	{\tt evolve\_energy}         & integer: multiplier for energy evolution (default: 1) \\ \hline
+	{\tt evolve\_neutral}        & integer: multiplier for neutral density evolution (default: 1) \\ \hline
+	{\tt density\_norm}          & real: normalization of densities in solution vector {\tt Y} (default: {\tt initial\_n}) \\ \hline
+	{\tt temperature\_norm}      & real: temperature used to normalize solution vector {\tt Y} (default: 1.0D0 eV) \\ \hline
+	{\tt velocity\_norm}         & real: velocity used to normalize solution vector {\tt Y} (default: sound speed at {\tt temperature\_norm}) \\ \hline
+	{\tt switch\_density\_source} & real: multiplier of source term in particle balance (default: 1.0D0) \\ \hline
+	{\tt switch\_momentum\_source}& real: multiplier of source term in momentum balance (default: 1.0D0) \\ \hline
+	{\tt switch\_energy\_source}  & real: multiplier of source term in energy balance (default: 1.0D0) \\ \hline
+	{\tt switch\_neutral\_source} & real: multiplier of source term in neutral density equation (default: 1.0D0) \\ \hline
+	{\tt switch\_charge\_exchange}& real: multiplier of the charge exchange rate (default: 1.0D0) \\ \hline
+	{\tt switch\_recombination}  & real: multiplier of the recombination rate (default: 1.0D0) \\ \hline
+	{\tt switch\_ionization}     & real: multiplier of the ionization rate (default: 1.0D0) \\ \hline
+	{\tt switch\_excitation}     & real: multiplier of the excitation rate (default: 1.0D0) \\ \hline
+	{\tt switch\_impurity\_radiation}& real: multiplier of the impurity radiation losses (default: 1.0) \\ \hline
+	{\tt viscosity}              & real: numerical viscosity (default: 0.0D0)  \\ \hline
+	{\tt central\_differencing}   & real: fraction of central differencing in pressure gradient term (default: 0.5D0) \\ \hline
+	{\tt restart}                & logical: when {\tt .true.} initial conditions are read from restart file (default: {\tt .false.}) \\ \hline
+    \hline
+  \end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+  \caption{{\bf Namelist {\tt div1d\_physics} setting parameters controlling the physics of the problem solved}.}
+  \label{tab:input_numerics}
+  \begin{tabular}{|| l  | l ||}
+    \hline\hline
+    variable name                & description \\ \hline\hline
+    {\tt L}                      & real: length of the field line between X-point and target (default: 5.0D1~m) \\ \hline
+    {\tt mass}                   & real: mass of the main plasma ion (default: 3.3436D-17~kg for D) \\ \hline
+    {\tt gamma}                  & real: sheath heat transmission factor (default: 6.5D0) \\ \hline
+    {\tt sintheta}               & real: sinus of angle theta between B-field and target plate (default: 0.1D0) \\ \hline
+    {\tt q\_parX}                & real: parallel heat flux at the X-point (default: 1.0D8~W/m$^2$) \\ \hline
+    {\tt initial\_n}             & real: initial, homogeneous particle density cq. density at X-point (default: 1.0D20~m$^{-3}$) \\ \hline
+    {\tt density\_ramp\_rate}    & real: rate of change of X-point density (default: 0.0D0~/m$^3$/s) \\ \hline
+    {\tt initial\_v}             & real: initial, homogeneous plasma velocity (default: 0.0D0~m/s) \\ \hline
+    {\tt initial\_T}             & real: initial, homogeneous plasma temperature (default: 1.0D2~eV) \\ \hline
+    {\tt initial\_a}             & real: initial, homogeneous neutral density (default: 0.0D0~m$^{-3}$) \\ \hline
+    {\tt carbon\_concentration}  & real: concentration of Carbon impurity ions (default: 1.0D-2) \\ \hline
+    {\tt recycling}              & real: fraction of ion flux on target recycled as neutral (default: 1.0D0) \\ \hline
+    {\tt redistributed\_fraction}& real: fraction of recycling neutral that is evenly distributed along the divertor leg (default: 0.0D0) \\ \hline
+    {\tt neutral\_residence\_time}& real: time scale in which neutral are lost from the SOL (default: 1.0D20~s) \\ \hline
+    {\tt gas\_puff\_source}      & real: total particle source from gass puff along flux tube (default: 0.0D0~m$^{-2}$) \\ \hline
+    {\tt gas\_puff\_location}    & real: location of gass puff along flux tube (default: 0.0D0~m) \\ \hline
+    {\tt gas\_puff\_width}       & real: Gaussian width of gass puff region along flux tube (default: 1.0D20~m) \\ \hline
+    {\tt charge\_exchange\_model}& character string selecting the charge exchange model (default: {\tt AMJUEL}) \\ \hline
+    {\tt ionization\_model}      & character string selecting the ionization model (default: {\tt AMJUEL}) \\ \hline
+    {\tt recombination\_model}   & character string selecting the recombination model (default: {\tt AMJUEL}) \\ \hline
+    {\tt energy\_loss\_ion}      & real: effective energy loss per ionization (only used when {\tt switch\_excitation .eq. 0.0d+0})) \\ \hline
+    {\tt minimum\_density}       & real: minimum value allowed for densities (default: 1.0D4~m$^{-3}$) \\ \hline
+    {\tt minimum\_temperature}   & real: minimum value allowed for temperatures (default: 0.1D0~eV) \\ \hline
+    \hline
+  \end{tabular}
+\end{center}
+\end{table}
+
 \section{Benchmark with 2 Point Model}
 
 The 2 Point Model for an attached divertor plasma assuming purely conductive heat transport and no losses is discussed in Chapter 5.2 of~\cite{stangeby}). For a given parallel heat flux $q_{\parallel,\rm X}$ entering the divertor leg upstream, a given upstream plasma density $n_{\rm X}$, the length of the divertor leg $L$, a set of three equations is obtained from the energy balance, the sheath heat transmission, and pressure balance respectively~\cite{stangeby}:
@@ -383,7 +463,7 @@ The 2 Point Model for an attached divertor plasma assuming purely conductive hea
     T_{\rm X} = \left(T_{\rm L}^{7/2} + {7 \over 2} {q_{\parallel,\rm X} L \over \kappa_0}\right)^{2/7},
 \end{equation}
 \begin{equation}\label{2PM_sheath_heat_transmission}
-    q_{\parallel,\rm X} = \gamma n e T_{\rm L} c_s,
+    q_{\parallel,\rm X} = \gamma n e T_{\rm L} c_{\rm s},
 \end{equation}
 \begin{equation}\label{2PM_pressure_balance}
     2 n_{\rm L} T_{\rm L} = n_{\rm X} T_{\rm X}.
@@ -449,41 +529,51 @@ Some other remarks on the solutions of the 1D problem. Momentum dissipation requ
 
 Important insight into the existence and stability of stationary solutions can be obtained by some further assumptions concerning the 1D model. In particular, ionization and recombination are often located in a relatively narrow zone. For stationary solutions of the equations, the pressure can then be assumed to be constant outside this narrow ionization and recombination zone and the parallel velocity and the convective heat flux can be neglected. The stationary solutions are then entirely specified by the stationary energy balance
 \begin{equation}\label{stationary_energy_balance}
-    {\partial \over \partial x} q_\parallel = Q.
+    {\partial \over \partial x} q_\parallel = Q \quad\hbox{with}\quad q_\parallel = - \kappa_\parallel {\partial \over \partial x} T.
 \end{equation}
 Using a transformation first introduced by Wim Goedheer [check citation] in the context of radiation losses from the edge of the confined plasma, allows to recast this equation into an integral equation for the change in the heat flux over the divertor leg or, in other words, an integral equation for the radiative energy losses in the divertor region. To this end Eq.~({\ref{stationary_energy_balance}) is multiplied by the parallel heat flux and integrated to obtain
 \begin{equation}\label{flux_change}
-    q_X^2 - q_L^2 = 2 \int_{T_L}^{T_X} \kappa_\parallel Q {\rm d}T.
+    q_X^2 - q_L^2 = - 2 \int_{T_L}^{T_X} \kappa_\parallel Q {\rm d}T.
 \end{equation}
 Next, the parallel heat conductivity is substituted as $\kappa_\parallel = \kappa_0 T^{5/2}$, the energy loss term is taken in the form of the radiative impurity losses (\ref{impurity_radiation}), and the constant pressure, $ p = 2 neT$, approximation is applied to obtain~\cite{lengyel1981,capes1992,hutchinson1994}
 \begin{equation}\label{flux_change_2}
-    q_X^2 - q_L^2 = {1\over2} \kappa_0 p^2 \xi_Z \int_{T_L}^{T_X} \sqrt{T} L_Z(T) {\rm d}T,
+    q_X^2 - q_L^2 = {1\over2 e^2} \kappa_0 p^2 \xi_Z \int_{T_L}^{T_X} \sqrt{T} L_Z(T) {\rm d}T,
 \end{equation}
 where the impurity concentration $xi_Z$ has also been assumed to be constant over the radiative layer.
 
 A number of conclusions can be drawn from this equation. Several authors apply it to quantify the maximum flux that can be radiated away in the divertor leg \cite{lengyel1981,lackner1993,kallenbach2013,siccinio2016}
 \begin{equation}\label{maximum_radiated_flux}
-    q_{\rm max} = \sqrt{{1\over2} \kappa_0 p^2 \xi_Z \int_0^\infty \sqrt{T} L_Z(T) {\rm d}T}.
+    q_{\rm max} = \sqrt{{1\over2 e^2} \kappa_0 p^2 \xi_Z \int_0^\infty \sqrt{T} L_Z(T) {\rm d}T}.
 \end{equation}
 Hutchinson and Lipschultz use it to formulate the stability condition for a radiative front~\cite{hutchinson1994,lipschultz2016}:
 \begin{equation}
     {{\rm d} \over {\rm d}x_f} (q_i - q_{\rm max}) \le 0,
 \end{equation}
-where $x_f$ is the front position and $q_i$ is the parallel energy flux entering the system. We apply this to analyse the stability of a detachment in our model where $q_i$ is fixed by the boundary condition at the X-point, while the pressure is determined by the equilibrium condition that $q_X = q_{\rm max}$. For a given X-point density then also the X-point temperature is determined, which through the heat conductivity equation sets the position of the radiation front (i.e. the position where the temperature is reached at which $L_Z(T)$ is maximum). Perturbing the front position in the direction of the X-point would lower the X-point temperature and, consequently the X-pint temperature and the pressure in the divertor. This will reduce the losses in the radiation front and push it back to its original position. Similarly a movement in the direction of the target will result in an increase of the losses again pushing the radiative layer back to its original position. As a result, given the boundary conditions in our model, the position of the radiation front for a fully detached case is always stable.
+where $x_f$ is the front position and $q_i$ is the parallel energy flux entering the front. We can apply this to analyse the stability of a detachment front. In our model, $q_i$ is fixed by the boundary condition at the X-point, while the pressure is determined by the equilibrium condition that $q_X = q_{\rm max}$. For a given X-point density then also the X-point temperature is determined, which through the heat conductivity equation sets the position of the radiation front (i.e. the position where the temperature is reached at which $L_Z(T)$ is maximum). Perturbing the front position in the direction of the X-point would lower the X-point temperature and, consequently the X-pint temperature and the pressure in the divertor. This will reduce the losses in the radiation front and push it back to its original position. Similarly a movement in the direction of the target will result in an increase of the losses again pushing the radiative layer back to its original position. As a result, given the boundary conditions in our model, the position of the radiation front for a fully detached case is always stable. We should add here that the radiation losses in our model also include significant contributions from ionization and recombination. However, because for a given impurity concentration the detachment front in our model becomes effectively independent of the position of the front so that the analysis given above also applies when considering the total losses which effectively have become a function of the temperature only.
 
-Capes et al. use this integral relation to the stability of attached or semi-detached divertor solutions for which $q_X$ is larger than $q_{\rm max}$~\cite{capes1992}. The residual energy flux to the target then determines the properties at the target according to the sheath boundary condition. Substituting the target heat flux (\ref{sheath_heat_transmission}) in Eq.~(\ref{flux_change_2}) and some algebraic manipulation results in a nonlinear relation between the target temperature $T_L$ to the conditions at the X-point:
+Capes et al. use this integral relation to study the stability of attached or semi-detached divertor solutions for which $q_X$ is larger than $q_{\rm max}$~\cite{capes1992}. The residual energy flux to the target then determines the properties at the target according to the sheath boundary condition. Substituting the target heat flux (\ref{sheath_heat_transmission}) in Eq.~(\ref{flux_change_2}), while taking into account the condition (\ref{2PM_pressure_balance}) that follows from the acceleration of the plasma in the presheath to the sound velocity, then results after some algebraic manipulation in a nonlinear relation between the target temperature $T_L$ to the conditions at the X-point:
 \begin{equation}
-    X(T_L) \equiv {2 m q_X^2 \over e \gamma^2 p^2} = T_L + {\kappa_0 m \xi_Z \over e \gamma^2} \int_0^\infty \sqrt{T} L_Z(T) {\rm d}T.
+    X(T_L) \equiv {8 m q_X^2 \over e \gamma^2 p^2} = T_L + {4 \kappa_0 m \xi_Z \over e^3 \gamma^2} \int_{T_L}^\infty \sqrt{T} L_Z(T) {\rm d}T,
 \end{equation}
-Note that $X(T_L)$ is identical to the target temperature in case there are no radiative losses. For a given condition X at the X-point, there can be one, multiple, or no solution for $T_L$. The bifurcation points can be found by differentiating $X(T_L)$ with respect to $T_L$ and finding the zeros of the resulting relation, i.e.
+where for convenience the upper limit of the integration has been extended to infinity. Generalizing this to include all radiative losses this relation could be written as
 \begin{equation}
-    {{\rm d} X(T_L) \over {\rm d}T_L} = 1 - {\kappa_0 m \xi_Z \over e \gamma^2} \sqrt{T_L} L_Z(T_L).
+    X(T_L) \equiv {8 m q_X^2 \over e \gamma^2 p^2} = T_L - {16 m \over e \gamma^2 p^2}  \int_{T_L}^\infty \kappa_\parallel Q {\rm d}T.
 \end{equation}
-The impurity concentration $xi_Z$ above which the solutions for the stationary divertor solution are bifurcated is then determined by the maximum of $\sqrt{T} L_Z(T)$
+Note that $X(T_L)$ is identical to the two-point-model target temperature (\ref{2PM_target_temperature}) in case there are no radiative losses. In case radiative losses are not negligible the integral on the right hand side is related to the dissipated power fraction in the two point model. For a given condition $X$ at the X-point, there can be one, multiple, or no solution for $T_L$. Bifurcation points can be found by differentiating $X(T_L)$ with respect to $T_L$ and finding the zeros of the resulting relation, i.e.
 \begin{equation}
-    \xi_\star = {e \gamma^2 \over \kappa_0 m [\sqrt{T} L_Z(T)]_{\rm max}}.
+    {{\rm d} X(T_L) \over {\rm d}T_L} = 1 - {4 \kappa_0 m \xi_Z \over e^3 \gamma^2} \sqrt{T_L} L_Z(T_L) = 0,
 \end{equation}
-This explains the bifurcations that we have found in the stationary divertor solutions for Carbon impurity concentrations of 5\%. Note that in their paper Capes et al. considered only the electron fluid resulting in slightly different expressions, while also the parallel heat conductivity $\kappa_0$ and the heat transmission coefficient $\gamma$ differ from the resent work.
+or
+\begin{equation}
+    {{\rm d} X(T_L) \over {\rm d}T_L} = 1 + {16 m \over e \gamma^2 p^2} [\kappa_\parallel Q](T_L) = 0.
+\end{equation}
+The impurity concentration $\xi_Z$ above which the solutions for the stationary divertor solution are bifurcated is then determined by the maximum of $\sqrt{T} L_Z(T)$
+\begin{equation}
+    \xi_\star = {e^3 \gamma^2 \over 4 \kappa_0 m [\sqrt{T} L_Z(T)]_{\rm max}}.
+\end{equation}
+Substituting the numbers from our simulations would predict a critical Carbon concentration of about 2.5\% [MUST BE CHECKED]. In case of a 5\% Carbon concentration our simulations indeed confirm the existence of a bifurcation. However, impurity radiation losses are not the only losses that must be accounted for. Also ionization and charge exchange losses are significant and should be accounted for. Apart from leading to energy losses these are also responsible for momentum losses that are not accounted for in the analysis given above. The simulations show tat the momentum losses are non-negligible in the parameter range where the bifurcation is observed.
+
+Note that in their paper Capes et al. considered only the electron fluid and neglected the effect of the acceleration of the plasma in the presheath resulting in slightly different expressions. Also the values used for the parallel heat conductivity $\kappa_0$ and the heat transmission coefficient $\gamma$ differ from the present work.
 
 \section*{Acknowledgments}
 \noindent This project was carried out with financial support from NWO. The work has been carried out within the framework of the EUROfusion Consortium and has received funding from the Euratom research and training programme 2014-2018 under grant agreement No 633053. The views and opinions expressed herein do not necessarily reflect those of the European Commission.
@@ -554,4 +644,4 @@ B. Lipschultz, F.I. Parra, and I.H. Hutchinson, Nucl. Fusion {\bf 56} (2016) 056
     &&T_u^{7/2} = T_t^{7/2} + {\displaystyle {7 \over 2} {q_\parallel (1 - f_{\rm conv}) L \over \kappa_{0e}} } \nonumber \\
     &&q_\parallel (1 - f_{\rm pwr}) = \gamma n_t k_B T_t c_{st} \nonumber
 \end{eqnarray}
-
+  This explains that we find a bifurcation in the stationary divertor solutions already for Carbon impurity concentrations of 5\%.
