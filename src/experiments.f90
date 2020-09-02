@@ -5,7 +5,7 @@ module experiments
                                    switch_elm_density, switch_elm_heat_flux, switch_elm_series, &
                                    q_parX, L, radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location
     use numerics_parameters, only: delta_t
-    use grid_data, only: x 
+    use grid_data, only: x, delta_xcb
 
     implicit none
     integer, parameter, private :: wp = KIND(1.0D0)
@@ -130,21 +130,19 @@ contains
         
         ! This subroutine captures the radial losses as a volumetric energy sink with a gaussian
         ! profile. Inputs are the gaussian width and peak location, given by radial_loss_width and 
-        ! radial_loss_location respectively. Setting the former to a value much greater than the
-        ! divertor leg length, results in a constant loss over the divertor leg of 
-        ! radial_loss_factor *
+        ! radial_loss_location respectively. Depending on whether radial_loss_gaussian is zero or
+        ! not, the radial loss profile is a bell curve or constant, respectively. The normalisation
+        ! is calculated numerically, so that the total lost heat flux is always fixed by q_parX.
         implicit none
         integer         :: Nx
-        real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx)
+        real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation
 
         if (radial_loss_gaussian.gt.0) then
             a0 = radial_loss_width
             x0 = radial_loss_location
-            norm = 1/(a0*sqrt(2*pi))
-            gaussian = norm*exp(-(x-x0)**2/(2*a0**2))
-
-            radial_sink = radial_loss_factor * q_parX * gaussian
-        
+            gaussian = exp(-(x-x0)**2/(2*a0**2))
+            normalisation = sum(gaussian * delta_xcb)
+            radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
         else
             radial_sink = radial_loss_factor * q_parX / L
         endif
