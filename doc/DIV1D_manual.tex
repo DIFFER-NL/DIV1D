@@ -340,6 +340,49 @@ An alternative for the cooling rate of Carbon according to Post et al. is provid
 \end{equation}
 for $T$ in eV.
 
+
+\section{Edge-localised modes}
+\label{section:elms}
+
+Edge-localised modes (ELMs) are sudden disruptions in the core plasma, which release large amounts of heat and particles. To simulate ELMs in DIV1D, the subroutine simulate\_elm is included. This subroutine adds an additional term to the boundary conditions for the parallel heat flux and the plasma density at the X-point, which simulates the short-term  heat flux and particle density surges that are characteristic of ELMs. The DIV1D ELMs are characterised by a steep initial increase, and a long tail, and can be calculated from the equation
+
+\begin{equation}
+\label{maxwell_boltzmann_elm}
+\frac{\Phi(t)}{\tilde{\Phi}} = \frac{\sqrt{2/{\mathrm{\pi}}}}{n+1} \sum_{i=0}^{n} \frac{t^2}{a_{i}^3}\exp{\frac{-t^2}{2a_i^2}}
+\end{equation}
+
+which is recognisable as a sum over Maxwell-Boltzmann distrutions in time $t$ where the factors $a_i$ are given by
+
+\begin{equation}
+\label{maxwell_boltzmann_elm_a}
+a_i = \Delta^i\frac{\tau_{\mathrm{r}}}{\sqrt{2}}.
+\end{equation}
+
+This follows from the fact that the maximum of equation~(\ref{maxwell_boltzmann_elm}) for $n=0$ is set to coincide with some ELM ramp time $\tau_{\mathrm{r}}$, which is an input parameter. Note that the ELM ramp time does not exactly reflect the maximum value for $n=3$, which is shifted to a slightly later time. Consecutive-order terms in $a_i$ differ by a multiplication factor of $\Delta$. Values of $\Delta=1.9$ and $n=3$ (note that the sum starts from zero, so these are four terms) were chosen to eye-ballingly match the long-tail behaviour found from AXUV bolometry on TCV~\cite{veres2009}. They are fixed in the code.
+
+Equation~(\ref{maxwell_boltzmann_elm}) has the useful property that
+
+\begin{equation}
+\label{norm_of_maxwell_boltzmann_elm}
+\int_0^\infty\frac{\Phi(t)}{\tilde{\Phi}}\mathrm{d}t=1
+\end{equation}
+
+which means that the total amount of energy or particles that is put into the system by the ELM is known beforehand. The total number of particles and amount of heat flux are set by a pair of input parameters.
+
+The subroutine can be used to calculate both the heat flux and particle contributions of an ELM. The former is done by directly adding $\Phi(t)$ to the X-point boundary condition for the heat flux. Alternatively, the latter requires calculating the first derivative of equation~(\ref{maxwell_boltzmann_elm}) with respect to time first, owing to a slightly different formulation of the plasma density boundary condition.
+
+Finally, the code also includes a possibility to simulate a series of ELMs rather than a single one, with a repetition frequency that can also be defined on input.
+The full list of input parameters related to ELMs in DIV1D is
+elm\_start\_time,
+elm\_ramp\_time,
+elm\_time\_between,
+elm\_expelled\_heat,
+elm\_expelled\_particles,
+switch\_elm\_density,
+switch\_elm\_heat\_flux,
+switch\_elm\_series,
+explained more fully in table~2.
+
 \section{Discretization and numerical implementation}\label{numerics}
 
 The equations are discretized on a nonequidistant grid as employed also in the SD1D code \cite{SD1D}. For  $N$ grid cells the boundaries $x_{{\rm cb},i}$ counting from $i = 0$ at the X-point on the left to $i =N$ at the target on the right are given by \cite{SD1D}
@@ -451,7 +494,15 @@ Here we provide a complete list of the input and output parameters of the code. 
     {\tt energy\_loss\_ion}      & real: effective energy loss per ionization (only used when {\tt switch\_excitation .eq. 0.0d+0})) \\ \hline
     {\tt minimum\_density}       & real: minimum value allowed for densities (default: 1.0D4~m$^{-3}$) \\ \hline
     {\tt minimum\_temperature}   & real: minimum value allowed for temperatures (default: 0.1D0~eV) \\ \hline
-    \hline
+    {\tt elm\_start\_time}   	 & integer: outer time step at which the first ELM starts, in units of delta\_t (default: 0) \\ \hline
+    {\tt elm\_ramp\_time}   	 & integer: ramp time of ELM (not exact, see section~\ref{section:elms}), in units of delta\_t (default: 0) \\ \hline
+    {\tt elm\_time\_between,}    & integer: outer time steps between two the start of two ELMs, in units of delta\_t (default: 2d+08) \\ \hline
+    {\tt elm\_expelled\_heat}    & real: total amount of expelled heat per unit area due to an ELM (default: 0 J m$^{-2}$) \\ \hline
+    {\tt elm\_expelled\_particles}& real: total number of expelled particles due to an ELM (default: 0 m$^{-3}$) \\ \hline
+    {\tt switch\_elm\_heat\_flux}& integer: turns off (0) or on (1) the ELM contribution to the heat flux (default: 0) \\ \hline
+    {\tt switch\_elm\_density}       & integer: turns off (0) or on (1) the ELM contribution to the particle flux (default: 0) \\ \hline
+    {\tt switch\_elm\_series}       & integer: turns off (0) or on (1) the multi-ELM sequence (default: 0) \\ \hline
+        \hline
   \end{tabular}
 \end{center}
 \end{table}
@@ -608,6 +659,9 @@ Yu.S. Gordeev, A.N. Zinov'ev, and M.P. Petrov, J. Exp. Theor. Physics {\bf 25} (
 \bibitem{post1977}
 D.E. Post, et al., Atomic Data and Nuclear Data Tables {\bf 20} (1977) 397.
 
+\bibitem{veres2009}
+G. Veres, et al., J. Nucl. Mater. {\bf 390–391} (2009) 835.
+
 \bibitem{hinnov1962}
 E. Hinnov,. and J.G. Hirschberg, Phys. Review {\bf 125} (1962) 795.
 
@@ -634,6 +688,8 @@ M. Siccinio, et al., Plasma Phys. Control. Fusion {\bf 58} (2016) 125011.
 
 \bibitem{lipschultz2016}
 B. Lipschultz, F.I. Parra, and I.H. Hutchinson, Nucl. Fusion {\bf 56} (2016) 056007.
+
+
 
 \end{thebibliography}
 
