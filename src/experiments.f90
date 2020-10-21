@@ -2,7 +2,7 @@ module experiments
 
     use constants, only : pi
     use physics_parameters, only : elm_start_time, elm_ramp_time, elm_time_between ,elm_expelled_heat, elm_expelled_particles, &
-                                   switch_elm_density, switch_elm_heat_flux, switch_elm_series
+                                   switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm
     use numerics_parameters, only: delta_t
 
     implicit none
@@ -52,10 +52,14 @@ contains
         elm_count = 0
 
         do while (time_mod.gt.0d0)
-            
+
             if (switch_elm_heat_flux.eq.1) then
                 time_integrated_quantity = elm_expelled_heat
-                call maxwell_boltzmann_elm(time_mod,time_integrated_quantity,quantity,dquantity)
+                if (gaussian_elm.eq.1) then
+                    call maxwell_boltzmann_elm(time_mod,time_integrated_quantity,quantity,dquantity)
+                else
+                    call triangular_elm(time_mod,time_integrated_quantity,quantity,dquantity)
+                endif
                 elm_heat_load = elm_heat_load + quantity
                 if (isnan(elm_heat_load)) then
                     elm_heat_load = 0d0
@@ -64,7 +68,11 @@ contains
 
             if (switch_elm_density.eq.1) then
                 time_integrated_quantity = elm_expelled_particles
-                call maxwell_boltzmann_elm(time_mod,time_integrated_quantity,quantity,dquantity)
+                if (gaussian_elm.eq.1) then
+                    call maxwell_boltzmann_elm(time_mod,time_integrated_quantity,quantity,dquantity)
+                else
+                    call triangular_elm(time_mod,time_integrated_quantity,quantity,dquantity)
+                endif
                 elm_density_change = elm_density_change + dquantity
                 if (isnan(elm_density_change)) then
                     elm_density_change = 0d0
@@ -77,6 +85,29 @@ contains
         end do
 
     end subroutine simulate_elm
+
+    subroutine triangular_elm(time_relative,time_integrated_quantity,quantity,dquantity)
+
+        ! Time-dependent ELM model from Eich et al (2017) [https://doi.org/10.1016/j.nme.2017.04.014]
+        ! that simulates ELMs as triangular waveforms.
+
+        implicit none
+
+        real(wp)        :: t, tr, norm, quantity, dquantity, time_relative, time_integrated_quantity
+
+        t = time_relative
+        tr = elm_ramp_time*delta_t
+        norm = time_integrated_quantity*(2d0/3d0)*(1/tr)
+
+        if (t.lt.tr) then
+            quantity = norm * t/tr
+            dquantity= norm * 1/tr
+        elseif (t.gt.tr.and.t.le.3d0*tr) then
+            quantity = norm * (1d0-(t-tr)/(2d0*tr))
+            dquantity= norm * -1d0/(2d0*tr)
+        endif
+        
+    end subroutine triangular_elm
 
     subroutine maxwell_boltzmann_elm(time_relative,time_integrated_quantity,quantity,dquantity)
 
@@ -100,27 +131,43 @@ contains
         real(wp)        :: a0, a1, a2, a3, MB0, MB1, MB2, MB3, dMB0, dMB1, dMB2, dMB3
         real(wp)        :: time_relative, time_integrated_quantity, quantity, dquantity
         integer         :: istep
+        
+        ! t = time_relative
+        ! tr = elm_ramp_time*delta_t
+        ! norm    = 1d0/4d0*sqrt(2d0/pi)
+        ! mb2mb_distance = 1.9d0
+
+        ! a0      = mb2mb_distance**0d0*tr/sqrt(2d0)
+        ! a1      = mb2mb_distance**1d0*tr/sqrt(2d0)
+        ! a2      = mb2mb_distance**2d0*tr/sqrt(2d0)
+        ! a3      = mb2mb_distance**3d0*tr/sqrt(2d0)
+        ! MB0     = norm/a0**3d0*t**2d0*exp(-t**2d0/(2d0*a0**2d0))
+        ! MB1     = norm/a1**3d0*t**2d0*exp(-t**2d0/(2d0*a1**2d0))
+        ! MB2     = norm/a2**3d0*t**2d0*exp(-t**2d0/(2d0*a2**2d0))
+        ! MB3     = norm/a3**3d0*t**2d0*exp(-t**2d0/(2d0*a3**2d0))
+        ! quantity    = (MB0 + MB1 + MB2 + MB3)*time_integrated_quantity
+
+        ! dMB0    = (2d0/t-t/a0**2d0)*MB0
+        ! dMB1    = (2d0/t-t/a1**2d0)*MB1
+        ! dMB2    = (2d0/t-t/a2**2d0)*MB2
+        ! dMB3    = (2d0/t-t/a3**2d0)*MB3
+        ! dquantity   = (dMB0 + dMB1 + dMB2 + dMB3)*time_integrated_quantity
 
         t = time_relative
         tr = elm_ramp_time*delta_t
-        norm    = 1d0/4d0*sqrt(2d0/pi)
-        mb2mb_distance = 1.9d0
+        norm    = 1d0/2d0*sqrt(2d0/pi)
+        mb2mb_distance = 1.4d0
 
         a0      = mb2mb_distance**0d0*tr/sqrt(2d0)
         a1      = mb2mb_distance**1d0*tr/sqrt(2d0)
-        a2      = mb2mb_distance**2d0*tr/sqrt(2d0)
-        a3      = mb2mb_distance**3d0*tr/sqrt(2d0)
         MB0     = norm/a0**3d0*t**2d0*exp(-t**2d0/(2d0*a0**2d0))
         MB1     = norm/a1**3d0*t**2d0*exp(-t**2d0/(2d0*a1**2d0))
-        MB2     = norm/a2**3d0*t**2d0*exp(-t**2d0/(2d0*a2**2d0))
-        MB3     = norm/a3**3d0*t**2d0*exp(-t**2d0/(2d0*a3**2d0))
-        quantity    = (MB0 + MB1 + MB2 + MB3)*time_integrated_quantity
+        quantity    = (MB0 + MB1)*time_integrated_quantity
 
         dMB0    = (2d0/t-t/a0**2d0)*MB0
         dMB1    = (2d0/t-t/a1**2d0)*MB1
-        dMB2    = (2d0/t-t/a2**2d0)*MB2
-        dMB3    = (2d0/t-t/a3**2d0)*MB3
-        dquantity   = (dMB0 + dMB1 + dMB2 + dMB3)*time_integrated_quantity
+        dquantity   = (dMB0 + dMB1)*time_integrated_quantity
+
 
     end subroutine maxwell_boltzmann_elm
 

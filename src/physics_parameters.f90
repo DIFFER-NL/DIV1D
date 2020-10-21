@@ -37,6 +37,7 @@ module physics_parameters
    integer    :: switch_elm_heat_flux   = 0           ! turns off (0, default) or on (1) the elm contribution to the heat flux
    integer    :: switch_elm_density     = 0           ! turns off (0, default) or on (1) the elm contribution to the particle flux
    integer    :: switch_elm_series      = 0           ! turns off (0, default) or on (1) the multi-elm sequence
+   integer    :: gaussian_elm           = 1           ! switch between gaussian ELM (1, default) and triangular ELM (anything but 1) 
    logical    :: case_AMJUEL            = .true.      ! use collision rates from AMJUEL data base
    character*10 :: charge_exchange_model= "AMJUEL"    ! use charge exchange reaction rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: ionization_model     = "AMJUEL"    ! use ionization rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
@@ -52,7 +53,7 @@ contains
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
-                               switch_elm_density, switch_elm_heat_flux, switch_elm_series
+                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
