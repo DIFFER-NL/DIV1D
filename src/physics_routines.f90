@@ -212,7 +212,7 @@ contains
       Source_Q = Source_Q - switch_impurity_radiation * rate_imp * e_charge ! note impurity radiation loss rate is in eV m^3 / s
       ! write(*,*) rate_ion, Source_Q
       ! Add the effect of radial losses across the flux tube
-      call calculate_radial_losses(Nx,radial_sink)
+      call calculate_radial_losses(Nx,radial_sink,q_parallel)
       ! Consecutively, check whether substracting this radial_sink does not yield unphysical results by confirming that the total 
       ! losses over the flux tube are smaller than the incoming flux, so as not to obtain sub-zero fluxes.
       do ix = 1, Nx
