@@ -216,7 +216,12 @@ contains
       ! Consecutively, check whether substracting this radial_sink does not yield unphysical results by confirming that the total 
       ! losses over the flux tube are smaller than the incoming flux, so as not to obtain sub-zero fluxes.
       do ix = 1, Nx
-         radial_sink(ix) = min(radial_sink(ix), q_parallel(ix)/delta_xcb(ix))
+         if (abs(Source_Q(ix) - radial_sink).ge.0.9d+0*abs(q_parallel(ix)/delta_xcb(ix))) then
+            do iix = ix, Nx
+               radial_sink(iix) = 0
+            end do
+            exit
+         endif
       enddo
       Source_Q = Source_Q - radial_sink ! note impurity radiation loss rate is in eV m^3 / s
       ! remove spikes that cause problems during integration of the ODE
