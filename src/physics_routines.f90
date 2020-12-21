@@ -185,7 +185,7 @@ contains
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
       real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_imp(Nx)
       real(wp) :: radial_sink(Nx)
-      integer  :: ix
+      integer  :: ix, iix
       Source_n = 0.0d+0
       Source_v = 0.0d+0
       Source_Q = 0.0d+0
@@ -216,7 +216,7 @@ contains
       ! Consecutively, check whether substracting this radial_sink does not yield unphysical results by confirming that the total 
       ! losses over the flux tube are smaller than the incoming flux, so as not to obtain sub-zero fluxes.
       do ix = 1, Nx
-         if (abs(Source_Q(ix) - radial_sink).ge.0.9d+0*abs(q_parallel(ix)/delta_xcb(ix))) then
+         if (abs(Source_Q(ix) - radial_sink(ix)).ge.0.9d+0*abs(q_parallel(ix)/delta_xcb(ix))) then
             do iix = ix, Nx
                radial_sink(iix) = 0
             end do

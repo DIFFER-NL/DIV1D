@@ -130,9 +130,11 @@ contains
         
         ! This subroutine captures the radial losses as a volumetric energy sink with a gaussian
         ! profile. Inputs are the gaussian width and peak location, given by radial_loss_width and 
-        ! radial_loss_location respectively. Depending on whether radial_loss_gaussian is zero or
-        ! not, the radial loss profile is a bell curve or constant, respectively. The normalisation
-        ! is calculated numerically, so that the total lost heat flux is always fixed by q_parX.
+        ! radial_loss_location respectively. Depending on whether radial_loss_gaussian is
+        ! positive, zero or negative, the radial loss profile is a bell curve, constant or dependent
+        ! on the local heat flux, respectively. The normalisation of the gaussian is calculated numerically,
+        ! so that the total lost heat flux is always fixed by q_parX.
+
         implicit none
         integer         :: Nx
         real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation,q_parallel(Nx)
@@ -148,6 +150,7 @@ contains
         else
             radial_sink = radial_loss_factor * q_parX / L
         endif
+
     end subroutine calculate_radial_losses
         
 
