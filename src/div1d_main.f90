@@ -58,7 +58,7 @@ program div1d
    ! calculate the fluxes
    call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
    ! calculate the sources
-   call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
+   call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
@@ -168,7 +168,7 @@ program div1d
          ! calculate the fluxes
          call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
          ! calculate the sources
-         call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, source_neutral )
+         call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
          call write_solution( end_time )
       endif
       start_time = end_time

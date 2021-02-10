@@ -8,7 +8,7 @@ module physics_routines
                                   gas_puff_source, gas_puff_location, gas_puff_width
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources
-   use experiments, only: simulate_elm
+   use experiments, only: simulate_elm, calculate_radial_losses
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -177,14 +177,15 @@ contains
       return
    end subroutine initialize_gas_puff
 
-   subroutine calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, neutral_source )
+   subroutine calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source )
    ! this subroutine calculates the source terms of the discretized conservation equations
       implicit none
       integer,  intent(in)  :: Nx
-      real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
+      real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx),q_parallel(Nx)
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
       real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_imp(Nx)
-      integer  :: ix
+      real(wp) :: radial_sink(Nx)
+      integer  :: ix, iix
       Source_n = 0.0d+0
       Source_v = 0.0d+0
       Source_Q = 0.0d+0
@@ -210,6 +211,19 @@ contains
       endif
       Source_Q = Source_Q - switch_impurity_radiation * rate_imp * e_charge ! note impurity radiation loss rate is in eV m^3 / s
       ! write(*,*) rate_ion, Source_Q
+      ! Add the effect of radial losses across the flux tube
+      call calculate_radial_losses(Nx,radial_sink,q_parallel)
+      ! Consecutively, check whether substracting this radial_sink does not yield unphysical results by confirming that the total 
+      ! losses over the flux tube are smaller than the incoming flux, so as not to obtain sub-zero fluxes.
+      do ix = 1, Nx
+         if (abs(Source_Q(ix) - radial_sink(ix)).ge.0.9d+0*abs(q_parallel(ix)/delta_xcb(ix))) then
+            do iix = ix, Nx
+               radial_sink(iix) = 0
+            end do
+            exit
+         endif
+      enddo
+      Source_Q = Source_Q - radial_sink ! note impurity radiation loss rate is in eV m^3 / s
       ! remove spikes that cause problems during integration of the ODE
       if( filter_sources ) then
           call spike_filter( Nx, neutral_source )
@@ -248,7 +262,7 @@ contains
       ! calculate the fluxes
       call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
       ! calculate the sources
-      call calculate_sources( Nx, density, velocity, temperature, neutral, Source_n, Source_v, Source_Q, neutral_source )
+      call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source )
       ! calculate the ELM heat flux and particle flux
       call simulate_elm(elm_heat_load, elm_density_change, time)
       ! write(*,*) 'Gamma_n =', Gamma_n

@@ -42,6 +42,10 @@ module physics_parameters
    character*10 :: charge_exchange_model= "AMJUEL"    ! use charge exchange reaction rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: ionization_model     = "AMJUEL"    ! use ionization rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: recombination_model  = "AMJUEL"    ! use recombination rates from "AMJUEL" data base, or "Nakazawa" (combining radiative rec. from Gordeev with 3 body rec. from Hinnov et al)
+   real( wp ) :: radial_loss_factor     = 0           ! percentage of the parallel flux that is lost radially throughout the flux tube
+   integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, or to 1 for a gaussian distribution 
+   real( wp ) :: radial_loss_width      = 1d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1)
+   real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1)
 
 contains
 
@@ -53,7 +57,8 @@ contains
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
-                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm
+                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
