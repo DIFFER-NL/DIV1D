@@ -1,7 +1,7 @@
-\documentclass[amsmath,amssymb,a4]{revtex4}
+\documentclass[amsmath,amssymb,a4]{revtex4-2}
+% updated from revtex4 tot revtex4-2 because revtex4 would cause compiler malfunctioning in the most recent Miktex package. It is superseded by revtex4-2 (https://journals.aps.org/revtex/revtex-faq) so that was used as of 12-2-2020.
 \usepackage{graphicx}
 \begin{document}
-
 \title[DIV1D manual]{DIV1D manual: a 1D code for divertor plasma simulation}
 
 \author{E. Westerhof}
@@ -11,6 +11,7 @@
 \email[E-mail: ]{e.westerhof@differ.nl}
 \vspace{10pt}
 \date\today
+
 
 \begin{abstract}
 Abstract goes here.
@@ -93,6 +94,37 @@ where $L_Z(T)$ is the radiative cooling rate of the impurity with concentration 
 \end{equation}
 where $S_{\rm puff}$ is the neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in the next paragraph where also the impurity radiative cooling rates are be given.
 
+
+\subsection{Radial power losses}
+An additional factor that can be of some importance is that of power losses in the radial direction. To simulate this effect, DIV1D includes several versions of an effective radial loss term. The simplest version is
+
+\begin{equation}
+\label{constant_rad_losses}
+S_{\perp}=-\eta_{\perp}\frac{q_\parallel}{L}
+\end{equation}
+
+where $S_{\perp}$ denotes the radial power sink, and $\eta_{\perp}$ is the fraction of the upstream heat flux that is lost over the length of the flux tube due to radial losses. A slightly more advanced version of these losses is
+
+\begin{equation}
+S_\perp(x)=-\frac{\eta_{\perp}q_{\parallel}}{\sqrt{2\pi(\mathrm{\Delta}x)^2}}
+\mathrm{exp}{-\frac{1}{2}\left(\frac{x-x_0}{\mathrm{\Delta}x}\right)^2}
+\end{equation}
+
+where losses are no longer incurred equally over the flux tube, but are instead peaked at $x_0$ with a typical width of $\mathrm{\Delta}x$ around it. Note that the prefactor is calculated analytically in the code to make sure that the total losses always amount to $-\eta_{\perp}\times q_{\parallel}$. A comparison of either loss profile show that the target parameters are rather indifferent to the choice of loss profile.\\
+
+Finally, a heat-flux-dependent variant is also included as
+
+\begin{equation}
+S_{\perp}=-\eta_{\perp}\frac{q_\parallel(x)}{L}
+\end{equation}
+
+which is crucially different from~\ref{constant_rad_losses} in that it takes into account the local heat flux in each grid cell rather than the upstream heat flux. As a result $\eta_{\perp}$ no longer reflects the total fraction of the upstream heat flux that is lost.\\
+
+Four input parameters exist which the user can employ to shape the radial losses to his or her desire. These are: 
+radial\_loss\_factor ($\eta_{\perp}$),
+radial\_loss\_gaussian (choice of loss profile),
+radial\_loss\_width ($\mathrm{\Delta}x$), and
+radial\_loss\_location ($x_0$). See table~2.
 
 \section{Atomic Rates}\label{rates}
 
@@ -344,34 +376,56 @@ for $T$ in eV.
 \section{Edge-localised modes}
 \label{section:elms}
 
-Edge-localised modes (ELMs) are sudden disruptions in the core plasma, which release large amounts of heat and particles. To simulate ELMs in DIV1D, the subroutine simulate\_elm is included. This subroutine adds an additional term to the boundary conditions for the parallel heat flux and the plasma density at the X-point, which simulates the short-term  heat flux and particle density surges that are characteristic of ELMs. The DIV1D ELMs are characterised by a steep initial increase, and a long tail, and can be calculated from the equation
+Edge-localised modes (ELMs) are sudden disruptions in the core plasma, which release large amounts of heat and particles. To simulate ELMs in DIV1D, the subroutine simulate\_elm is included. This subroutine adds an additional term to the boundary conditions for the parallel heat flux and the plasma density at the X-point, which simulates the short-term  heat flux and particle density surges that are characteristic of ELMs. Two models have been included. The DIV1D ELMs are characterised by a steep initial increase, and a longer decrease. The first is a model by Eich et al~\cite{eich2017}, which is a simple triangular waveform written as
+
+\begin{equation}
+\label{triangular_elm}
+q_{\mathrm{ELM}}(t)=\frac{2}{3}\frac{Q_{\mathrm{ELM}}}{\tau_{\mathrm{r}}}\times
+\left\{
+\begin{matrix}
+\frac{t}{\tau_{\mathrm{\mathrm{r}}}} & 
+0 \leq t \leq \tau_{\mathrm{r}} \\
+1-\frac{t-\tau_{\mathrm{r}}}{2\tau_{\mathrm{r}}} &
+\tau_{\mathrm{r}} < t \leq 3\tau_{\mathrm{r}}
+\end{matrix}
+\right.
+\end{equation}
+
+that has the useful property that
+
+\begin{equation}
+\int_{0}^{3\tau_{\mathrm{r}}} q_{\mathrm{ELM}} \mathrm{d}t=Q_{\mathrm{ELM}}.
+\end{equation}
+
+Here $\tau_{\mathrm{r}}$ is the time during which the ELM-induced heat flux grows, and $Q_{\mathrm{ELM}}$ the total fluence (joules per square meter) that is added on the upstream side of the domain over the course of the ELM. Equation~\ref{triangular_elm} is added to the steady-state heat flux ($q_{\parallel}$) as
+
+\begin{equation}
+\label{elm_boundary_condition}
+q_{\parallel,\mathrm{tot}}=q_{\parallel}+q_{\mathrm{ELM}}(t).
+\end{equation}
+
+An alternative formulation to equation~\ref{triangular_elm}, to remove discontinuities in the first derivative of $q_{\mathrm{ELM}}$ with respect to time, is formulated as
 
 \begin{equation}
 \label{maxwell_boltzmann_elm}
-\frac{\Phi(t)}{\tilde{\Phi}} = \frac{\sqrt{2/{\mathrm{\pi}}}}{n+1} \sum_{i=0}^{n} \frac{t^2}{a_{i}^3}\exp{\frac{-t^2}{2a_i^2}}
+q_{\mathrm{ELM}} = Q_{\mathrm{ELM}}\times
+\frac{1}{N}\sqrt{\frac{2}{\pi}}
+\sum_{n=1}^{N} \frac{t^2}{a_{n}^3}\exp{\frac{-t^2}{2a_n^2}}
 \end{equation}
 
 which is recognisable as a sum over Maxwell-Boltzmann distrutions in time $t$ where the factors $a_i$ are given by
 
 \begin{equation}
 \label{maxwell_boltzmann_elm_a}
-a_i = \Delta^i\frac{\tau_{\mathrm{r}}}{\sqrt{2}}.
+a_n = \Delta^{n-1}\frac{\tau_{\mathrm{r}}}{\sqrt{2}}.
 \end{equation}
 
-This follows from the fact that the maximum of equation~(\ref{maxwell_boltzmann_elm}) for $n=0$ is set to coincide with some ELM ramp time $\tau_{\mathrm{r}}$, which is an input parameter. Note that the ELM ramp time does not exactly reflect the maximum value for $n=3$, which is shifted to a slightly later time. Consecutive-order terms in $a_i$ differ by a multiplication factor of $\Delta$. Values of $\Delta=1.9$ and $n=3$ (note that the sum starts from zero, so these are four terms) were chosen to eye-ballingly match the long-tail behaviour found from AXUV bolometry on TCV~\cite{veres2009}. They are fixed in the code.
+This follows from the fact that the maximum of equation~(\ref{maxwell_boltzmann_elm}) for $n=1$ is set to coincide with some ELM ramp time $\tau_{\mathrm{r}}$, which is an input parameter. Note that the ELM ramp time does not exactly reflect the maximum value for $n=1$, which is shifted to a slightly later time. Consecutive-order terms in $a_n$ differ by a multiplication factor of $\Delta$. Values of $\Delta=1.4$ and $N=2$ were chosen to match the triangular shape proposed by~\cite{eich2017}. It was initially hoped that this type of ELM would give smoother results than its triangular counterpart, but it would appear that this is not the case. This is why the triangular ELM is the default.\\
 
-Equation~(\ref{maxwell_boltzmann_elm}) has the useful property that
+Single-pulse ELMs are not always realistic, particularly for the smaller (but higher-frequency) Type-II and Type-III ELMs. To this end, DIV1D includes the possibility of repeating ELMs on a fixed time interval.\\
 
-\begin{equation}
-\label{norm_of_maxwell_boltzmann_elm}
-\int_0^\infty\frac{\Phi(t)}{\tilde{\Phi}}\mathrm{d}t=1
-\end{equation}
+Finally, the ELM functionality was written such that it can also include a density effect. Using the same equation \ref{triangular_elm} (or \ref{maxwell_boltzmann_elm}), but now considering $Q_{\mathrm{ELM}}$ to be the total amount of particles that is dispelled during an ELM we can take the time derivative of equation \ref{triangular_elm}/\ref{maxwell_boltzmann_elm}) and thus obtain the rate of change of the density due to this ELM. This effect can be summed with the density ramp feature in DIV1D to simulate the rise in the upstream density.\\
 
-which means that the total amount of energy or particles that is put into the system by the ELM is known beforehand. The total number of particles and amount of heat flux are set by a pair of input parameters.
-
-The subroutine can be used to calculate both the heat flux and particle contributions of an ELM. The former is done by directly adding $\Phi(t)$ to the X-point boundary condition for the heat flux. Alternatively, the latter requires calculating the first derivative of equation~(\ref{maxwell_boltzmann_elm}) with respect to time first, owing to a slightly different formulation of the plasma density boundary condition.
-
-Finally, the code also includes a possibility to simulate a series of ELMs rather than a single one, with a repetition frequency that can also be defined on input.
 The full list of input parameters related to ELMs in DIV1D is
 elm\_start\_time,
 elm\_ramp\_time,
@@ -381,6 +435,7 @@ elm\_expelled\_particles,
 switch\_elm\_density,
 switch\_elm\_heat\_flux,
 switch\_elm\_series,
+gaussian\_elm
 explained more fully in table~2.
 
 \section{Discretization and numerical implementation}\label{numerics}
@@ -495,13 +550,18 @@ Here we provide a complete list of the input and output parameters of the code. 
     {\tt minimum\_density}       & real: minimum value allowed for densities (default: 1.0D4~m$^{-3}$) \\ \hline
     {\tt minimum\_temperature}   & real: minimum value allowed for temperatures (default: 0.1D0~eV) \\ \hline
     {\tt elm\_start\_time}   	 & integer: outer time step at which the first ELM starts, in units of delta\_t (default: 0) \\ \hline
-    {\tt elm\_ramp\_time}   	 & integer: ramp time of ELM (not exact, see section~\ref{section:elms}), in units of delta\_t (default: 0) \\ \hline
+    {\tt elm\_ramp\_time}   	 & integer: ramp time of ELM (not exact for gaussian, see section~\ref{section:elms}), in units of delta\_t (default: 0) \\ \hline
     {\tt elm\_time\_between,}    & integer: outer time steps between two the start of two ELMs, in units of delta\_t (default: 2d+08) \\ \hline
     {\tt elm\_expelled\_heat}    & real: total amount of expelled heat per unit area due to an ELM (default: 0 J m$^{-2}$) \\ \hline
     {\tt elm\_expelled\_particles}& real: total number of expelled particles due to an ELM (default: 0 m$^{-3}$) \\ \hline
     {\tt switch\_elm\_heat\_flux}& integer: turns off (0) or on (1) the ELM contribution to the heat flux (default: 0) \\ \hline
-    {\tt switch\_elm\_density}       & integer: turns off (0) or on (1) the ELM contribution to the particle flux (default: 0) \\ \hline
-    {\tt switch\_elm\_series}       & integer: turns off (0) or on (1) the multi-ELM sequence (default: 0) \\ \hline
+    {\tt switch\_elm\_density}   & integer: turns off (0) or on (1) the ELM contribution to the particle flux (default: 0) \\ \hline
+    {\tt switch\_elm\_series}    & integer: turns off (0) or on (1) the multi-ELM sequence (default: 0) \\ \hline
+        {\tt gaussian\_elm}      & integer: chooses triangular (0) or gaussian (1) ELM (default: 0) \\ \hline
+        {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
+        {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
+        {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
+        {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline      
         \hline
   \end{tabular}
 \end{center}
@@ -661,6 +721,9 @@ D.E. Post, et al., Atomic Data and Nuclear Data Tables {\bf 20} (1977) 397.
 
 \bibitem{veres2009}
 G. Veres, et al., J. Nucl. Mater. {\bf 390–391} (2009) 835.
+
+\bibitem{eich2017}
+T. Eich, et al., Nuclear Materials and Energy {\bf 12} (2017) 84-90l
 
 \bibitem{hinnov1962}
 E. Hinnov,. and J.G. Hirschberg, Phys. Review {\bf 125} (1962) 795.
