@@ -32,20 +32,20 @@ module physics_parameters
    integer    :: elm_start_time         = 0           ! time step (outer step) at which the ELM starts
    integer    :: elm_ramp_time          = 0           ! time (outer step) over which the ELM ramps up
    integer    :: elm_time_between       = 200000000   ! time (outer step) between two ELMs
-   real( wp ) :: elm_expelled_heat      = 0.0d+0      ! total heat flux owing to elm, integrated over time [W/m^2]
+   real( wp ) :: elm_expelled_heat      = 0.0d+0      ! total heat flux owing to elm, integrated over time [J/m^2]
    real( wp ) :: elm_expelled_particles = 0.0d+0      ! total particle flux owing to elm, integrated over time [/m^2]
    integer    :: switch_elm_heat_flux   = 0           ! turns off (0, default) or on (1) the elm contribution to the heat flux
    integer    :: switch_elm_density     = 0           ! turns off (0, default) or on (1) the elm contribution to the particle flux
    integer    :: switch_elm_series      = 0           ! turns off (0, default) or on (1) the multi-elm sequence
-   integer    :: gaussian_elm           = 1           ! switch between gaussian ELM (1, default) and triangular ELM (anything but 1) 
+   integer    :: gaussian_elm           = 0           ! switch between gaussian ELM (1, default) and triangular ELM (anything but 1) 
    logical    :: case_AMJUEL            = .true.      ! use collision rates from AMJUEL data base
    character*10 :: charge_exchange_model= "AMJUEL"    ! use charge exchange reaction rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: ionization_model     = "AMJUEL"    ! use ionization rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: recombination_model  = "AMJUEL"    ! use recombination rates from "AMJUEL" data base, or "Nakazawa" (combining radiative rec. from Gordeev with 3 body rec. from Hinnov et al)
-   real( wp ) :: radial_loss_factor     = 0           ! percentage of the parallel flux that is lost radially throughout the flux tube
-   integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, or to 1 for a gaussian distribution 
-   real( wp ) :: radial_loss_width      = 1d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1)
-   real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1)
+   real( wp ) :: radial_loss_factor     = 0           ! percentage of the parallel flux that is lost radially throughout the flux tube (not exact for radial_loss_gaussian = -1)
+   integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
+   real( wp ) :: radial_loss_width      = 1d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
+   real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
 
 contains
 
