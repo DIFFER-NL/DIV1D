@@ -9,9 +9,14 @@ It can be used to investigate dynamics and compare to measurements such as [Rave
 * Fortran90 and cmake compilers
 ## Setup
 clone to your folder: git clone hash
+
 Go into div1d: cd div1d
+
 Make obj folder: mkdir obj
+
 Use makefile: make 
+
+
 
 ## Status
 A place to add ideas for development
