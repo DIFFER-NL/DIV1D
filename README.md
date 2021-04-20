@@ -16,7 +16,9 @@ Make obj folder: mkdir obj
 
 Use makefile: make 
 
+Copy or make input.txt and div1d_restart_old.txt 
 
+Run a simulation, go to the directory of input.txt and div1d_restart_old.txt and type: ./<dir>/obj/div1d.exe < input.txt
 
 ## Status
 A place to add ideas for development
