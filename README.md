@@ -9,9 +9,16 @@ It can be used to investigate dynamics and compare to measurements such as [Rave
 * Fortran90 and cmake compilers
 ## Setup
 clone to your folder: git clone hash
+
 Go into div1d: cd div1d
+
 Make obj folder: mkdir obj
+
 Use makefile: make 
+
+Copy or make input.txt and div1d_restart_old.txt 
+
+Run a simulation, go to the directory of input.txt and div1d_restart_old.txt and type: ./<dir>/obj/div1d.exe < input.txt
 
 ## Status
 A place to add ideas for development
