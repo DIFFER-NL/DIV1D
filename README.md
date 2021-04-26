@@ -35,6 +35,9 @@ Version X.Y.Z of DIV1D:
 * Z is raised when backwards compatibility is lost.
 * Y is raised when new features are added with compatibility.
 * X is raised when a new version only contains small changes.
+Tag: git tag -a v1.0.0 -m "Version 1.0.0 of DIV1D".
+Show: git show v1.0.0
+Push: git push origin v1.0.0
 ### Version History
 * Version 1.0.0 merged to master by Westerhof and Frankemolle in 2020
 
