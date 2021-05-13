@@ -2,7 +2,7 @@ module physics_parameters
 ! module defining the physics parameters and their default values
 ! when the div1d_physics namelist is read the normalizations are defined
 
-   use numerics_parameters, only : density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm
+   use numerics_parameters, only : density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, ntime
    use constants, only : e_charge
 
    implicit none
@@ -47,11 +47,15 @@ module physics_parameters
    real( wp ) :: radial_loss_width      = 1d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
 
+  ! time dependent data 
+   real, dimension(ntime) :: nu_t 		
+				
 contains
 
    subroutine read_physics_parameters( error )
       implicit none
-      integer :: error
+      integer :: error, i
+      real, dimension(ntime) :: nu_t
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
@@ -63,6 +67,18 @@ contains
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
+
+      ! read time dependent parameters
+      open(1, file = 'nu.dat', status = 'old')
+      do i =  1,ntime
+	read(1,*) nu_t(i)
+      end do
+      close(1)
+
+      do i = 1,ntime
+	write(*,*) nu_t(i)
+      end do
+
       ! correct the desired normalizations
       if( density_norm .eq. 0.0d+0 ) density_norm = initial_n
       if( temperature_norm .eq. 0.0d+0 ) temperature_norm = 1.0e+0
