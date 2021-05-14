@@ -36,6 +36,11 @@ program div1d
    input_error = input_error_numerics + 10*input_error_physics
    if( input_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
 
+
+   ! test if new input is readable
+   write(*,*) "nu.dat access test."
+   write(*,*) nu_t(2)
+   
    ! initialize the grid
    call initialize_grid
 

@@ -9,12 +9,14 @@ implicit none
    ! data  
    ntime = 10000
    do i = 1, 1000 
-	nu(i) = 2e+19
+	! nu(i) = 2e+19
+	nu(i) = 0
    end do
 
    do i = 1000,ntime   
 	tmp = i/1000 - 1
-      	nu(i) = 2e+19 + SIN( tmp )*2e+18
+      	!nu(i) = 2e+19 + SIN( tmp )*2e+18 
+	nu(i) = SIN( tmp )*2e+18
    end do  
    
    

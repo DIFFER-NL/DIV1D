@@ -5,9 +5,10 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
-                                  gas_puff_source, gas_puff_location, gas_puff_width
+                                  gas_puff_source, gas_puff_location, gas_puff_width, nu_t, dnu_t
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
-                                   switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources
+                                   switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources,&
+			   	   delta_t
    use experiments, only: simulate_elm, calculate_radial_losses
 
    implicit none
@@ -216,7 +217,7 @@ contains
       ! Consecutively, check whether substracting this radial_sink does not yield unphysical results by confirming that the total 
       ! losses over the flux tube are smaller than the incoming flux, so as not to obtain sub-zero fluxes.
       do ix = 1, Nx
-         if (abs(Source_Q(ix) - radial_sink(ix)).ge.0.9d+0*abs(q_parallel(ix)/delta_xcb(ix))) then
+         if (abs(Source_Q(ix) - radial_sink(ix)) .ge. 0.9d+0*abs(q_parallel(ix)/delta_xcb(ix))) then
             do iix = ix, Nx
                radial_sink(iix) = 0
             end do
@@ -240,7 +241,8 @@ contains
    ! note that y and ydor are normalized, but the arrays density, velocity, temperature, and neutral are not!
       implicit none
       integer,  intent(in)  :: neq
-      real(wp), intent(in)  :: time, y(neq) !time is not used
+      real(wp), intent(in)  :: time, y(neq) !time is not used?
+      integer	            :: itime ! GD index of time in simulation
       real(wp), intent(out) :: ydot(neq)
       integer               :: Nx, ix
       real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)
@@ -250,15 +252,21 @@ contains
       real(wp)              :: csound_target, q_sheath, v0, Gmom0
       ! input variables for the elm simulation
       real(wp)              :: elm_heat_load, elm_density_change
-      Nx = neq/4
+ 
+
+      Nx 	= neq/4
+      itime 	= time / delta_t
+      ! write(*,*) 'RHS called at itime =', itime
       ! write(*,*) 'RHS called at t =', time
       ! write(*,*) 'y =', y
+
       ! first tranform the solution vector to (density velocity temperature neutral-density)
       call y2nvt( Nx, y, density, velocity, temperature, neutral )
       ! write(*,*) 'density = ', density
       ! write(*,*) 'velocity =', velocity
       ! write(*,*) 'temperature =', temperature
       ! write(*,*) 'neutral density =', neutral
+
       ! calculate the fluxes
       call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
       ! calculate the sources
@@ -272,20 +280,22 @@ contains
       ! write(*,*) 'Source_v =', Source_v
       ! write(*,*) 'Source_Q =', Source_Q
       ! write(*,*) 'neutral_source =', neutral_source
+
       ! sound velocity at the target
       csound_target = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
-      ! ydot for the density equation
+
+      ! -------------------------------------------- ydot for the density equation ----------------------------------------------
          ydot(1:Nx) = switch_density_source * Source_n(1:Nx)
          ! add the particle flux term using the flux as calculated in calculate_fluxes
          ! Gamma_n(i) contains the flux at i+1/2
          do ix = 2, Nx
             ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)
          enddo
-         ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate
-      
-         ydot(1) = density_ramp_rate + elm_density_change
-      ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx)
-      ! ydot for the momentum equation
+         ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
+         ydot(1) = density_ramp_rate + elm_density_change + dnu_t(itime) ! [1/ (m^3 s)]
+      ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx) ! ---------------------------------------------------------------------
+
+      ! --------------------------------------------- ydot for the momentum equation ------------------------------------------
          ydot(Nx+1:2*Nx) = switch_momentum_source * Source_v(1:Nx)
          ! add the momentum flux term using the flux as calculated in calculate_fluxes
          ! Gamma_mom(i) contains the flux at i+1/2
@@ -294,24 +304,25 @@ contains
          enddo
          ! apply boundary condition at the X-point, as following from the constant density n(1)
          ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
-         v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1)
-         ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
+         !v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1) ! GD: no ELM_density_change ?
+         v0 = velocity(2) - 2.0d+0 * (Source_n(1)+ydot(1)) * delta_xcb(1) / density(1) ! GD added result from density equation
+	 ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
          Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0
          ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
          ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
-            ydot(Nx+ix) = ydot(Nx+ix) - (1.0d+0-central_differencing)*(y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix) - central_differencing*(y(2*Nx+ix+1)-y(2*Nx+ix-1))*energy_norm/1.5d+0/(x(ix+1)-x(ix-1))
+            ydot(Nx+ix) = ydot(Nx+ix) - (1.0d+0-central_differencing)*(y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix)&
+                                      - central_differencing*(y(2*Nx+ix+1)-y(2*Nx+ix-1))*energy_norm/1.5d+0/(x(ix+1)-x(ix-1))
             ! add effect of numerical viscosity
             ydot(Nx+ix) = ydot(Nx+ix) + viscosity*(velocity(ix+1) + velocity(ix-1)-2.0d0*velocity(ix))
          enddo
-         ! apply boundary condition at the sheath entrance, i=Nx: 
-         ! extrapolate temperature and density to the sheath, add numerical viscosity (linearly extrapolate velocity beyond the sheath)
-         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)
-         ! ydot(2*Nx) = ydot(2*Nx) + (0.5d+0*(y(3*Nx)+y(3*Nx-1))*energy_norm/1.5d+0-(3.0d+0*density(Nx)-density(Nx-1))*e_charge*temperature(Nx))/delta_xcb(Nx)
-         ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target + velocity(Nx-1)-3.0d0*velocity(Nx))
-      ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx)
-      ! ydot for the energy equation
+         ! apply boundary condition at the sheath entrance, i=Nx: (linearly extrapolate velocity beyond the sheath)
+         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)     ! extrapolate temperature and density
+	 ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target + velocity(Nx-1)-3.0d0*velocity(Nx))  ! add numerical viscocity
+      ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx) ! -----------------------------------------------------------------------
+      
+      ! ------------------------------------------------ ydot for the energy equation --------------------------------------------
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
          ! add the heat flux term in the internal region (including the sheath)
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)
@@ -320,43 +331,30 @@ contains
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load
          ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-(q_parX+elm_heat_load))/delta_xcb(1)
          ! limit ydot(2*Nx+1:3*Nx) to prevent temperature below minimum_temperature (assuming a time step of 1.0d-6)
-         ! do ix = 1, Nx
-         !    ! ydot(2*Nx+ix) = max(ydot(2*Nx+ix), (3.0d+0*density(ix)*e_charge*minimum_temperature - y(2*Nx+ix))/1.0d-9)
-         !    if( 3.0d+0*density(ix)*e_charge*minimum_temperature .gt. y(2*Nx+ix) ) then
-         !       ydot(2*Nx+ix) = max(ydot(2*Nx+ix), (3.0d+0*density(ix)*e_charge*minimum_temperature - y(2*Nx+ix))/1.0d-4)
-         !       write(*,*) 'temperature limited', ix, time, y(2*Nx+ix)/density(ix)/e_charge/3.0d+0
-         !    endif
-         ! enddo
-         ! do ix = 1, Nx
-         !    if( temperature(ix) .le. minimum_temperature ) then
-         !       ydot(2*Nx+ix) = max(ydot(2*Nx+ix), 0.0d+0)
-         !    endif
-         ! enddo
-      ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx)
-      ! ydot for the neutral density equation
+      ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx) ! -------------------------------------------------------------------------
+
+      ! ----------------------------------------------ydot for the neutral density equation --------------------------------------
          ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx)
          ! add the density diffusion in the internal reagion
          ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
          do ix = 1, Nx
-            Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) )
+            Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) ) ! GD Fortran can do matrix and vector operations right?
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
-         ! ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + Diff_neutral(2:Nx-1) * ((neutral(3:Nx)-neutral(2:Nx-1))/delta_x(2:Nx-1)-(neutral(2:Nx-1)-neutral(1:Nx-2))/delta_x(1:Nx-2))/delta_xcb(2:Nx-1)
-         ! ydot(3*Nx+2:4*Nx-1) = ydot(3*Nx+2:4*Nx-1) + (Diff_neutral(3:Nx)-Diff_neutral(1:Nx-2))*(neutral(3:Nx)-neutral(1:Nx-2))/(delta_x(2:Nx-1)+delta_x(1:Nx-2))**2
          ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
          ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)/delta_xcb(1)
          ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)/delta_x(1)
-         ! ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
-         ! ydot(4*Nx) = ydot(4*Nx) + (Gamma_n(Nx) * recycling * (1.0d-0-redistributed_fraction) - 0.5d+0*(Diff_neutral(Nx)+Diff_neutral(Nx-1))*(neutral(Nx)-neutral(Nx-1))/delta_x(Nx-1))/delta_xcb(Nx)
-         ! finally add the neutral sources and losses from redistribution and finite residence time
+         ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         ! add neutral sources and losses from redistribution and finite residence time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
-      ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx)
+      ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx) !-------------------------------------------------------------------------
+
       ! apply evolution switches
-      ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx) / density(1:Nx)
-      ydot(  Nx+1:2*Nx) = evolve_momentum * ydot(  Nx+1:2*Nx) / momentum_norm
-      ydot(2*Nx+1:3*Nx) = evolve_energy   * ydot(2*Nx+1:3*Nx) / energy_norm
-      ydot(3*Nx+1:4*Nx) = evolve_neutral  * ydot(3*Nx+1:4*Nx) / neutral(1:Nx)
+         ydot(     1:  Nx) = evolve_density  * ydot(     1:  Nx) / density(1:Nx)
+	 ydot(  Nx+1:2*Nx) = evolve_momentum * ydot(  Nx+1:2*Nx) / momentum_norm
+      	 ydot(2*Nx+1:3*Nx) = evolve_energy   * ydot(2*Nx+1:3*Nx) / energy_norm
+      	 ydot(3*Nx+1:4*Nx) = evolve_neutral  * ydot(3*Nx+1:4*Nx) / neutral(1:Nx)
       ! write(*,*) 'time =', time, 'ydot(Nx) =', ydot(Nx), 'density(Nx) =', density(Nx), 'Source_n(Nx) =', Source_n(Nx), Gamma_n(Nx)
       ! write(*,*) 'ydot =', ydot
       return
