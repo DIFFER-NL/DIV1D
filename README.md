@@ -39,9 +39,9 @@ A place to add ideas for development
 Although a history is kept by git, this readme also presents an overview of changes.
 ### Semantics
 Version X.Y.Z of DIV1D:
-* Z is raised when backwards compatibility is lost.
+* X is raised when backwards compatibility is lost.
 * Y is raised when new features are added with compatibility.
-* X is raised when a new version only contains small changes.
+* Z is raised when a new version only contains small changes.
 Tag: git tag -a v1.0.0 -m "Version 1.0.0 of DIV1D".
 Show: git show v1.0.0
 Push: git push origin v1.0.0
