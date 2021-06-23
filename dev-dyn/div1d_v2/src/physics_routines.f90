@@ -65,7 +65,7 @@ contains
    subroutine advection(Nx, variable, velocity, temperature, flux)
    ! this subroutine calculates the advected flux of a variable with a given velocity field
    ! the temperature is needed to calculate the sound velocity
-   ! the variable and velcoty field are given on the (equidistant) grid centers
+   ! the variable and velocity field are given on the (equidistant) grid centers
    ! the flux is returned at the grid boundaries i + 1/2
       implicit none
       integer,  intent(in)  :: Nx
@@ -76,8 +76,7 @@ contains
       flux = 0.0
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
       do i = 1, Nx-1
-         csound = sqrt( 2.0d+0 * e_charge * max(temperature(i),temperature(i+1),minimum_temperature) / mass )
-         ! csound = sqrt(          e_charge *    (temperature(i)+temperature(i+1)) / mass )
+         csound = sqrt( 2.0d+0 * e_charge * max(temperature(i),temperature(i+1),minimum_temperature) / mass ) 
          average_velocity = 0.5d+0 * (velocity(i)+velocity(i+1))
          if( average_velocity .gt. csound ) then
             if( i .eq. 1 ) then
@@ -123,17 +122,13 @@ contains
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound_target = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
          ! write(*,*) 'flux', e_charge, mass, temperature(Nx)
-         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target)
          Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target)
          ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound_target
-         ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
          momentum = density * mass * velocity
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
-         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2
          Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2
-         ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
       ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
@@ -143,10 +138,8 @@ contains
             q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) ! we have extrapolated the density linear towards x = L, i.e. the sheath
-         ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
-      ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
-         ! we do this in the right_hand_side routine itself
+         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) ! NOTE: extrapolated the density linear towards x = L, i.e. the sheath
+      ! the neutral particle diffusion  
          do i = 1, Nx-1
             neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
          enddo
@@ -221,7 +214,7 @@ contains
             do iix = ix, Nx
                radial_sink(iix) = 0
             end do
-            exit
+          exit
          endif
       enddo
       Source_Q = Source_Q - radial_sink ! note impurity radiation loss rate is in eV m^3 / s
@@ -235,6 +228,34 @@ contains
       return
    end subroutine calculate_sources
 
+   
+   subroutine calculate_radial_losses(Nx,radial_sink,q_parallel)
+        
+        ! This subroutine captures the radial losses as a volumetric energy sink with a gaussian
+        ! profile. Inputs are the gaussian width and peak location, given by radial_loss_width and 
+        ! radial_loss_location respectively. Depending on whether radial_loss_gaussian is
+        ! positive, zero or negative, the radial loss profile is a bell curve, constant or dependent
+        ! on the local heat flux, respectively. The normalisation of the gaussian is calculated numerically,
+        ! so that the total lost heat flux is always fixed by q_parX.
+
+        implicit none
+        integer         :: Nx
+        real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation,q_parallel(Nx)
+
+        if (radial_loss_gaussian.gt.0) then
+            a0 = radial_loss_width
+            x0 = radial_loss_location
+            gaussian = exp(-(x-x0)**2/(2*a0**2))
+            normalisation = sum(gaussian * delta_xcb)
+            radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
+        elseif (radial_loss_gaussian.lt.0) then
+            radial_sink = radial_loss_factor *q_parallel / L
+        else
+            radial_sink = radial_loss_factor * q_parX / L
+        endif
+
+   end subroutine calculate_radial_losses
+
 
    subroutine right_hand_side( neq, time, y, ydot )
    ! this subroutine calculates the right hand side ydot of the discretized conservation equations
@@ -242,13 +263,13 @@ contains
       implicit none
       integer,  intent(in)  :: neq
       real(wp), intent(in)  :: time, y(neq) !time is not used?
-      integer	            :: itime ! GD index of time in simulation
+      integer, intent(in)   :: itime ! GD index of time in simulation
       real(wp), intent(out) :: ydot(neq)
       integer               :: Nx, ix
-      real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)
-      real(wp)              :: Gamma_n(neq/4), Gamma_mom(neq/4), q_parallel(neq/4), neutral_flux(neq/4)
-      real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4)
-      real(wp)              :: Diff_neutral(neq/4)
+      real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)      ![1/m3] ,[m/s]    ,[eV]   ,[1/m3]
+      real(wp)              :: Gamma_n(neq/4), Gamma_mom(neq/4), q_parallel(neq/4), neutral_flux(neq/4) ![1/m2s],[kg/ms2] ,[J/m2s],[1/m2s]
+      real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4) ![1/m3s],[kg/m2s2],[J/m3s],[1/m3s] 
+      real(wp)              :: Diff_neutral(neq/4)  ! [m2/s]
       real(wp)              :: csound_target, q_sheath, v0, Gmom0
       ! input variables for the elm simulation
       real(wp)              :: elm_heat_load, elm_density_change
@@ -296,7 +317,7 @@ contains
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx) ! ---------------------------------------------------------------------
 
       ! --------------------------------------------- ydot for the momentum equation ------------------------------------------
-         ydot(Nx+1:2*Nx) = switch_momentum_source * Source_v(1:Nx)
+         ydot(Nx+1:2*Nx) = switch_momentum_source * Source_v(1:Nx) ![kg/m2s2]
          ! add the momentum flux term using the flux as calculated in calculate_fluxes
          ! Gamma_mom(i) contains the flux at i+1/2
          do ix = 2, Nx
@@ -307,8 +328,8 @@ contains
          !v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1) ! GD: no ELM_density_change ?
          v0 = velocity(2) - 2.0d+0 * (Source_n(1)+ydot(1)) * delta_xcb(1) / density(1) ! GD added result from density equation
 	 ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
-         Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0
-         ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)
+         Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0       ! [kg/ms2]
+         ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)    ! [kg/m2s2]
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
          ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
@@ -323,7 +344,7 @@ contains
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx) ! -----------------------------------------------------------------------
       
       ! ------------------------------------------------ ydot for the energy equation --------------------------------------------
-         ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
+         ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx) ! [J/m3s]
          ! add the heat flux term in the internal region (including the sheath)
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)
          ! add the compression term
@@ -334,11 +355,11 @@ contains
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx) ! -------------------------------------------------------------------------
 
       ! ----------------------------------------------ydot for the neutral density equation --------------------------------------
-         ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx)
+         ydot(3*Nx+1:4*Nx) = switch_neutral_source * neutral_source(1:Nx) ![1/m3s]
          ! add the density diffusion in the internal reagion
          ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
          do ix = 1, Nx
-            Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) ) ! GD Fortran can do matrix and vector operations right?
+            Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) ) 
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
          ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
@@ -375,7 +396,6 @@ contains
       real(wp) :: temperature, density
       ! the neutral particle diffusion coefficient D == n_n kT / m charge_exchange_rate sin^2theta
       !                                               =     kT / m density <sigma v>_cx sin^2theta
-      ! D_neutral = e_charge * max(temperature,1.0d+0,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
       D_neutral = e_charge * max(temperature,minimum_temperature) / (mass * density * charge_exchange(temperature) * sintheta**2)
       return
    end function D_neutral

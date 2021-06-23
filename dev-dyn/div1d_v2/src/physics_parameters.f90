@@ -15,20 +15,23 @@ module physics_parameters
    real( wp ) :: Gamma_X                = 1.0d+23     ! particle flux entering the flux tube at the X-point [/m^2s]
    real( wp ) :: q_parX                 = 1.0d+8      ! parallel heat flux entering the flux tube at the X-point [W/m^2] (value from Stangeby problem 5.1)
    real( wp ) :: initial_n              = 1.0d+20     ! initial plasma particle density (homogeneous) and density at X-point [/m^3]
+   integer    :: dndt                   = 0           ! time dependent plasma X point density requested from nu.dat (perturbation on initial_n)
    real( wp ) :: initial_v              = 0.0d+0      ! initial plasma velocity (homogeneous) [m/s]
    real( wp ) :: initial_T              = 1.0d+2      ! initial plasma temperature (homogeneous) [eV]
    real( wp ) :: initial_a              = 0.0d+4      ! initial neutral density (homogeneous) [/m^3]
    real( wp ) :: density_ramp_rate      = 0.0d+0      ! ramp rate of the density at the X-point [/m^3s]
    real( wp ) :: energy_loss_ion        = 3.0d+1      ! average loss of plasma energy due to ionization [eV]
    real( wp ) :: recycling              = 0.95d+0     ! fraction of recycled neutrals coming from the target [-]
+   integer    :: dRdt                   = 0           ! time dependent recycling fraction taken from R.dat [-]
    real( wp ) :: redistributed_fraction = 0.8d+0      ! fraction of recycled neutrals that is evenly redistributed along the SOL [-]
    real( wp ) :: neutral_residence_time = 1.0d+20     ! time scale on which neutrals are lost from the SOL [s]
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
    real( wp ) :: carbon_concentration   = 1.0d-2      ! the concentration of carbon impurity ions
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
+   integer    :: dgdt                   = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
-   real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source
+   real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]
    integer    :: elm_start_time         = 0           ! time step (outer step) at which the ELM starts
    integer    :: elm_ramp_time          = 0           ! time (outer step) over which the ELM ramps up
    integer    :: elm_time_between       = 200000000   ! time (outer step) between two ELMs
@@ -43,47 +46,101 @@ module physics_parameters
    character*10 :: ionization_model     = "AMJUEL"    ! use ionization rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: recombination_model  = "AMJUEL"    ! use recombination rates from "AMJUEL" data base, or "Nakazawa" (combining radiative rec. from Gordeev with 3 body rec. from Hinnov et al)
    real( wp ) :: radial_loss_factor     = 0           ! percentage of the parallel flux that is lost radially throughout the flux tube (not exact for radial_loss_gaussian = -1)
+   integer    :: dRLdt                  = 0           ! time dependent radial loss factor taken from RL.dat
    integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
    real( wp ) :: radial_loss_width      = 1d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
 
   ! time dependent data 
-  real( wp ), allocatable :: nu_t(:)  ! density of boundary condition		
+  real( wp ), allocatable :: nu_t(:)  ! density of boundary condition 		
   real( wp ), allocatable :: dnu_t(:) ! derivative for ODE solver
-				
+  real( wp ), allocatable :: gas_t(:) ! gas source [1/m2] [0,->)
+  real( wp ), allocatable :: R_t(:)   ! recycling coefficient [0-1]
+  real( wp ), allocatable :: RL_t(:)  ! radial loss factor [0-1]
 contains
 
    subroutine read_physics_parameters( error )
       implicit none
+      real( wp ) :: tmp ! tmp real for intermediate calculations
       integer :: error, i
       allocate( nu_t(ntime) )
       allocate( dnu_t(ntime) )
-      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
-                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, &
+      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, dndt, initial_v, initial_T, initial_a, density_ramp_rate, &
+                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, dRdt, carbon_concentration, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
-                               minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
+                               minimum_temperature, minimum_density, gas_puff_source, dgdt, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location
+                               radial_loss_factor, dRLdt, radial_loss_gaussian, radial_loss_width, radial_loss_location
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
 
-      ! read time dependent parameters
+      ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
+      ! ------- upstream density ------- !
+      if dndt .eq. 1
       open(1, file = 'nu.dat', status = 'old')
-      do i =  1,ntime
-	read(1,*) nu_t(i)
-      end do
-      close(1)
-      ! derivatives for ODE solver
-      do i = 1,ntime-1 ! forward difference
- 	dnu_t(i) = ( nu_t(i + 1) - nu_t(i) ) / delta_t ! slope going from i to i + 1
-      end do
-      dnu_t(ntime) = 0
-      write(*,*) "nu.dat read test."
-      write(*,*) nu_t(2)
-      
+       do i =  1,ntime
+        read(1,*) nu_t(i)
+       end do
+       close(1)
+       ! derivatives for ODE solver
+       do i = 1,ntime-1 ! forward difference
+        dnu_t(i) = ( nu_t(i + 1) - nu_t(i) ) / delta_t ! slope going from i to i +  1  nu_t =10^19, delta_t = 10^-6  real is single
+       end do
+       dnu_t(ntime) = 0
+       !write(*,*) "nu.dat read test.", nu_t(1010), nu_t(1011)
+       !write(*,*) "dnu.dat read test", dnu_t(1010)
+      else
+        do i = 1,ntime
+                nu_t(i) = initial_n
+                dnu_t(i) = 0.0d+0
+        end do
+      end if
+
+      ! ------- Recycling ------!
+      if dRdt .eq. 1
+        open(2, file = 'R.dat', status = 'old')
+        do i = 1,ntime
+         read(2,*) tmp
+         R_t(i) = min(max(tmp,0.0d+0),1.0d+0)
+        end do
+        close(2)
+      else
+        do i = 1,ntime
+         R_t(i) = min(max(recycling,0.0d+0),1.0d+0)
+        end do
+      end if 
+
+      ! -------- Gas puff -------!
+      if dgdt .eq. 1
+        open(3, file = 'gas.dat', status = 'old')
+        do i = 1,ntime
+        read(3,*) gas_t(i) 
+        gas_t(i) = max(tmp,0.0d+0)
+        end do
+        close(3)
+      else      
+        do i = 1,ntime
+        gas_t(i) = max(gas_puff_source,0.0d+0) 
+        end do
+      end if
+
+      ! -------- Radial Loss fraction ----- !
+      if dRLdt .eq. 1
+        open(4, file = 'RL.dat', status= 'old')
+        do i = 1,ntime
+        read(4,*) tmp 
+        RL_t(i) = min(max(tmp,0.0d+0),1.0d+0)
+        end do
+        close(4)
+      else
+        do i = 1,ntime
+        RL_t(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
+        end do
+      end if
+      ! %%%%%%%%%%%% end read time dependent parameters %%%%%%%% !
 
       ! correct the desired normalizations
       if( density_norm .eq. 0.0d+0 ) density_norm = initial_n
