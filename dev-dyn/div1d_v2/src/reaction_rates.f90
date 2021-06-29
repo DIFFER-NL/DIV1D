@@ -1,8 +1,9 @@
 module reaction_rates
 ! module containing routines implementing the reaction rates
 
-   use numerics_parameters, only : switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
-   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, carbon_concentration, minimum_temperature, minimum_density, mass
+   use numerics_parameters, only : Nx, switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation
+   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, carbon_concentration, &
+                                   minimum_temperature, minimum_density, mass, car_con_prf
    use constants,           only : e_charge
 
    implicit none
@@ -216,9 +217,10 @@ contains
       end select
    end function recombination
 
-   real(wp) function impurity_radiation( temperature )
-   ! function to calculate the effective loss rate due to inpurity radiation rate coefficient [eV m^3/s]
+   real(wp) function impurity_radiation( temperature, ix) 
+      ! function to calculate the effective loss rate due to inpurity radiation rate coefficient [eV m^3/s]
       implicit none
+      integer :: ix
       real(wp) :: temperature, log_T, carbon_radiation
       impurity_radiation = 0.0d+0
       ! case Carbon
@@ -239,7 +241,8 @@ contains
          ! use the fit function from SD1D
          carbon_radiation = 2.0d-31/e_charge * (max(temperature,1.0d+0)/1.0d+1)**3 / (1.0d+0 + (max(temperature,1.0d+0)/1.0d+1)**4.5d+0)
       endif
-      impurity_radiation = carbon_radiation*carbon_concentration
+
+      impurity_radiation = carbon_radiation*car_con_prf(ix)
       return
    end function impurity_radiation
 

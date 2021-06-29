@@ -2,7 +2,7 @@ module physics_parameters
 ! module defining the physics parameters and their default values
 ! when the div1d_physics namelist is read the normalizations are defined
 
-   use numerics_parameters, only : density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, ntime, delta_t
+   use numerics_parameters, only : Nx, density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, ntime, delta_t
    use constants, only : e_charge
 
    implicit none
@@ -55,24 +55,27 @@ module physics_parameters
    integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
    integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from R.dat [-]
    integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from RL.dat
+   integer    :: switch_car_con_prf     = 0           ! carbon concentration profile    
 
 
-  real( wp ), allocatable :: nu_t(:)  ! density of boundary condition 		
-  real( wp ), allocatable :: dnu_t(:) ! derivative for ODE solver
-  real( wp ), allocatable :: gas_t(:) ! gas source [1/m2] [0,->)
-  real( wp ), allocatable :: R_t(:)   ! recycling coefficient [0-1]
-  real( wp ), allocatable :: RL_t(:)  ! radial loss factor [0-1]
+  real( wp ), allocatable :: dyn_nu(:)  ! density of boundary condition 		
+  real( wp ), allocatable :: dyn_dnu(:) ! derivative for ODE solver
+  real( wp ), allocatable :: dyn_gas(:) ! gas source [1/m2] [0,->)
+  real( wp ), allocatable :: dyn_rec(:)   ! recycling coefficient [0-1]
+  real( wp ), allocatable :: dyn_rad_los(:)  ! radial loss factor [0-1]
+  real( wp ), allocatable :: car_con_prf(:) ! carbon concentration profile [0-1]
 contains
 
    subroutine read_physics_parameters( error )
       implicit none
       real( wp ) :: tmp ! tmp real for intermediate calculations
       integer :: error, i
-      allocate( nu_t(ntime) )
-      allocate( dnu_t(ntime) )
-      allocate( gas_t(ntime) )
-      allocate( R_t(ntime) ) 
-      allocate( RL_t(ntime) )
+      allocate( dyn_nu(ntime) )
+      allocate( dyn_dnu(ntime) )
+      allocate( dyn_gas(ntime) )
+      allocate( dyn_rec(ntime) ) 
+      allocate( dyn_rad_los(ntime) )
+      allocate( car_con_prf(Nx) )
 !      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, dndt, initial_v, initial_T, initial_a, density_ramp_rate, &
  !                              energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, dRdt, carbon_concentration, &
 !                               case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
@@ -87,82 +90,100 @@ contains
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location &
-                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &
+                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_car_con_prf
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
+        
+      ! %%%%%%%%% read spatial profiles of input %%%%%%%% !  
+      ! carbon profile
+      if (switch_car_con_prf .eq. 1) then
+        open(4, file = 'car_con_prf.dat', status= 'old')
+        do i = 1,Nx
+        read(4,*) tmp 
+        car_con_prf(i) = min(max(tmp,0.0d+0),1.0d+0)
+        end do
+        close(4)
+        write(*,*) "test_dfCdx=1"
+      else
+        do i = 1,Nx
+        car_con_prf(i) = min(max(carbon_concentration,0.0d+0),1.0d+0)
+        end do
+        write(*,*) "test_dfCdx=0"
+      endif
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
       ! ------- upstream density ------- !
       if (switch_dyn_nu .eq. 1) then
-      open(1, file = 'nu.dat', status = 'old')
+      open(1, file = 'dyn_nu.dat', status = 'old')
        do i =  1,ntime
-        read(1,*) nu_t(i)
+        read(1,*) dyn_nu(i)
        end do
        close(1)
+       initial_n = dyn_nu(1) ! overwrite initial_n -> this turns it to  absolute input
        ! derivatives for ODE solver
        do i = 1,ntime-1 ! forward difference
-        dnu_t(i) = min( ( nu_t(i + 1) - nu_t(i) ) / delta_t ,1.0d+34)  
+       dyn_dnu(i) = min( ( dyn_nu(i + 1) - dyn_nu(i) ) / delta_t ,1.0d+34)  
        ! slope going from i to i +  1  nu_t =10^19, delta_t = 10^-6  real is single
        !  limit value to 1d34, below 32 bits of precision 1.7d+38 (wp = kind(1.0))
        end do
-       dnu_t(ntime) = 0
+       dyn_dnu(ntime) = 0
        !write(*,*) "nu.dat read test.", nu_t(1010), nu_t(1011)
        !write(*,*) "dnu.dat read test", dnu_t(1010)
       else
         do i = 1,ntime
-                nu_t(i) = initial_n
-                dnu_t(i) = 0.0d+0
+               dyn_nu(i) = initial_n
+               dyn_dnu(i) = 0.0d+0
         end do
         write(*,*) "test_dndt=0"  
       endif
 
       ! ------- Recycling ------!
       if (switch_dyn_rec .eq. 1) then
-        open(2, file = 'R.dat', status = 'old')
+        open(2, file = 'dyn_rec.dat', status = 'old')
         do i = 1,ntime
          read(2,*) tmp
-         R_t(i) = min(max(tmp,0.0d+0),1.0d+0)
+         dyn_rec(i) = min(max(tmp,0.0d+0),1.0d+0)
         end do
         close(2)
         write(*,*) "test_dRdt=1"
       else
         do i = 1,ntime
-         R_t(i) = min(max(recycling,0.0d+0),1.0d+0)
+         dyn_rec(i) = min(max(recycling,0.0d+0),1.0d+0)
         end do
         write(*,*)  "test_dRdt=0"
       endif 
 
       ! -------- Gas puff -------!
       if (switch_dyn_gas .eq. 1) then
-        open(3, file = 'gas.dat', status = 'old')
+        open(3, file = 'dyn_gas.dat', status = 'old')
         do i = 1,ntime
-        read(3,*) gas_t(i) 
-        gas_t(i) = max(tmp,0.0d+0)
+        read(3,*) dyn_gas(i) 
+        dyn_gas(i) = max(tmp,0.0d+0)
         end do
         close(3)
         write(*,*) "test_dgdt=1"
       else      
         do i = 1,ntime
-        gas_t(i) = max(gas_puff_source,0.0d+0) 
+        dyn_gas(i) = max(gas_puff_source,0.0d+0) 
         end do
         write(*,*) "test_dgdt=0"  
       endif
 
       ! -------- Radial Loss fraction ----- !
       if (switch_dyn_rad_los .eq. 1) then
-        open(4, file = 'RL.dat', status= 'old')
+        open(4, file = 'dyn_rad_los.dat', status= 'old')
         do i = 1,ntime
         read(4,*) tmp 
-        RL_t(i) = min(max(tmp,0.0d+0),1.0d+0)
+        dyn_rad_los(i) = min(max(tmp,0.0d+0),1.0d+0)
         end do
         close(4)
         write(*,*) "test_dRLdt=1"
       else
         do i = 1,ntime
-        RL_t(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
+        dyn_rad_los(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
         end do
         write(*,*) "test_dRLdt=0"
       endif

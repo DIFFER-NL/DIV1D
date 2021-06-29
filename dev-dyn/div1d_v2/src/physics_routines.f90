@@ -5,7 +5,8 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
-                                  gas_puff_source, gas_puff_location, gas_puff_width, nu_t, dnu_t
+                                  gas_puff_source, gas_puff_location, gas_puff_width, &
+                                  dyn_nu, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, car_con_prf
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources,&
 			   	   delta_t
@@ -106,16 +107,19 @@ contains
    end subroutine advection
 
 
-   subroutine calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+   subroutine calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
    ! this subroutine calculates the 'fluxes' required for the calculation of ydot (the right hand side of the discretized conservation equations)
    ! the fluxes are defined at the halfway point between grid points: i.e. Flux(i) is midway between x(i) and x(i+1)
       implicit none
       integer,  intent(in)  :: Nx
+      real(wp), intent(in)  :: time
+      integer               :: itime
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
       real(wp), intent(out) :: Gamma_n(Nx), Gamma_mom(Nx), q_parallel(Nx), neutral_flux(Nx)
       real(wp)              :: momentum(Nx), enthalpy(Nx)
       real(wp)              :: csound_target, average_velocity
       integer               :: i
+      itime = time / delta_t
       ! the particle flux = density velocity
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
          call advection(Nx, density, velocity, temperature, Gamma_n)
@@ -144,7 +148,8 @@ contains
             neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
-         neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+        ! neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         neutral_flux(Nx) = - Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - redistributed_fraction)
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
       return
@@ -166,20 +171,25 @@ contains
       gas_puff_normalization = sum(gas_puff * delta_xcb)
       
       ! set the unnormalized gas puff source
-      gas_puff = gas_puff_source * gas_puff / gas_puff_normalization
-      
+      ! gas_puff = gas_puff_source * gas_puff / gas_puff_normalization
+      gas_puff = gas_puff / gas_puff_normalization
+      ! dyn_gas
       return
    end subroutine initialize_gas_puff
 
-   subroutine calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source )
+   subroutine calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel,&
+                                 Source_n, Source_v, Source_Q, neutral_source )
    ! this subroutine calculates the source terms of the discretized conservation equations
       implicit none
       integer,  intent(in)  :: Nx
+      real(wp), intent(in)  :: time
+      integer               :: itime
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx),q_parallel(Nx)
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
       real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_imp(Nx)
       real(wp) :: radial_sink(Nx)
       integer  :: ix, iix
+      itime     = time / delta_t
       Source_n = 0.0d+0
       Source_v = 0.0d+0
       Source_Q = 0.0d+0
@@ -189,10 +199,10 @@ contains
          rate_ion(ix) = density(ix) * neutral(ix) * ionization(density(ix),temperature(ix))
          rate_exc(ix) = density(ix) * neutral(ix) * excitation(density(ix),temperature(ix))
          rate_rec(ix) = density(ix) * density(ix) * recombination(density(ix),temperature(ix))
-         rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix))
+         rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix),ix)
       enddo
       ! the particle sources
-      neutral_source = rate_rec - rate_ion + gas_puff
+      neutral_source = rate_rec - rate_ion + gas_puff * dyn_gas(itime)
       Source_n = rate_ion - rate_rec
       ! the momentum sources
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
@@ -206,7 +216,7 @@ contains
       Source_Q = Source_Q - switch_impurity_radiation * rate_imp * e_charge ! note impurity radiation loss rate is in eV m^3 / s
       ! write(*,*) rate_ion, Source_Q
       ! Add the effect of radial losses across the flux tube
-      call calculate_radial_losses(Nx,radial_sink,q_parallel)
+      call calculate_radial_losses(Nx,radial_sink,q_parallel, time)
       ! Consecutively, check whether substracting this radial_sink does not yield unphysical results by confirming that the total 
       ! losses over the flux tube are smaller than the incoming flux, so as not to obtain sub-zero fluxes.
       do ix = 1, Nx
@@ -228,42 +238,13 @@ contains
       return
    end subroutine calculate_sources
 
-   
-!   subroutine calculate_radial_losses(Nx,radial_sink,q_parallel)
-!        
-        ! This subroutine captures the radial losses as a volumetric energy sink with a gaussian
-        ! profile. Inputs are the gaussian width and peak location, given by radial_loss_width and 
-        ! radial_loss_location respectively. Depending on whether radial_loss_gaussian is
-        ! positive, zero or negative, the radial loss profile is a bell curve, constant or dependent
-        ! on the local heat flux, respectively. The normalisation of the gaussian is calculated numerically,
-        ! so that the total lost heat flux is always fixed by q_parX.
-!
-!        implicit none
-!       integer         :: Nx
-!        real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation,q_parallel(Nx)
-!
-!        if (radial_loss_gaussian.gt.0) then
-!            a0 = radial_loss_width
-!            x0 = radial_loss_location
-!            gaussian = exp(-(x-x0)**2/(2*a0**2))
-!            normalisation = sum(gaussian * delta_xcb)
-!            radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
-!        elseif (radial_loss_gaussian.lt.0) then
-!            radial_sink = radial_loss_factor *q_parallel / L
-!        else
-!            radial_sink = radial_loss_factor * q_parX / L
-!        endif
-!
-!   end subroutine calculate_radial_losses
-
-
    subroutine right_hand_side( neq, time, y, ydot )
    ! this subroutine calculates the right hand side ydot of the discretized conservation equations
    ! note that y and ydor are normalized, but the arrays density, velocity, temperature, and neutral are not!
       implicit none
       integer,  intent(in)  :: neq
-      real(wp), intent(in)  :: time, y(neq) !time is not used?
-      integer               :: itime ! GD index of time in simulation
+      real(wp), intent(in)  :: time, y(neq) 
+      integer               :: itime 
       real(wp), intent(out) :: ydot(neq)
       integer               :: Nx, ix
       real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)      ![1/m3] ,[m/s]    ,[eV]   ,[1/m3]
@@ -275,8 +256,8 @@ contains
       real(wp)              :: elm_heat_load, elm_density_change
  
 
-      Nx 	= neq/4
-      itime 	= time / delta_t
+      Nx        = neq/4
+      itime     = time / delta_t
       ! write(*,*) 'RHS called at itime =', itime
       ! write(*,*) 'RHS called at t =', time
       ! write(*,*) 'y =', y
@@ -289,9 +270,9 @@ contains
       ! write(*,*) 'neutral density =', neutral
 
       ! calculate the fluxes
-      call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+      call calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
       ! calculate the sources
-      call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source )
+      call calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source )
       ! calculate the ELM heat flux and particle flux
       call simulate_elm(elm_heat_load, elm_density_change, time)
       ! write(*,*) 'Gamma_n =', Gamma_n
@@ -313,7 +294,7 @@ contains
             ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)
          enddo
          ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
-         ydot(1) = density_ramp_rate + elm_density_change + dnu_t(itime) ! [1/ (m^3 s)]
+         ydot(1) = density_ramp_rate + elm_density_change + dyn_dnu(itime) ! [1/ (m^3 s)]
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx) ! ---------------------------------------------------------------------
 
       ! --------------------------------------------- ydot for the momentum equation ------------------------------------------

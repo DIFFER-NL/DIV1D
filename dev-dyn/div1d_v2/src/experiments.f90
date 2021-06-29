@@ -3,7 +3,8 @@ module experiments
     use constants, only : pi
     use physics_parameters, only : elm_start_time, elm_ramp_time, elm_time_between ,elm_expelled_heat, elm_expelled_particles, &
                                    switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                                   q_parX, L, radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location
+                                   q_parX, L, radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &
+                                   dyn_rad_los
     use numerics_parameters, only: delta_t
     use grid_data, only: x, delta_xcb
 
@@ -173,7 +174,7 @@ contains
 
     end subroutine maxwell_boltzmann_elm
 
-    subroutine calculate_radial_losses(Nx,radial_sink,q_parallel)
+    subroutine calculate_radial_losses(Nx,radial_sink,q_parallel,time)
         
         ! This subroutine captures the radial losses as a volumetric energy sink with a gaussian
         ! profile. Inputs are the gaussian width and peak location, given by radial_loss_width and 
@@ -184,18 +185,21 @@ contains
 
         implicit none
         integer         :: Nx
+        real(wp),intent(in):: time
         real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation,q_parallel(Nx)
-
+        integer         :: itime
+        itime = time / delta_t
         if (radial_loss_gaussian.gt.0) then
             a0 = radial_loss_width
             x0 = radial_loss_location
             gaussian = exp(-(x-x0)**2/(2*a0**2))
             normalisation = sum(gaussian * delta_xcb)
-            radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
+            !radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
+            radial_sink = dyn_rad_los(itime) * q_parX * gaussian / normalisation
         elseif (radial_loss_gaussian.lt.0) then
             radial_sink = radial_loss_factor *q_parallel / L
         else
-            radial_sink = radial_loss_factor * q_parX / L
+            radial_sink = dyn_rad_los(itime) * q_parX / L
         endif
 
     end subroutine calculate_radial_losses

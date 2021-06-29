@@ -39,7 +39,9 @@ program div1d
 
    ! test if new input is readable
    write(*,*) "nu.dat access test."
-   write(*,*) nu_t(2)
+   write(*,*)  dyn_nu(2)
+   write(*,*) "dnu calculation test."
+   write(*,*)  dyn_dnu(2)
    
    ! initialize the grid
    call initialize_grid
@@ -61,9 +63,10 @@ program div1d
 
    ! write the inital solution to file
    ! calculate the fluxes
-   call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
    ! calculate the sources
-   call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
+   call calculate_sources( Nx, start_time,  density, velocity, temperature, neutral, q_parallel, &
+                          Source_n, Source_v, Source_Q, source_neutral )
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
@@ -171,9 +174,9 @@ program div1d
       if( mod( istep, nout ) .eq. 0 ) then
          ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
          ! calculate the fluxes
-         call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
          ! calculate the sources
-         call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
+         call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
          call write_solution( end_time )
       endif
       start_time = end_time
@@ -224,7 +227,7 @@ subroutine write_header
    write( 10, * ) '   redistributed fraction  = ', redistributed_fraction
    write( 10, * ) '   recycling               = ', recycling
    write( 10, * ) '   carbon_concentration    = ', carbon_concentration
-   write( 10, * ) '   gas_puff_source         = ', gass_puff_source
+   write( 10, * ) '   gas_puff_source         = ', gas_puff_source
    write( 10, * ) '   gas_puff_location       = ', gas_puff_location
    write( 10, * ) '   gas_puff_width          = ', gas_puff_width
    write( 10, * ) '   elm_start_time          = ', elm_start_time
@@ -247,8 +250,8 @@ end subroutine write_header
 
 
 subroutine write_solution( time )
-
-   use numerics_parameters, only : Nx
+   use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los
+   use numerics_parameters, only : Nx, delta_t
    use grid_data, only : x
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
@@ -256,8 +259,14 @@ subroutine write_solution( time )
    integer, parameter :: wp = KIND(1.0D0)
    integer :: i
    real(wp), intent(in) :: time
-   
+   integer :: itime 
+   itime = time / delta_t
+
    write( 10, * ) 'time = ', time
+   write( 10, * ) 'dyn_gas = ',  dyn_gas(itime)
+   write( 10, * ) 'dyn_nu  = ',  dyn_nu(itime)
+   write( 10, * ) 'dyn_rec = ',  dyn_rec(itime)
+   write( 10, * ) 'dyn_rad_los = ',dyn_rad_los(itime)
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]    q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut'
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
    &                                   Gamma_n(i), Gamma_mom(i), q_parallel(i), neutral_flux(i), &
