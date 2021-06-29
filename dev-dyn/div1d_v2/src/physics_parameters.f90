@@ -65,13 +65,24 @@ contains
       integer :: error, i
       allocate( nu_t(ntime) )
       allocate( dnu_t(ntime) )
-      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, dndt, initial_v, initial_T, initial_a, density_ramp_rate, &
-                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, dRdt, carbon_concentration, &
+      allocate( gas_t(ntime) )
+      allocate( R_t(ntime) ) 
+      allocate( RL_t(ntime) )
+!      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, dndt, initial_v, initial_T, initial_a, density_ramp_rate, &
+ !                              energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, dRdt, carbon_concentration, &
+!                               case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
+!                               minimum_temperature, minimum_density, gas_puff_source, dgdt, gas_puff_location, gas_puff_width, &
+!                               elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
+!                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
+!                               radial_loss_factor, dRLdt, radial_loss_gaussian, radial_loss_width, radial_loss_location
+
+      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
+                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling,  carbon_concentration, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
-                               minimum_temperature, minimum_density, gas_puff_source, dgdt, gas_puff_location, gas_puff_width, &
+                               minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, dRLdt, radial_loss_gaussian, radial_loss_width, radial_loss_location
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
@@ -79,7 +90,7 @@ contains
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
       ! ------- upstream density ------- !
-      if dndt .eq. 1
+      if (dndt .eq. 1) then
       open(1, file = 'nu.dat', status = 'old')
        do i =  1,ntime
         read(1,*) nu_t(i)
@@ -97,49 +108,56 @@ contains
                 nu_t(i) = initial_n
                 dnu_t(i) = 0.0d+0
         end do
-      end if
+        write(*,*) "test_dndt=0"  
+      endif
 
       ! ------- Recycling ------!
-      if dRdt .eq. 1
+      if (dRdt .eq. 1) then
         open(2, file = 'R.dat', status = 'old')
         do i = 1,ntime
          read(2,*) tmp
          R_t(i) = min(max(tmp,0.0d+0),1.0d+0)
         end do
         close(2)
+        write(*,*) "test_dRdt=1"
       else
         do i = 1,ntime
          R_t(i) = min(max(recycling,0.0d+0),1.0d+0)
         end do
-      end if 
+        write(*,*)  "test_dRdt=0"
+      endif 
 
       ! -------- Gas puff -------!
-      if dgdt .eq. 1
+      if (dgdt .eq. 1) then
         open(3, file = 'gas.dat', status = 'old')
         do i = 1,ntime
         read(3,*) gas_t(i) 
         gas_t(i) = max(tmp,0.0d+0)
         end do
         close(3)
+        write(*,*) "test_dgdt=1"
       else      
         do i = 1,ntime
         gas_t(i) = max(gas_puff_source,0.0d+0) 
         end do
-      end if
+        write(*,*) "test_dgdt=0"  
+      endif
 
       ! -------- Radial Loss fraction ----- !
-      if dRLdt .eq. 1
+      if (dRLdt .eq. 1) then
         open(4, file = 'RL.dat', status= 'old')
         do i = 1,ntime
         read(4,*) tmp 
         RL_t(i) = min(max(tmp,0.0d+0),1.0d+0)
         end do
         close(4)
+        write(*,*) "test_dRLdt=1"
       else
         do i = 1,ntime
         RL_t(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
         end do
-      end if
+        write(*,*) "test_dRLdt=0"
+      endif
       ! %%%%%%%%%%%% end read time dependent parameters %%%%%%%% !
 
       ! correct the desired normalizations

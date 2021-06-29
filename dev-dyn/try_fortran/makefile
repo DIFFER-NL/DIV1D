@@ -12,5 +12,11 @@ FOPT = -module -g -03
 #outputdata.exe : outputdata.f90
 #	$(FC) outputdata.f90 $(FOPT) -o outputdata.exe
 
-nudat.exe : nudat.f90
-	$(FC) nudat.f90 $(FOPT) -o nudat.exe
+#nudat.exe : nudat.f90
+#	$(FC) nudat.f90 $(FOPT) -o nudat.exe
+
+
+gasdat.exe : gasdat.f90
+	$(FC) gasdat.f90 $(FOPT) -o gasdat.exe
+
+

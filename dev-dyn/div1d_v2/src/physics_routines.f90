@@ -229,32 +229,32 @@ contains
    end subroutine calculate_sources
 
    
-   subroutine calculate_radial_losses(Nx,radial_sink,q_parallel)
-        
+!   subroutine calculate_radial_losses(Nx,radial_sink,q_parallel)
+!        
         ! This subroutine captures the radial losses as a volumetric energy sink with a gaussian
         ! profile. Inputs are the gaussian width and peak location, given by radial_loss_width and 
         ! radial_loss_location respectively. Depending on whether radial_loss_gaussian is
         ! positive, zero or negative, the radial loss profile is a bell curve, constant or dependent
         ! on the local heat flux, respectively. The normalisation of the gaussian is calculated numerically,
         ! so that the total lost heat flux is always fixed by q_parX.
-
-        implicit none
-        integer         :: Nx
-        real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation,q_parallel(Nx)
-
-        if (radial_loss_gaussian.gt.0) then
-            a0 = radial_loss_width
-            x0 = radial_loss_location
-            gaussian = exp(-(x-x0)**2/(2*a0**2))
-            normalisation = sum(gaussian * delta_xcb)
-            radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
-        elseif (radial_loss_gaussian.lt.0) then
-            radial_sink = radial_loss_factor *q_parallel / L
-        else
-            radial_sink = radial_loss_factor * q_parX / L
-        endif
-
-   end subroutine calculate_radial_losses
+!
+!        implicit none
+!       integer         :: Nx
+!        real(wp)        :: radial_sink(Nx), a0, x0, norm, gaussian(Nx), normalisation,q_parallel(Nx)
+!
+!        if (radial_loss_gaussian.gt.0) then
+!            a0 = radial_loss_width
+!            x0 = radial_loss_location
+!            gaussian = exp(-(x-x0)**2/(2*a0**2))
+!            normalisation = sum(gaussian * delta_xcb)
+!            radial_sink = radial_loss_factor * q_parX * gaussian / normalisation
+!        elseif (radial_loss_gaussian.lt.0) then
+!            radial_sink = radial_loss_factor *q_parallel / L
+!        else
+!            radial_sink = radial_loss_factor * q_parX / L
+!        endif
+!
+!   end subroutine calculate_radial_losses
 
 
    subroutine right_hand_side( neq, time, y, ydot )
@@ -263,7 +263,7 @@ contains
       implicit none
       integer,  intent(in)  :: neq
       real(wp), intent(in)  :: time, y(neq) !time is not used?
-      integer, intent(in)   :: itime ! GD index of time in simulation
+      integer               :: itime ! GD index of time in simulation
       real(wp), intent(out) :: ydot(neq)
       integer               :: Nx, ix
       real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)      ![1/m3] ,[m/s]    ,[eV]   ,[1/m3]
