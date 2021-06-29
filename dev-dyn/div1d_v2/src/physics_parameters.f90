@@ -48,10 +48,15 @@ module physics_parameters
    real( wp ) :: radial_loss_factor     = 0           ! percentage of the parallel flux that is lost radially throughout the flux tube (not exact for radial_loss_gaussian = -1)
    integer    :: dRLdt                  = 0           ! time dependent radial loss factor taken from RL.dat
    integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
-   real( wp ) :: radial_loss_width      = 1d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
+   real( wp ) :: radial_loss_width      = 1.0d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
+   ! time dependent settings
+   integer    :: switch_dyn_nu          = 0           ! time dependent plasma X point density requested from nu.dat (perturbation on initial_n)
+   integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
+   integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from R.dat [-]
+   integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from RL.dat
 
-  ! time dependent data 
+
   real( wp ), allocatable :: nu_t(:)  ! density of boundary condition 		
   real( wp ), allocatable :: dnu_t(:) ! derivative for ODE solver
   real( wp ), allocatable :: gas_t(:) ! gas source [1/m2] [0,->)
@@ -82,7 +87,8 @@ contains
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location &
+                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
@@ -90,7 +96,7 @@ contains
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
       ! ------- upstream density ------- !
-      if (dndt .eq. 1) then
+      if (switch_dyn_nu .eq. 1) then
       open(1, file = 'nu.dat', status = 'old')
        do i =  1,ntime
         read(1,*) nu_t(i)
@@ -98,7 +104,9 @@ contains
        close(1)
        ! derivatives for ODE solver
        do i = 1,ntime-1 ! forward difference
-        dnu_t(i) = ( nu_t(i + 1) - nu_t(i) ) / delta_t ! slope going from i to i +  1  nu_t =10^19, delta_t = 10^-6  real is single
+        dnu_t(i) = min( ( nu_t(i + 1) - nu_t(i) ) / delta_t ,1.0d+34)  
+       ! slope going from i to i +  1  nu_t =10^19, delta_t = 10^-6  real is single
+       !  limit value to 1d34, below 32 bits of precision 1.7d+38 (wp = kind(1.0))
        end do
        dnu_t(ntime) = 0
        !write(*,*) "nu.dat read test.", nu_t(1010), nu_t(1011)
@@ -112,7 +120,7 @@ contains
       endif
 
       ! ------- Recycling ------!
-      if (dRdt .eq. 1) then
+      if (switch_dyn_rec .eq. 1) then
         open(2, file = 'R.dat', status = 'old')
         do i = 1,ntime
          read(2,*) tmp
@@ -128,7 +136,7 @@ contains
       endif 
 
       ! -------- Gas puff -------!
-      if (dgdt .eq. 1) then
+      if (switch_dyn_gas .eq. 1) then
         open(3, file = 'gas.dat', status = 'old')
         do i = 1,ntime
         read(3,*) gas_t(i) 
@@ -144,7 +152,7 @@ contains
       endif
 
       ! -------- Radial Loss fraction ----- !
-      if (dRLdt .eq. 1) then
+      if (switch_dyn_rad_los .eq. 1) then
         open(4, file = 'RL.dat', status= 'old')
         do i = 1,ntime
         read(4,*) tmp 

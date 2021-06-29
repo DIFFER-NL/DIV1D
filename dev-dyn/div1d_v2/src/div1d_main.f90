@@ -201,11 +201,47 @@ subroutine write_header
    write( 10, * ) '   ntime      = ', ntime
    write( 10, * ) '   nout       = ', nout
    write( 10, * ) '   dxmin      = ', dxmin
+   write( 10, * ) '   delta_t    = ', delta_t  
+   write( 10, * ) '   abstol     = ', abstol  
+   write( 10, * ) '   reltol     = ', reltol  
+   write( 10, * ) '   viscocity  = ', viscosity
+   write( 10, * ) '   method     = ', method  
+   write( 10, * ) '   restart    = ', restart
    write( 10, * ) 'physics parameters:'
+   write( 10, * ) '   gamma      = ', gamma
    write( 10, * ) '   L          = ', L
+   write( 10, * ) '   sintheta   = ', sintheta
+   write( 10, * ) '   mass       = ', mass
+   write( 10, * ) '   Gamma_X    = ', Gamma_X
    write( 10, * ) '   q_parX     = ', q_parX
    write( 10, * ) '   initial_n  = ', initial_n
-
+   write( 10, * ) '   initial_v  = ', initial_v
+   write( 10, * ) '   initial_T  = ', initial_T
+   write( 10, * ) '   initial_a  = ', initial_a
+   write( 10, * ) '   density_ramp_rate       = ', density_ramp_rate
+   write( 10, * ) '   energy_loss_ion         = ', energy_loss_ion
+   write( 10, * ) '   neutral_residence_time  = ', neutral_residence_time
+   write( 10, * ) '   redistributed fraction  = ', redistributed_fraction
+   write( 10, * ) '   recycling               = ', recycling
+   write( 10, * ) '   carbon_concentration    = ', carbon_concentration
+   write( 10, * ) '   gas_puff_source         = ', gass_puff_source
+   write( 10, * ) '   gas_puff_location       = ', gas_puff_location
+   write( 10, * ) '   gas_puff_width          = ', gas_puff_width
+   write( 10, * ) '   elm_start_time          = ', elm_start_time
+   write( 10, * ) '   elm_ramp_time           = ', elm_ramp_time
+   write( 10, * ) '   elm_time_between        = ', elm_time_between
+   write( 10, * ) '   elm_expelled_heat       = ', elm_expelled_heat
+   write( 10, * ) '   elm_expelled_particles  = ', elm_expelled_particles
+   write( 10, * ) '   switch_elm_series       = ', switch_elm_series
+   write( 10, * ) '   gaussian_elm            = ', gaussian_elm
+   write( 10, * ) '   radial_loss_factor      = ', radial_loss_factor
+   write( 10, * ) '   radial_loss_gaussian    = ', radial_loss_gaussian
+   write( 10, * ) '   radial_loss_width       = ', radial_loss_width
+   write( 10, * ) '   radial_loss_location    = ', radial_loss_location
+   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
+   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
+   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
+   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
    return
 end subroutine write_header
 
