@@ -64,6 +64,7 @@ module physics_parameters
   real( wp ), allocatable :: dyn_rec(:)   ! recycling coefficient [0-1]
   real( wp ), allocatable :: dyn_rad_los(:)  ! radial loss factor [0-1]
   real( wp ), allocatable :: car_con_prf(:) ! carbon concentration profile [0-1]
+  real( wp ), allocatable :: gas_puff(:) ! gas puff distribution
 contains
 
    subroutine read_physics_parameters( error )

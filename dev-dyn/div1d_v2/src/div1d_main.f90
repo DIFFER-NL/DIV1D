@@ -194,8 +194,10 @@ subroutine write_header
 
    use numerics_parameters
    use physics_parameters
+   use grid_data, only : x
 
    implicit none
+   integer :: i
    integer, parameter :: wp = KIND(1.0D0)
 
    ! note these lists should still be completed
@@ -245,6 +247,9 @@ subroutine write_header
    write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
    write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
    write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
+   write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf [] '  !       rad_los_prf  '
+  write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),i=1,Nx )
+  !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
    return
 end subroutine write_header
 
@@ -266,11 +271,11 @@ subroutine write_solution( time )
    write( 10, * ) 'dyn_gas = ',  dyn_gas(itime)
    write( 10, * ) 'dyn_nu  = ',  dyn_nu(itime)
    write( 10, * ) 'dyn_rec = ',  dyn_rec(itime)
-   write( 10, * ) 'dyn_rad_los = ',dyn_rad_los(itime)
-   write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]    q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut'
+   write( 10, * ) 'dyn_rad_los = ', dyn_rad_los(itime)
+   write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
    &                                   Gamma_n(i), Gamma_mom(i), q_parallel(i), neutral_flux(i), &
-   &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
+   &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i),   i=1,Nx )
    
    return
 end subroutine write_solution
