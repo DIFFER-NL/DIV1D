@@ -1,7 +1,7 @@
 module physics_routines
 ! module containing general purpose routines implementing the equations
 
-   use grid_data, only : delta_x, delta_xcb, x
+   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
@@ -108,7 +108,8 @@ contains
 
    subroutine calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
    ! this subroutine calculates the 'fluxes' required for the calculation of ydot (the right hand side of the discretized conservation equations)
-   ! the fluxes are defined at the halfway point between grid points: i.e. Flux(i) is midway between x(i) and x(i+1)
+   ! the fluxes are defined at the halfway point between grid points: i.e. Flux(i) is midway between x(i) and x(i+1) on the cell boundaries xcb
+   ! ew 01-03-2021: modified to take account of flux expansion
       implicit none
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
@@ -116,33 +117,33 @@ contains
       real(wp)              :: momentum(Nx), enthalpy(Nx)
       real(wp)              :: csound_target, average_velocity
       integer               :: i
-      ! the particle flux = density velocity
+      ! the particle flux = density velocity / B
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
-         call advection(Nx, density, velocity, temperature, Gamma_n)
+         call advection(Nx, density/B_field, velocity, temperature, Gamma_n)
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound_target = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
          ! write(*,*) 'flux', e_charge, mass, temperature(Nx)
-         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target)
-         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target)
+         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target) / B_field_cb(Nx+1)
+         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target) / B_field_cb(Nx+1)
          ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound_target
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
-      ! the momentum flux = momentum * velocity where momentum = density * mass * velocity
-         momentum = density * mass * velocity
+      ! the momentum flux = momentum * velocity where momentum = density * mass * velocity / B_field
+         momentum = density * mass * velocity / B_field
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
-         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2
-         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2
+         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx+1)
+         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx+1)
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
-      ! convective heat flux = 5 density k temperature velocity (i.e. 5/2 pressure)
-         enthalpy = 5.0d+0 * density * e_charge * temperature
+      ! convective heat flux = 5 density k temperature velocity / B_field (i.e. 5/2 pressure)
+         enthalpy = 5.0d+0 * density * e_charge * temperature / B_field
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
          ! write(*,*) 'advection', q_parallel
       ! add the conductive heat flux in the internal region
          do i = 1, Nx-1
-            q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i)
+            q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i) / B_field_cb(i+1)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) ! we have extrapolated the density linear towards x = L, i.e. the sheath
+         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / B_field_cb(Nx+1) ! we have extrapolated the density linear towards x = L, i.e. the sheath
          ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
@@ -150,7 +151,7 @@ contains
             neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
          enddo
          ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
-         neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         neutral_flux(Nx) = - B_field_cb(Nx)*Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction) ! must correct Gamma_n(Nx) for flux expansion
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
       return
@@ -238,6 +239,7 @@ contains
    subroutine right_hand_side( neq, time, y, ydot )
    ! this subroutine calculates the right hand side ydot of the discretized conservation equations
    ! note that y and ydor are normalized, but the arrays density, velocity, temperature, and neutral are not!
+   ! ew 01-03-2021: modified to take account of flux expansion
       implicit none
       integer,  intent(in)  :: neq
       real(wp), intent(in)  :: time, y(neq) !time is not used
@@ -279,7 +281,7 @@ contains
          ! add the particle flux term using the flux as calculated in calculate_fluxes
          ! Gamma_n(i) contains the flux at i+1/2
          do ix = 2, Nx
-            ydot(ix) = ydot(ix) - (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)
+            ydot(ix) = ydot(ix) - B_field(ix) * (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)   ! ew 01-03-2021:
          enddo
          ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate
       
@@ -290,7 +292,7 @@ contains
          ! add the momentum flux term using the flux as calculated in calculate_fluxes
          ! Gamma_mom(i) contains the flux at i+1/2
          do ix = 2, Nx
-            ydot(Nx+ix) = ydot(Nx+ix) - (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_xcb(ix)
+            ydot(Nx+ix) = ydot(Nx+ix) - B_field(ix) * (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_xcb(ix)   ! ew 01-03-2021:
          enddo
          ! apply boundary condition at the X-point, as following from the constant density n(1)
          ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
@@ -314,7 +316,7 @@ contains
       ! ydot for the energy equation
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx)
          ! add the heat flux term in the internal region (including the sheath)
-         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)
+         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - B_field(2:Nx) * (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)   ! ew 01-03-2021:
          ! add the compression term
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))*energy_norm/1.5d+0/delta_x(1:Nx-1)
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load

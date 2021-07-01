@@ -14,6 +14,7 @@ module physics_parameters
    real( wp ) :: mass                   = 3.3436d-27  ! mass of the dominant ion species (default value representing Deuterium) [kg]
    real( wp ) :: Gamma_X                = 1.0d+23     ! particle flux entering the flux tube at the X-point [/m^2s]
    real( wp ) :: q_parX                 = 1.0d+8      ! parallel heat flux entering the flux tube at the X-point [W/m^2] (value from Stangeby problem 5.1)
+   real( wp ) :: flux_expansion         = 1.0d+0      ! the flux expansion factor between X-point and target = B_X / B_target = R_target / R_X
    real( wp ) :: initial_n              = 1.0d+20     ! initial plasma particle density (homogeneous) and density at X-point [/m^3]
    real( wp ) :: initial_v              = 0.0d+0      ! initial plasma velocity (homogeneous) [m/s]
    real( wp ) :: initial_T              = 1.0d+2      ! initial plasma temperature (homogeneous) [eV]
@@ -52,7 +53,7 @@ contains
    subroutine read_physics_parameters( error )
       implicit none
       integer :: error
-      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
+      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, carbon_concentration, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
