@@ -200,7 +200,7 @@ subroutine write_header
    integer :: i
    integer, parameter :: wp = KIND(1.0D0)
 
-   ! note these lists should still be completed
+   ! note these lists should still be completed (GD, complete now?)
    write( 10, * ) 'numerics parameters:'
    write( 10, * ) '   Nx         = ', Nx
    write( 10, * ) '   ntime      = ', ntime
@@ -226,7 +226,7 @@ subroutine write_header
    write( 10, * ) '   density_ramp_rate       = ', density_ramp_rate
    write( 10, * ) '   energy_loss_ion         = ', energy_loss_ion
    write( 10, * ) '   neutral_residence_time  = ', neutral_residence_time
-   write( 10, * ) '   redistributed fraction  = ', redistributed_fraction
+   write( 10, * ) '   redistributed_fraction  = ', redistributed_fraction
    write( 10, * ) '   recycling               = ', recycling
    write( 10, * ) '   carbon_concentration    = ', carbon_concentration
    write( 10, * ) '   gas_puff_source         = ', gas_puff_source
@@ -247,6 +247,10 @@ subroutine write_header
    write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
    write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
    write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
+   write( 10, * ) '   switch_car_con_prf      = ', switch_car_con_prf
+   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
+   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
+
    write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf [] '  !       rad_los_prf  '
   write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),i=1,Nx )
   !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
@@ -255,7 +259,7 @@ end subroutine write_header
 
 
 subroutine write_solution( time )
-   use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los
+   use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc
    use numerics_parameters, only : Nx, delta_t
    use grid_data, only : x
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
@@ -265,13 +269,15 @@ subroutine write_solution( time )
    integer :: i
    real(wp), intent(in) :: time
    integer :: itime 
-   itime = time / delta_t
+   itime = time / delta_t  
 
-   write( 10, * ) 'time = ', time
-   write( 10, * ) 'dyn_gas = ',  dyn_gas(itime)
-   write( 10, * ) 'dyn_nu  = ',  dyn_nu(itime)
-   write( 10, * ) 'dyn_rec = ',  dyn_rec(itime)
+   write( 10, * ) 'time        = ', time
+   write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)
+   write( 10, * ) 'dyn_nu      = ', dyn_nu(itime)
+   write( 10, * ) 'dyn_rec     = ', dyn_rec(itime)
    write( 10, * ) 'dyn_rad_los = ', dyn_rad_los(itime)
+   write( 10, * ) 'dyn_qparX   = ', dyn_qparX(itime)
+   write( 10, * ) 'dyn_red_frc = ', dyn_red_frc(itime)
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
    &                                   Gamma_n(i), Gamma_mom(i), q_parallel(i), neutral_flux(i), &
