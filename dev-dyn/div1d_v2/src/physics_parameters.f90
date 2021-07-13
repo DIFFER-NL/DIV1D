@@ -14,22 +14,20 @@ module physics_parameters
    real( wp ) :: mass                   = 3.3436d-27  ! mass of the dominant ion species (default value representing Deuterium) [kg]
    real( wp ) :: Gamma_X                = 1.0d+23     ! particle flux entering the flux tube at the X-point [/m^2s]
    real( wp ) :: q_parX                 = 1.0d+8      ! parallel heat flux entering the flux tube at the X-point [W/m^2] (value from Stangeby problem 5.1)
+   real( wp ) :: flux_expansion         = 1.0d+0      ! the flux expansion factor between X-point and target = B_X / B_target = R_target / R_X
    real( wp ) :: initial_n              = 1.0d+20     ! initial plasma particle density (homogeneous) and density at X-point [/m^3]
-   integer    :: dndt                   = 0           ! time dependent plasma X point density requested from nu.dat (perturbation on initial_n)
    real( wp ) :: initial_v              = 0.0d+0      ! initial plasma velocity (homogeneous) [m/s]
    real( wp ) :: initial_T              = 1.0d+2      ! initial plasma temperature (homogeneous) [eV]
    real( wp ) :: initial_a              = 0.0d+4      ! initial neutral density (homogeneous) [/m^3]
    real( wp ) :: density_ramp_rate      = 0.0d+0      ! ramp rate of the density at the X-point [/m^3s]
    real( wp ) :: energy_loss_ion        = 3.0d+1      ! average loss of plasma energy due to ionization [eV]
    real( wp ) :: recycling              = 0.95d+0     ! fraction of recycled neutrals coming from the target [-]
-   integer    :: dRdt                   = 0           ! time dependent recycling fraction taken from R.dat [-]
    real( wp ) :: redistributed_fraction = 0.8d+0      ! fraction of recycled neutrals that is evenly redistributed along the SOL [-]
    real( wp ) :: neutral_residence_time = 1.0d+20     ! time scale on which neutrals are lost from the SOL [s]
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
    real( wp ) :: carbon_concentration   = 1.0d-2      ! the concentration of carbon impurity ions
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
-   integer    :: dgdt                   = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]
    integer    :: elm_start_time         = 0           ! time step (outer step) at which the ELM starts
@@ -46,7 +44,6 @@ module physics_parameters
    character*10 :: ionization_model     = "AMJUEL"    ! use ionization rates from "AMJUEL" data base, "Havlickova", or "Freeman" and Jones
    character*10 :: recombination_model  = "AMJUEL"    ! use recombination rates from "AMJUEL" data base, or "Nakazawa" (combining radiative rec. from Gordeev with 3 body rec. from Hinnov et al)
    real( wp ) :: radial_loss_factor     = 0           ! percentage of the parallel flux that is lost radially throughout the flux tube (not exact for radial_loss_gaussian = -1)
-   integer    :: dRLdt                  = 0           ! time dependent radial loss factor taken from RL.dat
    integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
    real( wp ) :: radial_loss_width      = 1.0d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
@@ -73,8 +70,6 @@ contains
 
    subroutine read_physics_parameters( error )
       implicit none
-  !    real( wp ), dimension(ntime) :: tmptime ! tmp real for intermediate calculations
-  !    real( wp ). dimension(Nx) ::tmpgrid ! tmp real for grid calculations
       integer :: error, i
       allocate( dyn_nu(ntime) )
       allocate( dyn_dnu(ntime) )
@@ -93,7 +88,7 @@ contains
 !                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
 !                               radial_loss_factor, dRLdt, radial_loss_gaussian, radial_loss_width, radial_loss_location
 
-      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
+      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling,  carbon_concentration, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
