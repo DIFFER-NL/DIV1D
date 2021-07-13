@@ -187,7 +187,7 @@ subroutine write_header
 
    use numerics_parameters
    use physics_parameters
-   use grid_data, only : x
+   use grid_data, only : x, B_field
 
    implicit none
    integer :: i
@@ -245,8 +245,8 @@ subroutine write_header
    write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
    write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
 
-   write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf [] '  !       rad_los_prf  '
-  write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),i=1,Nx )
+   write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
+  write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i), B_field(i), i=1,Nx )
   !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
    return
 end subroutine write_header
