@@ -199,6 +199,7 @@ contains
         elseif (radial_loss_gaussian.lt.0) then
             radial_sink = radial_loss_factor *q_parallel / L
         else
+           ! radial_sink = radial_loss_factor * q_parX / L 
             radial_sink = dyn_rad_los(itime) * q_parX / L
         endif
 
