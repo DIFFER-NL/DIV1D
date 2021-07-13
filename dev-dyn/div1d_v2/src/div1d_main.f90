@@ -36,13 +36,6 @@ program div1d
    input_error = input_error_numerics + 10*input_error_physics
    if( input_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
 
-
-   ! test if new input is readable
-   write(*,*) "nu.dat access test."
-   write(*,*)  dyn_nu(2)
-   write(*,*) "dnu calculation test."
-   write(*,*)  dyn_dnu(2)
-   
    ! initialize the grid
    call initialize_grid
 
@@ -219,6 +212,7 @@ subroutine write_header
    write( 10, * ) '   mass       = ', mass
    write( 10, * ) '   Gamma_X    = ', Gamma_X
    write( 10, * ) '   q_parX     = ', q_parX
+   write( 10, * ) '   flux_exp   = ', flux_expansion
    write( 10, * ) '   initial_n  = ', initial_n
    write( 10, * ) '   initial_v  = ', initial_v
    write( 10, * ) '   initial_T  = ', initial_T
@@ -281,7 +275,7 @@ subroutine write_solution( time )
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
    &                                   Gamma_n(i), Gamma_mom(i), q_parallel(i), neutral_flux(i), &
-   &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i),   i=1,Nx )
+   &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return
 end subroutine write_solution
