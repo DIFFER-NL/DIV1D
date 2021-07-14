@@ -483,7 +483,9 @@ The advected part of the fluxes are calculated according to the numerical scheme
 
 \section{Input and Output}\label{IO}
 
-Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~2.
+Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~II. Some inputs can be switched to be dynamic, which requires additional files in the execution director. These files should only contain columns with numerical values and sizes are indicated. \\
+
+The output is written in the execution directory in {\tt div1doutput.txt}. Firstly, most inputs that were provided via {\tt input.txt} and the {\tt *.dat} files have been appended to {\tt div1doutput.txt} and represent the actual values used by DIV1D for input verification. Secondly, the outputs in terms of states: {\tt density, velocity, temperature, neutral }, fluxes: {\tt Gamma\_n, Gamma\_mom, q\_parallel, neutral\_flux }, and sources: {\tt Source\_n, Source\_v, Source\_Q, Source\_neutral} are written. 
 
 \begin{table}[h]
 \begin{center}
@@ -525,7 +527,6 @@ Here we provide a complete list of the input and output parameters of the code. 
   \end{tabular}
 \end{center}
 \end{table}
-
 \begin{table}[h]
 \begin{center}
   \caption{{\bf Namelist {\tt div1d\_physics} setting parameters controlling the physics of the problem solved}.}
@@ -559,24 +560,31 @@ Here we provide a complete list of the input and output parameters of the code. 
     {\tt minimum\_temperature}   & real: minimum value allowed for temperatures (default: 0.1D0~eV) \\ \hline
     {\tt elm\_start\_time}   	 & integer: outer time step at which the first ELM starts, in units of delta\_t (default: 0) \\ \hline
     {\tt elm\_ramp\_time}   	 & integer: ramp time of ELM (not exact for gaussian, see section~\ref{section:elms}), in units of delta\_t (default: 0) \\ \hline
-    {\tt elm\_time\_between,}    & integer: outer time steps between two the start of two ELMs, in units of delta\_t (default: 2d+08) \\ \hline
+    {\tt elm\_time\_between}    & integer: outer time steps between two the start of two ELMs, in units of delta\_t (default: 2d+08) \\ \hline
     {\tt elm\_expelled\_heat}    & real: total amount of expelled heat per unit area due to an ELM (default: 0 J m$^{-2}$) \\ \hline
     {\tt elm\_expelled\_particles}& real: total number of expelled particles due to an ELM (default: 0 m$^{-3}$) \\ \hline
     {\tt switch\_elm\_heat\_flux}& integer: turns off (0) or on (1) the ELM contribution to the heat flux (default: 0) \\ \hline
     {\tt switch\_elm\_density}   & integer: turns off (0) or on (1) the ELM contribution to the particle flux (default: 0) \\ \hline
     {\tt switch\_elm\_series}    & integer: turns off (0) or on (1) the multi-ELM sequence (default: 0) \\ \hline
-        {\tt gaussian\_elm}      & integer: chooses triangular (0) or gaussian (1) ELM (default: 0) \\ \hline
-        {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
-        {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
-        {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
-        {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline      
-        \hline
+    {\tt gaussian\_elm}      & integer: chooses triangular (0) or gaussian (1) ELM (default: 0) \\ \hline
+    {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
+    {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
+    {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
+    {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline  
+    {\tt switch\_dyn\_nu} & integer: switch dynamic X-point density (default: 0)   \\ \hline
+    {\tt switch\_dyn\_gas} & integer: switch dynamic gas puff source  (default: 0) (requires: {\tt dyn\_nu.dat(ntime) }) \\ \hline
+    {\tt switch\_dyn\_rec} & integer: switch dynamic recycling coefficient (default: 0) (requires: {\tt dyn\_rec.dat(ntime) })   \\ \hline
+    {\tt switch\_dyn\_rad\_los} & integer:  switch dynamic radial los factor (default: 0) (requires: {\tt dyn\_rad\_los.dat(ntime) })  \\ \hline
+    {\tt switch\_car\_con\_prf} & integer: switch carbon concentration profile (default: 0) (requires: {\tt car\_con\_prf.dat(Nx) }) \\ \hline
+    {\tt switch\_dyn\_qpar} & integer: switch dynamic X-point heat flux (default: 0) (requires: {\tt dyn\_qpar.dat(ntime) })  \\ \hline
+    {\tt switch\_dyn\_red\_frc} & integer: switch dynamic redistribution fraction (default: 0)  (requires: {\tt dyn\_red\_frc.dat(ntime) })  \\ \hline
+    \hline
   \end{tabular}
 \end{center}
 \end{table}
 
+\cleardoublepage
 \section{Benchmark with 2 Point Model}
-
 The 2 Point Model for an attached divertor plasma assuming purely conductive heat transport and no losses is discussed in Chapter 5.2 of~\cite{stangeby}). For a given parallel heat flux $q_{\parallel,\rm X}$ entering the divertor leg upstream, a given upstream plasma density $n_{\rm X}$, the length of the divertor leg $L$, and neglecting possible effects of flux expansion a set of three equations is obtained from the energy balance, the sheath heat transmission, and pressure balance respectively~\cite{stangeby}:
 \begin{equation}\label{2PM_energy_balance}
     T_{\rm X} = \left(T_{\rm L}^{7/2} + {7 \over 2} {q_{\parallel,\rm X} L \over \kappa_0}\right)^{2/7},
