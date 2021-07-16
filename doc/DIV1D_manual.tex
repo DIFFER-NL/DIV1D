@@ -77,9 +77,9 @@ The neutral particle flux coming from the target is determined by the recycling 
 
 \subsection{Sources and Sinks}
 
-The various sources and sinks are determined mostly by atomic processes like charge exchange, ionization, excitation, and recombination. In addition a neutral particle loss term can be specified in terms of an average residence time for the neutral in the flux tube to account for cross field neutral particle transport losses. For the plasma density the sources and sinks are given by ionization and recombination, respectively:
+The various sources and sinks are determined mostly by atomic processes like charge exchange, ionization, excitation, and recombination. In addition a neutral particle loss term can be specified in terms of an average residence time for the neutral in the flux tube to account for cross field neutral particle transport losses. For the plasma density the sources and sinks are given by ionization, recombination and target recycling, respectively:
 \begin{equation}\label{particle_source}
-    S_n = + n n_n \langle\sigma_{\rm ion} v\rangle - n^2 \langle\sigma_{\rm rec} v\rangle.
+    S_n = + n n_n \langle\sigma_{\rm ion} v\rangle - n^2 \langle\sigma_{\rm rec} v\rangle. -  \left. n(L)v_{\|}(L) \right|_{x=L}
 \end{equation}
 Because the neutral particle momentum is neglected there is no momentum source, while the momentum sinks are induced by charge exchange and recombination
 \begin{equation}\label{momentum_source}
@@ -91,9 +91,9 @@ Similarly there are only heat sinks in the energy equation, with additional sink
 \end{equation}
 where $E_{\rm ion} = 13.6$~eV is the ionization energy, $E_{\rm exc}$ is the energy loss per excitation, and $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$. What is a sink for the plasma density is a source for the neutral particles and vice versa, such that
 \begin{equation}\label{neutral_source}
-    S_{\rm neutral} = - S_n + S_{\rm puff} - {n_n \over \tau_n}
+    S_{\rm neutral} = - S_n + S_{\rm puff} - {n_n \over \tau_n} + \left. n(L)v_{\|}(L)R (1-f_r) \right|_{x=L} + {n(L)v_{\|}(L)R f_r \over L} 
 \end{equation}
-where $S_{\rm puff}$ is a neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in a later paragraph where also the impurity radiative cooling rates are be given.
+where $S_{\rm puff}$ is a neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The target recycling coefficient $R$ determines how many of the ions that hit the target are recycled and the redistribution fraction $f_r$ determines what fraction is redistributed over the leg. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in a later paragraph where also the impurity radiative cooling rates are be given.
 
 
 \subsection{Radial power losses}
