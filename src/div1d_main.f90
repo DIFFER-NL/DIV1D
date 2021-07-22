@@ -30,6 +30,10 @@ program div1d
    real(wp), allocatable :: abstol_vector(:), rwork(:)
    type (VODE_OPTS) :: options
 
+   ! time the program execution time exluding external system calls (ifortran, gfortran) incl external system calls (solaris f90)
+   real(wp) :: T1,T2
+   call cpu_time(T1)
+
    ! read non-default input parameters
    call read_numerics_parameters(input_error_numerics)
    call read_physics_parameters(input_error_physics)
@@ -63,7 +67,7 @@ program div1d
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
-
+  
    ! setting the absolute error tolerance for dvode_f90 or dlsode
    ! note that the solution vector y is normalized so the absolute error tolarance in all elements of y can be made equal
    allocate( abstol_vector(4*Nx) )
@@ -177,8 +181,12 @@ program div1d
       if( modulo( istep, istate_mod ) .eq. 0 ) istate = 1
    enddo
 
-   call write_restart_file
+   call cpu_time(T2)
 
+
+   write( 10, * ) '   cpu_time   = ', T2-T1
+
+   call write_restart_file
    stop 'div1d completed'
 end program div1d
 
@@ -246,7 +254,7 @@ subroutine write_header
    write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
 
    write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
-  write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i), B_field(i), i=1,Nx )
+   write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i), B_field(i), i=1,Nx )
   !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
    return
 end subroutine write_header

@@ -47,7 +47,10 @@ module physics_parameters
    integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
    real( wp ) :: radial_loss_width      = 1.0d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
-   ! time dependent settings
+   integer    :: switch_X_vel_con       = 0           ! switch to constrain the upstream velocity to zero gradient
+
+
+!  time dependent settings
    integer    :: switch_dyn_nu          = 0           ! time dependent plasma X point density requested from nu.dat (perturbation on initial_n)
    integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
    integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from R.dat [-]
@@ -88,6 +91,16 @@ contains
 !                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
 !                               radial_loss_factor, dRLdt, radial_loss_gaussian, radial_loss_width, radial_loss_location
 
+!      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
+!                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling,  carbon_concentration, &
+!                               case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
+!                               minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
+!                               elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
+!                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
+!                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &
+!                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_car_con_prf,&
+!                               switch_dyn_qpar, switch_dyn_red_frc
+
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling,  carbon_concentration, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
@@ -95,8 +108,10 @@ contains
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
                                radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &
+                               switch_X_vel_con, & 
                                switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_car_con_prf,&
                                switch_dyn_qpar, switch_dyn_red_frc
+
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
