@@ -359,7 +359,7 @@ contains
          ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! add neutral sources and losses from redistribution and finite residence time
          !ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
-         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * dyn_rec(itime) * dyn_red_frc(itime) / L - neutral / neutral_residence_time
+         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + B_field_cb(Nx) * Gamma_n(Nx) * dyn_rec(itime) * dyn_red_frc(itime) / L - neutral / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx) !-------------------------------------------------------------------------
 
       ! apply evolution switches
