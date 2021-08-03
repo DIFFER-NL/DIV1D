@@ -263,7 +263,7 @@ end subroutine write_header
 subroutine write_solution( time )
    use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc
    use numerics_parameters, only : Nx, delta_t
-   use grid_data, only : x
+   use grid_data, only : x, B_field
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none
