@@ -30,6 +30,10 @@ program div1d
    real(wp), allocatable :: abstol_vector(:), rwork(:)
    type (VODE_OPTS) :: options
 
+   ! time the program execution time exluding external system calls (ifortran, gfortran) incl external system calls (solaris f90)
+   real(wp) :: T1,T2
+   call cpu_time(T1)
+
    ! read non-default input parameters
    call read_numerics_parameters(input_error_numerics)
    call read_physics_parameters(input_error_physics)
@@ -56,13 +60,14 @@ program div1d
 
    ! write the inital solution to file
    ! calculate the fluxes
-   call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
    ! calculate the sources
-   call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
+   call calculate_sources( Nx, start_time,  density, velocity, temperature, neutral, q_parallel, &
+                          Source_n, Source_v, Source_Q, source_neutral )
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
-
+  
    ! setting the absolute error tolerance for dvode_f90 or dlsode
    ! note that the solution vector y is normalized so the absolute error tolarance in all elements of y can be made equal
    allocate( abstol_vector(4*Nx) )
@@ -166,9 +171,9 @@ program div1d
       if( mod( istep, nout ) .eq. 0 ) then
          ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
          ! calculate the fluxes
-         call calculate_fluxes( Nx, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
          ! calculate the sources
-         call calculate_sources( Nx, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
+         call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
          call write_solution( end_time )
       endif
       start_time = end_time
@@ -176,8 +181,12 @@ program div1d
       if( modulo( istep, istate_mod ) .eq. 0 ) istate = 1
    enddo
 
-   call write_restart_file
+   call cpu_time(T2)
 
+
+   write( 10, * ) '   cpu_time   = ', T2-T1
+
+   call write_restart_file
    stop 'div1d completed'
 end program div1d
 
@@ -186,28 +195,74 @@ subroutine write_header
 
    use numerics_parameters
    use physics_parameters
+   use grid_data, only : x, B_field
 
    implicit none
+   integer :: i
    integer, parameter :: wp = KIND(1.0D0)
 
-   ! note these lists should still be completed
+   ! note these lists should still be completed (GD, complete now?)
    write( 10, * ) 'numerics parameters:'
    write( 10, * ) '   Nx         = ', Nx
    write( 10, * ) '   ntime      = ', ntime
    write( 10, * ) '   nout       = ', nout
    write( 10, * ) '   dxmin      = ', dxmin
+   write( 10, * ) '   delta_t    = ', delta_t  
+   write( 10, * ) '   abstol     = ', abstol  
+   write( 10, * ) '   reltol     = ', reltol  
+   write( 10, * ) '   viscocity  = ', viscosity
+   write( 10, * ) '   method     = ', method  
+   write( 10, * ) '   restart    = ', restart
    write( 10, * ) 'physics parameters:'
+   write( 10, * ) '   gamma      = ', gamma
    write( 10, * ) '   L          = ', L
+   write( 10, * ) '   sintheta   = ', sintheta
+   write( 10, * ) '   mass       = ', mass
+   write( 10, * ) '   Gamma_X    = ', Gamma_X
    write( 10, * ) '   q_parX     = ', q_parX
+   write( 10, * ) '   flux_exp   = ', flux_expansion
    write( 10, * ) '   initial_n  = ', initial_n
+   write( 10, * ) '   initial_v  = ', initial_v
+   write( 10, * ) '   initial_T  = ', initial_T
+   write( 10, * ) '   initial_a  = ', initial_a
+   write( 10, * ) '   density_ramp_rate       = ', density_ramp_rate
+   write( 10, * ) '   energy_loss_ion         = ', energy_loss_ion
+   write( 10, * ) '   neutral_residence_time  = ', neutral_residence_time
+   write( 10, * ) '   redistributed_fraction  = ', redistributed_fraction
+   write( 10, * ) '   recycling               = ', recycling
+   write( 10, * ) '   carbon_concentration    = ', carbon_concentration
+   write( 10, * ) '   gas_puff_source         = ', gas_puff_source
+   write( 10, * ) '   gas_puff_location       = ', gas_puff_location
+   write( 10, * ) '   gas_puff_width          = ', gas_puff_width
+   write( 10, * ) '   elm_start_time          = ', elm_start_time
+   write( 10, * ) '   elm_ramp_time           = ', elm_ramp_time
+   write( 10, * ) '   elm_time_between        = ', elm_time_between
+   write( 10, * ) '   elm_expelled_heat       = ', elm_expelled_heat
+   write( 10, * ) '   elm_expelled_particles  = ', elm_expelled_particles
+   write( 10, * ) '   switch_elm_series       = ', switch_elm_series
+   write( 10, * ) '   gaussian_elm            = ', gaussian_elm
+   write( 10, * ) '   radial_loss_factor      = ', radial_loss_factor
+   write( 10, * ) '   radial_loss_gaussian    = ', radial_loss_gaussian
+   write( 10, * ) '   radial_loss_width       = ', radial_loss_width
+   write( 10, * ) '   radial_loss_location    = ', radial_loss_location
+   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
+   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
+   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
+   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
+   write( 10, * ) '   switch_car_con_prf      = ', switch_car_con_prf
+   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
+   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
 
+   write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
+   write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i), B_field(i), i=1,Nx )
+  !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
    return
 end subroutine write_header
 
 
 subroutine write_solution( time )
-
-   use numerics_parameters, only : Nx
+   use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc
+   use numerics_parameters, only : Nx, delta_t
    use grid_data, only : x
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
@@ -215,11 +270,19 @@ subroutine write_solution( time )
    integer, parameter :: wp = KIND(1.0D0)
    integer :: i
    real(wp), intent(in) :: time
-   
-   write( 10, * ) 'time = ', time
-   write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]    q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut'
+   integer :: itime 
+   itime = time / delta_t  
+
+   write( 10, * ) 'time        = ', time
+   write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)
+   write( 10, * ) 'dyn_nu      = ', dyn_nu(itime)
+   write( 10, * ) 'dyn_rec     = ', dyn_rec(itime)
+   write( 10, * ) 'dyn_rad_los = ', dyn_rad_los(itime)
+   write( 10, * ) 'dyn_qparX   = ', dyn_qparX(itime)
+   write( 10, * ) 'dyn_red_frc = ', dyn_red_frc(itime)
+   write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
-   &                                   Gamma_n(i), Gamma_mom(i), q_parallel(i), neutral_flux(i), &
+   &                                   Gamma_n(i)*B_field(i), Gamma_mom(i)*B_field(i),q_parallel(i)*B_field(i),neutral_flux(i)*B_field(i), & ! multiplied by B_field because the code calculates with normalized values
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return
