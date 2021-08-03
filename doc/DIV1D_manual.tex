@@ -2,6 +2,7 @@
 % updated from revtex4 tot revtex4-2 because revtex4 would cause compiler malfunctioning in the most recent Miktex package. It is superseded by revtex4-2 (https://journals.aps.org/revtex/revtex-faq) so that was used as of 12-2-2020.
 \usepackage{graphicx}
 \begin{document}
+
 \title[DIV1D manual]{DIV1D manual: a 1D code for divertor plasma simulation}
 
 \author{E. Westerhof}
@@ -31,19 +32,19 @@ The equations solved are: the particle balance equation, the plasma momentum bal
 
 \noindent The particle balance is given by
 \begin{equation}\label{particle_balance}
-    {\partial n \over \partial t} = - {\partial \over \partial x} \Gamma_n + S_n,
+    {\partial n \over \partial t} = - B{\partial \over \partial x} \left({\Gamma_n \over B}\right) + S_n,
 \end{equation}
-where $n$ is the plasma (electron) density, $\Gamma_n = n v_\parallel$ with $v_\parallel$ the parallel velocity is the convective particle flux (a possible effect of diffusion is ignored), and $S_n$ represent the sum of all particle sources and sinks
+where $n$ is the plasma (electron) density, $\Gamma_n = n v_\parallel$ with $v_\parallel$ the parallel velocity is the convective particle flux (a possible effect of diffusion is ignored), and $S_n$ represent the sum of all particle sources and sinks. $B$ represents the magnitude of the total magnetic field. Here and in the equations below, the inclusion of $B$ accounts for the effect of flux expansion due to a varying total magnetic field~\cite{dudson2019,havlickova2013}.
 
 \noindent The momentum balance is given by
 \begin{equation}\label{momentum_balance}
-    {\partial n m v_\parallel \over \partial t} = - {\partial \over \partial x} \left( n m v_\parallel^2 + p \right) + S_{\rm mom},
+    {\partial n m v_\parallel \over \partial t} = - B{\partial \over \partial x} \left({n m v_\parallel^2 \over B}\right) - {\partial \over \partial x} p + S_{\rm mom},
 \end{equation}
 where $m$ is the mass of the dominant ion species (default Deuterium $m = 3.3436 \times 10^{-27}$~kg) , $p = 2 n e T$ is the total plasma pressure (we will use T in units eV such that the Boltzmann constant can be equated with the elementary charge $e$ to obtain the pressure in Pascal), and $S_{\rm mom}$ represent the sum of all momentum sources and sinks.
 
 \noindent Ion and electron temperatures are considered equal such that only one energy balance needs to be solved. The internal energy ($3 n k T$) balance of the plasma is then given by
 \begin{equation}\label{energy_balance}
-    {\partial 3 n e T \over \partial t} = - {\partial \over \partial x} q_\parallel + v_\parallel {\partial \over \partial x} p + Q,
+    {\partial 3 n e T \over \partial t} = - B{\partial \over \partial x} \left({q_\parallel \over B}\right) + v_\parallel {\partial \over \partial x} p + Q,
 \end{equation}
 where the heat flux $q_\parallel$ is given by the equation
 \begin{equation}\label{heat_flux}
@@ -71,33 +72,33 @@ The boundary conditions at the target are given by the usual sheath boundary con
 \begin{equation}\label{sheath_heat_transmission}
     q_\parallel(x=L) = \gamma n e T c_{\rm s}.
 \end{equation}
-The neutral particle flux coming from the target is determined by the recycling coefficient $R$ given at input, i.e. $\Gamma_{\rm neutral}(x=L) = - R \Gamma_n(x=L)$. Note that when $R=1$ the total number of particles should be conserved requiring a zero plasma inflow velocity at the target in case of a steady state solution.
+The neutral particle flux coming from the target is determined by the recycling coefficient $R$ given at input, i.e. $\Gamma_{\rm neutral}(x=L) = - R \Gamma_n(x=L)$. Note that when $R=1$ the total number of particles should be conserved requiring a zero plasma inflow velocity at the X-point in case of a steady state solution.
 
 
 \subsection{Sources and Sinks}
 
-The various sources and sinks are determined mostly by atomic processes like charge exchange, ionization, excitation, and recombination. In addition a neutral particle loss term can be specified in terms of an average residence time for the neutral in the flux tube to account for cross field neutral particle transport losses. For the plasma density the sources and sinks are given by ionization and recombination, respectively:
+The various sources and sinks are determined mostly by atomic processes like charge exchange, ionization, excitation, and recombination. In addition a neutral particle loss term can be specified in terms of an average residence time for the neutral in the flux tube to account for cross field neutral particle transport losses. For the plasma density the sources and sinks are given by ionization, recombination and target recycling, respectively:
 \begin{equation}\label{particle_source}
-    S_n = + n n_n \langle\sigma_{\rm ion} v\rangle - n^2 \langle\sigma_{\rm rec} v\rangle.
+    S_n = + n n_n \langle\sigma_{\rm ion} v\rangle - n^2 \langle\sigma_{\rm rec} v\rangle. -  \left. n(L)v_{\|}(L) \right|_{x=L}
 \end{equation}
 Because the neutral particle momentum is neglected there is no momentum source, while the momentum sinks are induced by charge exchange and recombination
 \begin{equation}\label{momentum_source}
     S_{\rm mom} = - n m v_\parallel \left(n_n \langle\sigma_{\rm cx} v\rangle + n \langle\sigma_{\rm rec} v\rangle \right).
 \end{equation}
-Similarly there are only heat sinks in the energy equation, with additional sinks coming from excitation (including ionization) and impurity radiation
+Similarly there are only heat sinks in the energy equation, with additional sinks coming from hydrogenic ionization, and excitation and impurity radiation
 \begin{equation}\label{energy_source}
-    Q = - 1.5 n e T \left(n_n \langle\sigma_{\rm cx} v\rangle + 2 n \langle\sigma_{\rm rec} v\rangle \right) - n n_n \langle\sigma_{\rm exc} v\rangle - n^2 \xi_Z L_Z(T)
+    Q = - 1.5 n e T \left(n_n \langle\sigma_{\rm cx} v\rangle + 2 n \langle\sigma_{\rm rec} v\rangle \right) - n n_n \langle E_{\rm ion} \sigma_{\rm ion} v\rangle - n n_n \langle E_{\rm exc} \sigma_{\rm exc} v\rangle - n^2 \xi_Z L_Z(T)
 \end{equation}
-where $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$. What is a sink for the plasma density is a source for the neutral particles and vice versa, such that
+where $E_{\rm ion} = 13.6$~eV is the ionization energy, $E_{\rm exc}$ is the energy loss per excitation, and $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$. What is a sink for the plasma density is a source for the neutral particles and vice versa, such that
 \begin{equation}\label{neutral_source}
-    S_{\rm neutral} = - S_n + S_{\rm puff} - {n_n \over \tau_n}
+    S_{\rm neutral} = - S_n + S_{\rm puff} - {n_n \over \tau_n} + \left. n(L)v_{\|}(L)R (1-f_r) \right|_{x=L} + {n(L)v_{\|}(L)R f_r \over L} 
 \end{equation}
-where $S_{\rm puff}$ is the neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in the next paragraph where also the impurity radiative cooling rates are be given.
+where $S_{\rm puff}$ is a neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The target recycling coefficient $R$ determines how many of the ions that hit the target are recycled and the redistribution fraction $f_r$ determines what fraction is redistributed over the leg. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in a later paragraph where also the impurity radiative cooling rates are be given.
 
 
 \subsection{Radial power losses}
-An additional factor that can be of some importance is that of power losses in the radial direction. To simulate this effect, DIV1D includes several versions of an effective radial loss term. The simplest version is
-
+The power losses in the radial direction can be modelled through a radial power loss factor. Although one should be cautious when using this together with flux expansion as  they have similar effects on the power balance.
+To simulate this effect, DIV1D includes several versions of an effective radial loss term. The simplest version is
 \begin{equation}
 \label{constant_rad_losses}
 S_{\perp}=-\eta_{\perp}\frac{q_\parallel}{L}
@@ -133,30 +134,11 @@ A number of different options is available to calculate the atomic rates. For ea
 
 \subsection{Charge Exchange}
 
-The charge exchange rate as implemented in SD1D originates from the work by Havlickova \cite{havlickova2013} and is given by \cite{SD1D}
-\begin{equation}\label{charge_exchange_SD1D}
-    \langle\sigma_{\rm cx} v\rangle = \begin{cases} 1.0 \times 10^{-14} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
-                                        1.0 \times 10^{-14} T^{1/3} {\rm m}^3/{\rm s} & \mbox{for } T >   1 {\rm eV}. \end{cases}
-\end{equation}
-This option is selected by setting {\tt case\_cx = "Havlickova"}.
-
-Another expression that has been used for example in the work by Nakazawa et al. \cite{nakazawa2000}, comes from Table 3 of the report by Freeman and Jones \cite{freeman1974} in which case the charge exchange rate is given by the fit function
-\begin{equation}\label{charge_exchange_FJ}
-    \langle\sigma_{\rm cx} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
-\end{equation}
-with fitting coefficients $b_i$ given as
-\begin{small}\begin{verbatim}
-   b0 -1.841757E+01  b1  5.282950E-01  b2 -2.200477E-01
-   b3  9.750192E-02  b4 -1.749183E-02  b5  4.954296E-04
-   b6  2.174910E-04  b7 -2.530206E-05  b8  8.230751E-07
-\end{verbatim}\end{small}
-This option is selected by setting {\tt case\_cx = "Freeman"}. The validity range of this fit is indicated as 1 to $10^5$~eV.
-
-When using the AMJUEL option the charge exchange rate is calculated using the same fit function as above
+The default option uses the charge exchange rate as specified in section 2.1 reaction 0.1T of the AMJUEL data base for the total charge exchange rate of Hydrogen~\cite{EIRENE}. This uses a fit function of the form
 \begin{equation}\label{charge_exchange_AMJUEL}
     \langle\sigma_{\rm cx} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
-with the fitting constants $b_i$ as defined in section 2.1 reaction 0.1T of the AMJUEL document for the total charge exchange rate of Hydrogen~\cite{EIRENE}
+with the fitting constants $b_i$ defined by
 \begin{small}\begin{verbatim}
    b0 -1.833882000000E+01  b1  2.368705000000E-01  b2 -1.469575000000E-02
    b3 -1.139850000000E-02  b4  6.379644000000E-04  b5  3.162724000000E-04
@@ -164,32 +146,31 @@ with the fitting constants $b_i$ as defined in section 2.1 reaction 0.1T of the 
 \end{verbatim}\end{small}
 Note that the factor $10^{-6}$ stems from the use of the units ${\rm cm}^3/{\rm s}$ for the reaction rates in AMJUEL.
 
+In order to allow comparisons with models from other authors a number of alternative options are provided for the caclculations of the reaction rates. This includes the charge exchange rate as implemented in SD1D originating from the work by Havlickova \cite{havlickova2013} which is given by \cite{SD1D}
+\begin{equation}\label{charge_exchange_SD1D}
+    \langle\sigma_{\rm cx} v\rangle = \begin{cases} 1.0 \times 10^{-14} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
+                                        1.0 \times 10^{-14} T^{1/3} {\rm m}^3/{\rm s} & \mbox{for } T >   1 {\rm eV}. \end{cases}
+\end{equation}
+This option is selected by setting {\tt case\_cx = "Havlickova"}.
+
+Another expression that has been used for example in the work by Nakazawa et al. \cite{nakazawa2000}, comes from Table 3 of the report by Freeman and Jones \cite{freeman1974} in which case the charge exchange rate is given by a fit function of the same form as above
+\begin{equation}\label{charge_exchange_FJ}
+    \langle\sigma_{\rm cx} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
+\end{equation}
+with fitting coefficients $b_i$ now given as
+\begin{small}\begin{verbatim}
+   b0 -1.841757E+01  b1  5.282950E-01  b2 -2.200477E-01
+   b3  9.750192E-02  b4 -1.749183E-02  b5  4.954296E-04
+   b6  2.174910E-04  b7 -2.530206E-05  b8  8.230751E-07
+\end{verbatim}\end{small}
+This option is selected by setting {\tt case\_cx = "Freeman"}. The validity range of this fit is indicated as 1 to $10^5$~eV.
+
 Charge exchange rates for the Hydrogen isotopes like Deuterium and Tritium are obtained by the same expressions given above, but using a rescaled temperature multiplied with the factor $m_p/m_i$, i.e. the ratio of the proton mass over the mass of the Deuterium or Tritium ion, respectively.
 
 
 \subsection{Ionization}
 
-The ionization rate as implemented in SD1D again originates from the work by Havlickova \cite{havlickova2013}. It is slightly modified to remove the discontinuity at 20~eV and is given by \cite{SD1D}
-\begin{equation}\label{ionization_SD1D}
-    \langle\sigma_{\rm ion} v\rangle = \begin{cases} 7.638 \times 10^{-21} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
-                                        10^{-6.0d+0} T^{-2.987} 10^{-15.72 \exp(-\log_{10}T) + 1.603*exp(-\log_{10}^2T)} {\rm m}^3/{\rm s} & \mbox{for } 1 {\rm eV} < T \le 20 {\rm eV} \\
-                                        5.875 \times 10^{-12} T^{-0.5151} 10^{-2.563/\log_{10}T} {\rm m}^3/{\rm s}. \end{cases}
-\end{equation}
-This option is selected by setting {\tt case\_ion = "Havlickova"}
-
-Nakazawa et al.~\cite{nakazawa2000} in their 1D code use the ionization rate given in Table 3 of the report by Freeman and Jones. They provide a fit to the electron impact ionization given by
-\begin{equation}\label{charge_exchange_FJ}
-    \langle\sigma_{\rm ion} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^6 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
-\end{equation}
-with fitting coefficients $b_i$ given by
-\begin{small}\begin{verbatim}
-   b0 -0.3173850E+02  b1  0.1143818E+02  b2 -0.3833998E+01
-   b3  0.7046692E+00  b4 -0.7431486E-01  b5  0.4153749E-02
-   b6 -0.9486967E-04
-\end{verbatim}\end{small}
-This option is selected by setting {\tt case\_ion = "Freeman"}
-
-When using the AMJUEL option the effective ionization rate is calculated using the double fit function
+The default option for calculation of the ionization rate is also obtained from the AMJUEL data base, which provides an effective ionization rate as calculated using a double fit function
 \begin{equation}\label{ionization_AMJUEL}
     \langle\sigma_{\rm ion} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{ij} (\ln \bar n)^j (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
@@ -236,16 +217,34 @@ N2MIN =   1.00000D 08 1/CM3
 N2MAX =   1.00000D 16 1/CM3
 \end{verbatim}\end{small}
 
+One alternative option is again provided in the form of the ionization rate as implemented in SD1D originating from the work by Havlickova \cite{havlickova2013}. It is slightly modified to remove the discontinuity at 20~eV and is given by \cite{SD1D}
+\begin{equation}\label{ionization_SD1D}
+    \langle\sigma_{\rm ion} v\rangle = \begin{cases} 7.638 \times 10^{-21} {\rm m}^3/{\rm s}             & \mbox{for } T \le 1 {\rm eV} \\
+                                        10^{-6.0d+0} T^{-2.987} 10^{-15.72 \exp(-\log_{10}T) + 1.603*exp(-\log_{10}^2T)} {\rm m}^3/{\rm s} & \mbox{for } 1 {\rm eV} < T \le 20 {\rm eV} \\
+                                        5.875 \times 10^{-12} T^{-0.5151} 10^{-2.563/\log_{10}T} {\rm m}^3/{\rm s}. \end{cases}
+\end{equation}
+This option is selected by setting {\tt case\_ion = "Havlickova"}
+
+A further option again comes from the work of Nakazawa et al.~\cite{nakazawa2000} who use the ionization rate given in Table 3 of the report by Freeman and Jones~\cite{freeman1974}. They provide a fit to the electron impact ionization given by
+\begin{equation}\label{charge_exchange_FJ}
+    \langle\sigma_{\rm ion} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^6 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
+\end{equation}
+with fitting coefficients $b_i$ given by
+\begin{small}\begin{verbatim}
+   b0 -0.3173850E+02  b1  0.1143818E+02  b2 -0.3833998E+01
+   b3  0.7046692E+00  b4 -0.7431486E-01  b5  0.4153749E-02
+   b6 -0.9486967E-04
+\end{verbatim}\end{small}
+This option is selected by setting {\tt case\_ion = "Freeman"}
+
 
 \subsection{Excitation and ionization energy losses}
 
-Energy losses from ionization and due to excitation radiation are accounted for either as an effective energy loss constant per ionization (typically $E_{ion} = 30$~eV as in Nakazawa et al. \cite{nakazawa2000}) which can be specified at input er by an effective excitation rate which accounts for the temperature and density dependent total energy loss from ionization and excitation radiation. In the SD1D code the latter is given by a simple fit function as
-\begin{equation}\label{excitation_SD1D}
-    \langle\sigma_{\rm exc} v\rangle = {4.90 \times 10^{-13} \over 0.28 + Y} \exp(-Y) \sqrt{Y (1.0 + Y)} {\rm eV} {\rm m}^3/{\rm s},
+By default, the sum of energy losses from ionization and excitation is obtained from the AMJUEL data base, which provides an effective excitation rate in terms of an averaged effective energy loss per ionization. This is calculated from a fit function of the same form as defined above for the ionization rate (\ref{ionization_AMJUEL}), i.e.
+\begin{equation}
+  \langle E_{\rm ion} \sigma_{\rm ion} v\rangle - n n_n \langle E_{\rm exc} \sigma_{\rm exc} v\rangle =  10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{ij} (\ln \bar n)^j (\ln T)^i \right)  {\rm eV} {\rm m}^3/{\rm s}
 \end{equation}
-where $Y = 10.2 / \max( 1, T)$. Added to this is the 13.6~eV of energy loss per ionization.
-
-When using the AMJUEL option the effective excitation rate is calculated from a fit function of the same form as defined above for the ionization rate (\ref{ionization_AMJUEL}) with the coefficients $\alpha_{{\rm exc,} ij}$ as tabulated in section 10.2 for reaction 2.5.1 of the AMJUEL document for the case of the total energy loss rate associated with Hydrogen ionization and excitation radiation:
+with the coefficients $\alpha_{{\rm exc,} ij}$ as tabulated in section 10.2 for reaction 2.5.1 of the AMJUEL document for the case of the total energy loss rate associated with Hydrogen ionization and excitation radiation:
 \begin{small}\begin{verbatim}
         n-Index:     0                     1                     2
   T-Index:
@@ -287,6 +286,14 @@ T1MAX =   2.00000D 04 EV
 N2MIN =   1.00000D 08 1/CM3
 N2MAX =   1.00000D 16 1/CM3
 \end{verbatim}\end{small}
+
+
+Energy losses from ionization and due to excitation radiation are accounted for either as an effective energy loss constant per ionization (typically $E_{eff,ion} = 30$~eV as in Nakazawa et al. \cite{nakazawa2000}) which can be specified at input er by an effective excitation rate which accounts for the temperature and density dependent total energy loss from ionization and excitation radiation. In the SD1D code the latter is given by a simple fit function as
+\begin{equation}\label{excitation_SD1D}
+    \langle\sigma_{\rm exc} v\rangle = {4.90 \times 10^{-13} \over 0.28 + Y} \exp(-Y) \sqrt{Y (1.0 + Y)} {\rm eV} {\rm m}^3/{\rm s},
+\end{equation}
+where $Y = 10.2 / \max( 1, T)$. Added to this is the 13.6~eV of energy loss per ionization.
+
 
 
 \subsection{Recombination}
@@ -476,7 +483,9 @@ The advected part of the fluxes are calculated according to the numerical scheme
 
 \section{Input and Output}\label{IO}
 
-Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~2.
+Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~II. Some inputs can be switched to be dynamic, which requires additional files in the execution director. These files should only contain columns with numerical values and sizes are indicated. \\
+
+The output is written in the execution directory in {\tt div1doutput.txt}. Firstly, most inputs that were provided via {\tt input.txt} and the {\tt *.dat} files have been appended to {\tt div1doutput.txt} and represent the actual values used by DIV1D for input verification. Secondly, the outputs in terms of states: {\tt density, velocity, temperature, neutral }, fluxes: {\tt Gamma\_n, Gamma\_mom, q\_parallel, neutral\_flux }, and sources: {\tt Source\_n, Source\_v, Source\_Q, Source\_neutral} are written. 
 
 \begin{table}[h]
 \begin{center}
@@ -494,7 +503,7 @@ Here we provide a complete list of the input and output parameters of the code. 
 	{\tt max\_step}              & integer: maximum number of internal steps in {\tt dvode} (default: 100000) \\ \hline
 	{\tt max\_attempts}          & integer: maximum number of restarts of {\tt dvode} after failed integration (default: 1000) \\ \hline
     {\tt abstol}                 & real: absolute value of tolerance in numerical integration (default: 1.0D-4)  \\ \hline
-    {\tt reltol}                 & real: ralitive value of tolerance in numerical integration (default: 1.0D-4)  \\ \hline
+    {\tt reltol}                 & real: relative value of tolerance in numerical integration (default: 1.0D-4)  \\ \hline
 	{\tt evolve\_density}        & integer: multiplier for density evolution (default: 1) \\ \hline
 	{\tt evolve\_momentum}       & integer: multiplier for momentum evolution (default: 1) \\ \hline
 	{\tt evolve\_energy}         & integer: multiplier for energy evolution (default: 1) \\ \hline
@@ -518,7 +527,6 @@ Here we provide a complete list of the input and output parameters of the code. 
   \end{tabular}
 \end{center}
 \end{table}
-
 \begin{table}[h]
 \begin{center}
   \caption{{\bf Namelist {\tt div1d\_physics} setting parameters controlling the physics of the problem solved}.}
@@ -531,6 +539,7 @@ Here we provide a complete list of the input and output parameters of the code. 
     {\tt gamma}                  & real: sheath heat transmission factor (default: 6.5D0) \\ \hline
     {\tt sintheta}               & real: sinus of angle theta between B-field and target plate (default: 0.1D0) \\ \hline
     {\tt q\_parX}                & real: parallel heat flux at the X-point (default: 1.0D8~W/m$^2$) \\ \hline
+    {\tt flux\_expansion}        & real: expansion of total flux from X-point to target (default: 1.0D0) \\ \hline 
     {\tt initial\_n}             & real: initial, homogeneous particle density cq. density at X-point (default: 1.0D20~m$^{-3}$) \\ \hline
     {\tt density\_ramp\_rate}    & real: rate of change of X-point density (default: 0.0D0~/m$^3$/s) \\ \hline
     {\tt initial\_v}             & real: initial, homogeneous plasma velocity (default: 0.0D0~m/s) \\ \hline
@@ -551,30 +560,37 @@ Here we provide a complete list of the input and output parameters of the code. 
     {\tt minimum\_temperature}   & real: minimum value allowed for temperatures (default: 0.1D0~eV) \\ \hline
     {\tt elm\_start\_time}   	 & integer: outer time step at which the first ELM starts, in units of delta\_t (default: 0) \\ \hline
     {\tt elm\_ramp\_time}   	 & integer: ramp time of ELM (not exact for gaussian, see section~\ref{section:elms}), in units of delta\_t (default: 0) \\ \hline
-    {\tt elm\_time\_between,}    & integer: outer time steps between two the start of two ELMs, in units of delta\_t (default: 2d+08) \\ \hline
+    {\tt elm\_time\_between}    & integer: outer time steps between two the start of two ELMs, in units of delta\_t (default: 2d+08) \\ \hline
     {\tt elm\_expelled\_heat}    & real: total amount of expelled heat per unit area due to an ELM (default: 0 J m$^{-2}$) \\ \hline
     {\tt elm\_expelled\_particles}& real: total number of expelled particles due to an ELM (default: 0 m$^{-3}$) \\ \hline
     {\tt switch\_elm\_heat\_flux}& integer: turns off (0) or on (1) the ELM contribution to the heat flux (default: 0) \\ \hline
     {\tt switch\_elm\_density}   & integer: turns off (0) or on (1) the ELM contribution to the particle flux (default: 0) \\ \hline
     {\tt switch\_elm\_series}    & integer: turns off (0) or on (1) the multi-ELM sequence (default: 0) \\ \hline
-        {\tt gaussian\_elm}      & integer: chooses triangular (0) or gaussian (1) ELM (default: 0) \\ \hline
-        {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
-        {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
-        {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
-        {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline      
-        \hline
+    {\tt gaussian\_elm}      & integer: chooses triangular (0) or gaussian (1) ELM (default: 0) \\ \hline
+    {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
+    {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
+    {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
+    {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline  
+    {\tt switch\_dyn\_nu} & integer: switch dynamic X-point density (default: 0)   \\ \hline
+    {\tt switch\_dyn\_gas} & integer: switch dynamic gas puff source  (default: 0) (requires: {\tt dyn\_nu.dat(ntime) }) \\ \hline
+    {\tt switch\_dyn\_rec} & integer: switch dynamic recycling coefficient (default: 0) (requires: {\tt dyn\_rec.dat(ntime) })   \\ \hline
+    {\tt switch\_dyn\_rad\_los} & integer:  switch dynamic radial los factor (default: 0) (requires: {\tt dyn\_rad\_los.dat(ntime) })  \\ \hline
+    {\tt switch\_car\_con\_prf} & integer: switch carbon concentration profile (default: 0) (requires: {\tt car\_con\_prf.dat(Nx) }) \\ \hline
+    {\tt switch\_dyn\_qpar} & integer: switch dynamic X-point heat flux (default: 0) (requires: {\tt dyn\_qpar.dat(ntime) })  \\ \hline
+    {\tt switch\_dyn\_red\_frc} & integer: switch dynamic redistribution fraction (default: 0)  (requires: {\tt dyn\_red\_frc.dat(ntime) })  \\ \hline
+    \hline
   \end{tabular}
 \end{center}
 \end{table}
 
+\cleardoublepage
 \section{Benchmark with 2 Point Model}
-
-The 2 Point Model for an attached divertor plasma assuming purely conductive heat transport and no losses is discussed in Chapter 5.2 of~\cite{stangeby}). For a given parallel heat flux $q_{\parallel,\rm X}$ entering the divertor leg upstream, a given upstream plasma density $n_{\rm X}$, the length of the divertor leg $L$, a set of three equations is obtained from the energy balance, the sheath heat transmission, and pressure balance respectively~\cite{stangeby}:
+The 2 Point Model for an attached divertor plasma assuming purely conductive heat transport and no losses is discussed in Chapter 5.2 of~\cite{stangeby}). For a given parallel heat flux $q_{\parallel,\rm X}$ entering the divertor leg upstream, a given upstream plasma density $n_{\rm X}$, the length of the divertor leg $L$, and neglecting possible effects of flux expansion a set of three equations is obtained from the energy balance, the sheath heat transmission, and pressure balance respectively~\cite{stangeby}:
 \begin{equation}\label{2PM_energy_balance}
     T_{\rm X} = \left(T_{\rm L}^{7/2} + {7 \over 2} {q_{\parallel,\rm X} L \over \kappa_0}\right)^{2/7},
 \end{equation}
 \begin{equation}\label{2PM_sheath_heat_transmission}
-    q_{\parallel,\rm X} = \gamma n e T_{\rm L} c_{\rm s},
+    q_{\parallel,\rm X} = \gamma n_{\rm L} e T_{\rm L} c_{\rm s},
 \end{equation}
 \begin{equation}\label{2PM_pressure_balance}
     2 n_{\rm L} T_{\rm L} = n_{\rm X} T_{\rm X}.
@@ -614,6 +630,36 @@ and
     f_{\rm mom} \equiv \int_{x=L}^0 S_{\rm mom} {\rm d}x \Big/ p_{\rm tot,X},
 \end{equation}
 respectively. Also the equations for the extended 2 Point Model (\ref{extended_2PM_energy_balance}-\ref{extended_2PM_target_density}) are easily solved by iteration when the convective fraction, and the power and momentum loss fractions are known.
+
+Also flux expansion can be accounted for in the 2 Point model. In case of finite flux expansion, neglecting as usual the convective transport and assuming that all sources and sinks are well localized near the target the stationary energy equation becomes
+\begin{equation}
+    {q_\parallel \over B} = {q_{\parallel, \rm X} \over B_{\rm X}}.
+\end{equation}
+The solution of this equation now results in
+\begin{equation}\label{extended_2PM_energy_balance_FE}
+    T_{\rm X} = \left(T_{\rm L}^{7/2} + {7 \over 2} {q_{\parallel,\rm X} (1 - f_{\rm conv}) L  \Phi_{\rm f} \over \kappa_0}\right)^{2/7},
+\end{equation}
+introducing the flux expansion integral $\Phi_{\rm f}$ defined as
+\begin{equation}\label{FE_integral}
+    \Phi_{\rm f} \equiv \int_0^1 {B\over B_{\rm X}} {\rm d}{\bar x}.
+\end{equation}
+Here, ${\bar x} \equiv x /L$ is the normalized $x$ coordinate. Using that $B \propto 1/R$ and assuming that the major radius varies linearly along the divertor leg this integral evaluates to
+\begin{equation}\label{FE_integral}
+    \Phi_{\rm f} = \int_0^1 {1 \over 1 + \varepsilon_{\rm f} {\bar x}} {\rm d}{\bar x} = {\l n( 1 + \varepsilon_{\rm f} ) \over \varepsilon_{\rm f}},
+\end{equation}
+with the flux expansion parameter $\varepsilon_{\rm f}$ defined by $\varepsilon_{\rm f} \equiv (R_{\rm L}/R_{\rm X}) - 1$. A second modification to the extended 2 Point Model equations comes from the sheath boundary condition, which accounting to the flux expansion near the target is modified to
+\begin{equation}\label{2PM_sheath_heat_transmission_FE}
+    q_{\parallel,\rm X} {(1-f_{\rm pwr}) \over (1 + \varepsilon_{\rm f})} = \gamma n_{\rm L} e T_{\rm L} c_{\rm s}.
+\end{equation}
+This results in a modification of the equation for the target temperature to
+\begin{equation}\label{extended_2PM_target_temperature_FE}
+    T_{\rm L} = {m \over e} {2 q_{\parallel,\rm X}^2 (1-f_{\rm pwr})^2 \over (1 + \varepsilon_{\rm f})^2 \gamma^2 e^2 n_{\rm X}^2 T_{\rm X}^2 (1-f_{\rm mom})^2},
+\end{equation}
+and of the target density is to
+\begin{equation}\label{extended_2PM_target_density_FE}
+    n_{\rm L} = {\gamma^2 e^3 n_{\rm X}^3 T_{\rm X}^3 (1-f_{\rm mom})^3 (1 + \varepsilon_{\rm f})^2 \over 4 m q_{\parallel,\rm X}^2 (1-f_{\rm pwr})^2}.
+\end{equation}
+Again these equations (\ref{extended_2PM_energy_balance_FE}), (\ref{extended_2PM_target_temperature_FE}), and (\ref{extended_2PM_target_density_FE}) are easily solved iteratively.
 
 For the case that the losses along the divertor leg and/or the convective heat flux are not negligible, Kotov and Reiter \cite{kotov2009} derived an exact 2 Point Model Formulation for the target temperature and density, which under the conditions of the present model (equal electron and ion temperature, sound speed at the sheath boundary, and constant magnetic field) is simplified to
 \begin{equation}\label{2PMF_target temperature}
@@ -751,8 +797,6 @@ M. Siccinio, et al., Plasma Phys. Control. Fusion {\bf 58} (2016) 125011.
 
 \bibitem{lipschultz2016}
 B. Lipschultz, F.I. Parra, and I.H. Hutchinson, Nucl. Fusion {\bf 56} (2016) 056007.
-
-
 
 \end{thebibliography}
 

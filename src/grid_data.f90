@@ -2,7 +2,7 @@ module grid_data
 ! module defining the grid along the flux tube
 
    use numerics_parameters, only : Nx, dxmin
-   use physics_parameters, only  : L
+   use physics_parameters, only  : L, flux_expansion
 
    implicit none
 
@@ -11,6 +11,8 @@ module grid_data
    real( wp ), allocatable :: xcb(:)       ! grid cell boundaries [m]: xcb(1) = 0 and xcb(Nx+1) = L
    real( wp ), allocatable :: delta_x(:)   ! step size between grid cell centres delta_x(i) = x(i+1) - x(i) [m]
    real( wp ), allocatable :: delta_xcb(:) ! grid cell size defined as delta_x(i) = xcb(i+1) - xcb(i) [m]
+   real( wp ), allocatable :: B_field(:)   ! vector holding the ratio of B/B_target @ x(:)
+   real( wp ), allocatable :: B_field_cb(:)! vector holding the ratio of B/B_target @ xcb(:)
    real( wp ), private, allocatable :: xnorm(:)     ! a normalized array running from 0 to 1 at the cell boundaries, used to calculate the non-uniform grid efficiently
 
 contains
@@ -22,6 +24,7 @@ contains
       else
          call non_uniform_grid
       endif
+      call magnetic_field
       return
    end subroutine initialize_grid
 
@@ -63,5 +66,17 @@ contains
       delta_x(Nx) = 2.0d+0*(L-x(Nx))
       return
    end subroutine non_uniform_grid
+   
+   subroutine magnetic_field
+      implicit none
+      allocate( B_field(Nx), B_field_cb(Nx+1) )
+      ! set the magnetic field values along the grid
+      B_field    = 1.0d0
+      B_field_cb = 1.0d0
+      if( flux_expansion .gt. 1.0d0 ) then
+          B_field    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * x   / L )
+          B_field_cb = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * xcb / L )
+      endif
+   end subroutine magnetic_field
 
 end module grid_data
