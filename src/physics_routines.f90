@@ -5,7 +5,7 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
-                                  gas_puff_source, gas_puff_location, gas_puff_width, &
+                                  gas_puff_source, gas_puff_location, gas_puff_width, initial_a &
                                   dyn_nu, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, car_con_prf, gas_puff, dyn_red_frc, dyn_qparX!, &
                                  ! switch_X_vel_con
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
@@ -359,7 +359,8 @@ contains
          ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! add neutral sources and losses from redistribution and finite residence time
          !ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
-         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + B_field_cb(Nx) * Gamma_n(Nx) * dyn_rec(itime) * dyn_red_frc(itime) / L - neutral / neutral_residence_time
+         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + B_field_cb(Nx) * Gamma_n(Nx) * dyn_rec(itime) * dyn_red_frc(itime) / L &
+                                                                                       - (neutral-initial_a) / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx) !-------------------------------------------------------------------------
 
       ! apply evolution switches
