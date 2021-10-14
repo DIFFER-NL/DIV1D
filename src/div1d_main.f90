@@ -282,7 +282,7 @@ subroutine write_solution( time )
    write( 10, * ) 'dyn_red_frc = ', dyn_red_frc(itime)
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &
-   &                                   Gamma_n(i)*B_field(i), Gamma_mom(i)*B_field(i),q_parallel(i)*B_field(i),neutral_flux(i)*B_field(i), & ! multiplied by B_field because the code calculates with normalized values
+   &                                   Gamma_n(i), Gamma_mom(i),q_parallel(i),neutral_flux(i), & ! multiplied by B_field because the code calculates with normalized values
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return

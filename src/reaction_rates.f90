@@ -10,9 +10,12 @@ module reaction_rates
    integer, parameter, private :: wp = KIND(1.0D0)
 
    ! See page XX of AMJUEL for definition of the fit functions and variables (T in eV; density in 10^14 /m^3; resulting rates <sigma v> in cm^3/s
-   ! the coefficients for the charge exchange rate according to AMJUEL 2.1 reaction 0.1T(Total)
+!   ! the coefficients for the charge exchange rate according to AMJUEL 2.1 reaction 0.1T(Total)
+!   real(wp), private, dimension(9)   :: cxa_coef = (/ &
+!                -1.833882000000D+01,  2.368705000000D-01, -1.469575000000D-02, -1.139850000000D-02,  6.379644000000D-04,  3.162724000000D-04, -6.681994000000D-05,  3.812123000000D-06,  8.652321000000D-09 /)
+   ! the coefficients for the charge exchange rate according to AMJUEL 2.19 reaction 3.1.8 page 43
    real(wp), private, dimension(9)   :: cxa_coef = (/ &
-                -1.833882000000D+01,  2.368705000000D-01, -1.469575000000D-02, -1.139850000000D-02,  6.379644000000D-04,  3.162724000000D-04, -6.681994000000D-05,  3.812123000000D-06,  8.652321000000D-09 /)
+                -1.850280000000D+01,  3.708409000000D-01,  7.949876000000D-03, -6.143769000000D-04, -4.698969000000D-04, -4.096807000000D-04,  1.440382000000D-04, -1.514243000000D-05,  5.122435000000D-07 /)
 
    ! the coefficients for the total hydrogen recombination rate according to AMJUEL 4.4 reaction 2.1.8 total rate including three-body recombination [m^3 / s]
    real(wp), private, dimension(9,9) :: recomb_coef = reshape( (/  &
