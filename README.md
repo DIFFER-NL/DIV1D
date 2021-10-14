@@ -24,10 +24,15 @@ Run a simulation, go to the directory of input.txt and div1d_restart_old.txt and
 A place to add ideas for development
 ### Plasma
 - [x] Evaluation of plasma particle, momentum and energy balance including atomic modeling using the AMJUEL database.
+- [x] Flux expansion for magnetics and transport.
+- []  Core particle inventory (e.g. Blanken 2018).
 ### Neutrals
 - [x] Evaluation of neutral particle balance including charge-exchange and ionisation from AMJUEL database.
-- []  neutral model for knudson diffusion outside plasma
+- []  neutral model for particles outside plasma
 - []  molecular-proton elastic collisions and dissociation
+### Wall
+- [x] Recycling of ions.
+- []  Wall particle inventory (e.g. Kallenbach 2010).
 ### Inputs
 - [x] Input gas puff possible.
 - [x] Input model for edge-localized modes.
@@ -47,4 +52,5 @@ Show: git show v1.0.0
 Push: git push origin v1.0.0
 ### Version History
 * Version 1.0.0 merged to master by Westerhof and Frankemolle in 2020
+* Version 2.0.0 added flux expansion and dynamic inputs in 2021
 
