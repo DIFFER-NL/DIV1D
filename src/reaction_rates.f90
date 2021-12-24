@@ -265,7 +265,7 @@ contains
          enddo
          xm = xm * ln_n
       enddo
-      recombenergy = exp(recombenergy) * 1.0d-6 - 13.6 * recombination( density, temperature )
+      recombenergy = exp(recombenergy) * 1.0d-6 ! - 13.6 * recombination( density, temperature ) ! last part to be added explicitly in physics_routines%sources
       recombenergy = switch_recombenergy * recombenergy
       return
    end function recombenergy

@@ -196,7 +196,7 @@ contains
       integer               :: itime
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx),q_parallel(Nx)
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
-      real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_imp(Nx)
+      real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_ree(Nx), rate_imp(Nx)
       real(wp) :: radial_sink(Nx)
       integer  :: ix, iix
       itime     = time / delta_t  
@@ -209,6 +209,7 @@ contains
          rate_ion(ix) = density(ix) * neutral(ix) * ionization(density(ix),temperature(ix))
          rate_exc(ix) = density(ix) * neutral(ix) * excitation(density(ix),temperature(ix))
          rate_rec(ix) = density(ix) * density(ix) * recombination(density(ix),temperature(ix))
+         rate_ree(ix) = density(ix) * density(ix) * recombenergy(density(ix),temperature(ix))
          rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix),ix)
       enddo
       ! the particle sources
@@ -223,6 +224,9 @@ contains
       else
          Source_Q = Source_Q - switch_excitation * rate_exc * e_charge ! note excitation rate is in eV m^3 / s
       endif
+      ! add energy losses associated with radiative and 3-body recombination (the 13.6 eV potential energy per recombination event is added explicitly here)
+      Source_Q = Source_Q - ( rate_ree - 13.6 * rate_rec ) * e_charge ! note recombination loss rate is in eV m^3 / s
+      ! add impurity radiation losses
       Source_Q = Source_Q - switch_impurity_radiation * rate_imp * e_charge ! note impurity radiation loss rate is in eV m^3 / s
       ! write(*,*) rate_ion, Source_Q
       ! Add the effect of radial losses across the flux tube
