@@ -31,6 +31,7 @@ module numerics_parameters
    real( wp )  :: switch_neutral_source   = 1.0d+0   ! multiplier of neutral particle source term
    real( wp )  :: switch_charge_exchange  = 1.0d+0   ! multiplier of charge exchange rate
    real( wp )  :: switch_recombination    = 1.0d+0   ! multiplier of recombination rate
+   real( wp )  :: switch_recombenergy     = 1.0d+0   ! multiplier of effective electron colling rate from recombination
    real( wp )  :: switch_ionization       = 1.0d+0   ! multiplier of ionization rate
    real( wp )  :: switch_excitation       = 1.0d+0   ! multiplier of excitation rate
    real( wp )  :: switch_convective_heat   = 1.0d+0   ! multiplier of convective heat transport
