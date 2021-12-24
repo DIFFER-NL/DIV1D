@@ -197,7 +197,7 @@ contains
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       recombination = 0.0d+0
-      select case (ionization_model)
+      select case (recombination_model)
       case ("AMJUEL")
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
