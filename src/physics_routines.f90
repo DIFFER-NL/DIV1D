@@ -219,6 +219,8 @@ contains
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
       ! the energy sources (only internal energy)
       Source_Q = - (1.5d+0 * e_charge * temperature) * (rate_cx + 2.0d+0*rate_rec) ! the factor 2 for the recombination rate accounts for the loss of both an ion and an electron
+      ! add energy source associated with particle source from ionization (like a source of internal energy from effective friction with neutrals)
+      Source_Q = Source_Q + ( rate_ion * 0.5 * mass * velocity**2 )
       if ( switch_excitation .eq. 0.0d+0 ) then
          Source_Q = Source_Q - rate_ion * e_charge * energy_loss_ion ! note energy loss per ionization is in eV
       else
