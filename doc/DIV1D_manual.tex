@@ -23,7 +23,7 @@ Abstract goes here.
 
 \section{Introduction}
 
-This manual describes the {\tt DIV1D} code for the quick simulation of the 1D plasma and neutral behaviour along a flux tube in a tokamak divertor from the X-point up to the target. The code is inspired by similar works described in the papers by Nakazawa et al.~\cite{nakazawa2000} and Dudson et al.~\cite{dudson2019, SD1D}. In fact, the numerical implementation borrows heavily from the methods used in the SD1D code. The code is maintained on a SVN repository at DIFFER (https://www.differ.nl/svn/shared/div1d). This document describes the basic model equations in Section~\ref{basic_equations} including the boundary conditions and the sources and sinks. Section~\ref{rates} contains a full description of the different choices that are implemented to calculate the various atomic processes like charge exchange, ionization, recombination, and impurity rafiation. Some notes on the discretization and the numerical implementation are given in Section~\ref{numerics}.
+This manual describes the {\tt DIV1D} code for the quick simulation of the 1D plasma and neutral behaviour along a flux tube in a tokamak divertor from the X-point up to the target. The code is inspired by similar works described in the papers by Nakazawa et al.~\cite{nakazawa2000} and Dudson et al.~\cite{dudson2019, SD1D}. In fact, the numerical implementation borrows heavily from the methods used in the SD1D code. The code is maintained on a SVN repository at DIFFER (https://www.differ.nl/svn/shared/div1d). This document describes the basic model equations in Section~\ref{basic_equations} including the boundary conditions and the sources and sinks. Section~\ref{rates} contains a full description of the different choices that are implemented to calculate the various atomic processes like charge exchange, ionization, recombination, and impurity radiation. Some notes on the discretization and the numerical implementation are given in Section~\ref{numerics}.
 
 
 \section{Equations}\label{basic_equations}
@@ -72,7 +72,7 @@ The boundary conditions at the target are given by the usual sheath boundary con
 \begin{equation}\label{sheath_heat_transmission}
     q_\parallel(x=L) = \gamma n e T c_{\rm s}.
 \end{equation}
-The neutral particle flux coming from the target is determined by the recycling coefficient $R$ given at input, i.e. $\Gamma_{\rm neutral}(x=L) = - R \Gamma_n(x=L)$. Note that when $R=1$ the total number of particles should be conserved requiring a zero plasma inflow velocity at the X-point in case of a steady state solution.
+The neutral particle flux coming from the target is determined by the recycling coefficient $R$ and a redistribution fraction $f_r$ given no input, i.e. $\Gamma_{\rm neutral}(x=L) = - R (1 - f_r) \Gamma_n(x=L)$. Note that when $R=1$ the total number of particles should be conserved requiring a zero plasma inflow velocity at the X-point in case of a steady state solution.
 
 
 \subsection{Sources and Sinks}
@@ -81,19 +81,29 @@ The various sources and sinks are determined mostly by atomic processes like cha
 \begin{equation}\label{particle_source}
     S_n = + n n_n \langle\sigma_{\rm ion} v\rangle - n^2 \langle\sigma_{\rm rec} v\rangle.
 \end{equation}
+
 Because the neutral particle momentum is neglected there is no momentum source, while the momentum sinks are induced by charge exchange and recombination
 \begin{equation}\label{momentum_source}
     S_{\rm mom} = - n m v_\parallel \left(n_n \langle\sigma_{\rm cx} v\rangle + n \langle\sigma_{\rm rec} v\rangle \right).
 \end{equation}
-Similarly there are only heat sinks in the energy equation, with additional sinks coming from hydrogenic ionization, and excitation and impurity radiation
+
+The energy balance contains both heat sinks and sources associated with charge exchange, hydrogenic ionization, and excitation, radiative and three-body recombination as well as impurity radiation
 \begin{equation}\label{energy_source}
-    Q = - 1.5 n e T \left(n_n \langle\sigma_{\rm cx} v\rangle + 2 n \langle\sigma_{\rm rec} v\rangle \right) - n n_n \langle E_{\rm ion} \sigma_{\rm ion} v\rangle - n n_n \langle E_{\rm exc} \sigma_{\rm exc} v\rangle - n^2 \xi_Z L_Z(T)
+\begin{split}
+    Q = &- 1.5 n e T \left(n_n \langle\sigma_{\rm cx} v\rangle + 2 n \langle\sigma_{\rm rec} v\rangle \right) \\
+        &+ \frac{1}{2} n m v^2_\parallel n_n \langle\sigma_{\rm ion} v\rangle\\
+        &- n n_n E_{\rm ion} \langle \sigma_{\rm ion} v\rangle - n n_n \langle E_{\rm exc} \sigma_{\rm exc} v\rangle \\
+        &+ n^2 \;E_{\rm ion} \langle \sigma_{\rm rec} v\rangle - n^2 \;\langle E_{\rm rad} \sigma_{\rm rec} v\rangle \\
+        &- n^2 \xi_Z L_Z(T)
+\end{split}
 \end{equation}
-where $E_{\rm ion} = 13.6$~eV is the ionization energy, $E_{\rm exc}$ is the energy loss per excitation, and $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$. What is a sink for the plasma density is a source for the neutral particles and vice versa, such that
+where the first line represents the losses to the neutrals due to charge exchange and recombination and the second line is a source term from friction with the neutrals that comes from ionization of (assumed momentum less) neutrals. The third line comes from ionization and the associated excitation, where $E_{\rm ion} = 13.6$~eV is the ionization energy and $E_{\rm exc}$ is the energy loss per excitation. In practice these are typically combined into an effective energy loss per ionization (see the paragraph below on the implemented reaction rates). The fourth line represents the effective energy balance from three-body and radiative recombination. Finally, the last line $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$ for the specified impurity.
+
+What is a sink for the plasma density is a source for the neutral particles, while additional neutral particle sources are associated with gas puff, redistribution of recycled neutrals or a possible exchange with a neutral background, such that
 \begin{equation}\label{neutral_source}
-    S_{\rm neutral} = - S_n + S_{\rm puff} - {n_n \over \tau_n} + \left. n(L)v_{\|}(L)R (1-f_r) \right|_{x=L} + {n(L)v_{\|}(L)R f_r \over L} 
+    S_{\rm neutral} = - S_n + S_{\rm puff} - \frac{n_n - n_b}{\tau_n} + {n(L)v_{\|}(L)R f_r \over L}
 \end{equation}
-where $S_{\rm puff}$ is a neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. The target recycling coefficient $R$ determines how many of the ions that hit the target are recycled and the redistribution fraction $f_r$ determines what fraction is redistributed over the leg. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in a later paragraph where also the impurity radiative cooling rates are be given.
+where $S_{\rm puff}$ is a neutral particle source from an additional gas puff, and $\tau_n$ accounts for a finite residence time of the neutral particles. When a finite background neutral density $n_b$ is specified this term represents the exchange of neutrals in the leg with these background neutrals. A fraction $f_r$ of the recycling flux is redistributed homogeneously over the entire leg. The atomic rates for charge exchange, recombination, ionization, and excitation as used in the code as given in a later paragraph where also the impurity radiative cooling rates are be given.
 
 
 \subsection{Radial power losses}
@@ -121,7 +131,7 @@ S_{\perp}=-\eta_{\perp}\frac{q_\parallel(x)}{L}
 
 which is crucially different from~\ref{constant_rad_losses} in that it takes into account the local heat flux in each grid cell rather than the upstream heat flux. As a result $\eta_{\perp}$ no longer reflects the total fraction of the upstream heat flux that is lost.\\
 
-Four input parameters exist which the user can employ to shape the radial losses to his or her desire. These are: 
+Four input parameters exist which the user can employ to shape the radial losses to his or her desire. These are:
 radial\_loss\_factor ($\eta_{\perp}$),
 radial\_loss\_gaussian (choice of loss profile),
 radial\_loss\_width ($\mathrm{\Delta}x$), and
@@ -134,15 +144,15 @@ A number of different options is available to calculate the atomic rates. For ea
 
 \subsection{Charge Exchange}
 
-The default option uses the charge exchange rate as specified in section 2.1 reaction 0.1T of the AMJUEL data base for the total charge exchange rate of Hydrogen~\cite{EIRENE}. This uses a fit function of the form
+The default option uses the charge exchange rate as specified in section 2.19 reaction 3.1.8 of the AMJUEL data base for the total charge exchange rate of Hydrogen~\cite{EIRENE}. This uses a fit function of the form
 \begin{equation}\label{charge_exchange_AMJUEL}
     \langle\sigma_{\rm cx} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^8 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
 with the fitting constants $b_i$ defined by
 \begin{small}\begin{verbatim}
-   b0 -1.833882000000E+01  b1  2.368705000000E-01  b2 -1.469575000000E-02
-   b3 -1.139850000000E-02  b4  6.379644000000E-04  b5  3.162724000000E-04
-   b6 -6.681994000000E-05  b7  3.812123000000E-06  b8  8.652321000000E-09
+   b0 -1.850280000000E+01    b1  3.708409000000E-01    b2  7.949876000000E-03
+   b3 -6.143769000000E-04    b4 -4.698969000000E-04    b5 -4.096807000000E-04
+   b6  1.440382000000E-04    b7 -1.514243000000E-05    b8  5.122435000000E-07
 \end{verbatim}\end{small}
 Note that the factor $10^{-6}$ stems from the use of the units ${\rm cm}^3/{\rm s}$ for the reaction rates in AMJUEL.
 
@@ -226,7 +236,7 @@ One alternative option is again provided in the form of the ionization rate as i
 This option is selected by setting {\tt case\_ion = "Havlickova"}
 
 A further option again comes from the work of Nakazawa et al.~\cite{nakazawa2000} who use the ionization rate given in Table 3 of the report by Freeman and Jones~\cite{freeman1974}. They provide a fit to the electron impact ionization given by
-\begin{equation}\label{charge_exchange_FJ}
+\begin{equation}\label{ionization_FJ}
     \langle\sigma_{\rm ion} v\rangle = 10^{-6} \exp\left( \sum_{i=0}^6 b_i (\ln T)^i \right)  {\rm m}^3/{\rm s}
 \end{equation}
 with fitting coefficients $b_i$ given by
@@ -242,7 +252,7 @@ This option is selected by setting {\tt case\_ion = "Freeman"}
 
 By default, the sum of energy losses from ionization and excitation is obtained from the AMJUEL data base, which provides an effective excitation rate in terms of an averaged effective energy loss per ionization. This is calculated from a fit function of the same form as defined above for the ionization rate (\ref{ionization_AMJUEL}), i.e.
 \begin{equation}
-  \langle E_{\rm ion} \sigma_{\rm ion} v\rangle - n n_n \langle E_{\rm exc} \sigma_{\rm exc} v\rangle =  10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{ij} (\ln \bar n)^j (\ln T)^i \right)  {\rm eV} {\rm m}^3/{\rm s}
+  \langle E_{\rm ion} \sigma_{\rm ion} v\rangle + \langle E_{\rm exc} \sigma_{\rm exc} v\rangle =  10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{{\rm exc,} ij} (\ln \bar n)^j (\ln T)^i \right)  {\rm eV} {\rm m}^3/{\rm s}
 \end{equation}
 with the coefficients $\alpha_{{\rm exc,} ij}$ as tabulated in section 10.2 for reaction 2.5.1 of the AMJUEL document for the case of the total energy loss rate associated with Hydrogen ionization and excitation radiation:
 \begin{small}\begin{verbatim}
@@ -308,7 +318,7 @@ and the latter is expressed as~\cite{hinnov1962}
 \end{equation}
 This model is selected by setting {\tt case\_rec = "Nakazawa"}.
 
-Otherwise, the recombination rate is used from the AMJUEL data providing the total effective recombination rate including 3 body recombination using again a fit function (\ref{ionization_AMJUEL}) as defined above for the ionization rate, now with the coefficients $\alpha_{{\rm rec,} ij}$ as tabulated in section 4.4 reaction 2.1.8 of the AMJUEL document:
+Otherwise, the recombination rate is used from the AMJUEL data providing the total effective recombination rate including 3 body recombination using again a fit function (\ref{ionization_AMJUEL}) as defined above for the ionization rate, now with the coefficients $\alpha_{{\rm rec,} ij}$ as tabulated in section 4.6 reaction 2.1.8 of the AMJUEL document:
 \begin{small}\begin{verbatim}
         n-Index:     0                     1                     2
   T-Index:
@@ -351,6 +361,57 @@ N2MIN =   1.00000D 08 1/CM3
 N2MAX =   1.00000D 16 1/CM3
 \end{verbatim}\end{small}
 
+When the default option is selected to use the data from AMJUEL also the energy lost and gained by the electrons due to radiative and three-body recombination is taken into account. In this case the effective electron cooling rate from the associated processes is obtained from the fit specified in AMJUEL section 10.4 for the recombination reaction and taking into account the 13.6~eV potential enrgy gain per effective recombination event, i.e.
+\begin{equation}
+  \langle E_{\rm el} \sigma_{\rm rec} v\rangle =  10^{-6} \exp\left( \sum_{i=0}^8\sum_{j=0}^8 \alpha_{{\rm rec el,} ij} (\ln \bar n)^j (\ln T)^i \right) - 13.6 \langle\sigma_{\rm rec} v\rangle  {\rm eV} {\rm m}^3/{\rm s}
+\end{equation}
+where the effective recombination rate $\langle\sigma_{\rm rec} v\rangle$ is obtained from the fit specified before and the coefficients $\alpha_{{\rm rec el,} ij}$ of the current fit are given by
+\begin{small}\begin{verbatim}
+
+        E-Index:     0                     1                     2
+  T-Index:
+        0   -2.592450349909D+01    1.222097271874D-02    4.278499401907D-05
+        1   -7.290670236493D-01   -1.540323930666D-02   -3.406093779190D-03
+        2    2.363925869096D-02    1.164453346305D-02   -5.845209334594D-03
+        3    3.645333930947D-03   -1.005820792983D-03    6.956352274249D-04
+        4    1.594184648757D-03   -1.582238007548D-05    4.073695619272D-04
+        5   -1.216668033378D-03   -3.503070140126D-04    1.043500296633D-04
+        6    2.376115895241D-04    1.172709777146D-04   -6.695182045674D-05
+        7   -1.930977636766D-05   -1.318401491304D-05    8.848025453481D-06
+        8    5.599257775146D-07    4.977823319311D-07   -3.615013823092D-07
+
+        E-Index:     3                     4                     5
+  T-Index:
+        0    1.943967743593D-03   -7.123474602102D-04    1.303523395892D-04
+        1    1.532243431817D-03   -4.658423772784D-04    5.972448753445D-05
+        2    2.854145868307D-03   -5.077485291132D-04    4.211106637742D-05
+        3   -9.305056373739D-04    2.584896294384D-04   -3.294643898894D-05
+        4   -9.379169243859D-05    1.490890502214D-06    2.245292872209D-06
+        5    9.536162767321D-06   -6.908681884097D-06    8.232019008169D-07
+        6    1.188184006210D-05   -4.381514364966D-07   -6.936267173079D-08
+        7   -2.072370711390D-06    2.055919993599D-07   -7.489632654212D-09
+        8    9.466989306497D-08   -1.146485227699D-08    6.772338917155D-10
+
+        E-Index:     6                     7                     8
+  T-Index:
+        0   -1.186560752561D-05    5.334455630031D-07   -9.349857887253D-09
+        1   -4.070843294052D-06    1.378709880644D-07   -1.818079729166D-09
+        2   -1.251436618314D-06   -1.626555745259D-08    1.073458810743D-09
+        3    2.112924018518D-06   -6.544682842175D-08    7.810293075700D-10
+        4   -3.150901014513D-07    1.631965635818D-08   -2.984093025695D-10
+        5   -2.905331051259D-08   -3.169038517749D-10    2.442765766167D-11
+        6    6.592249255001D-09   -1.778887958831D-10    1.160762106747D-12
+        7   -7.073797030749D-11    1.047087505147D-11   -1.877446271350D-13
+        8   -1.776496344763D-11    7.199195061382D-14    3.929300283002D-15
+T1MIN =   0.10000D 00 EV
+T1MAX =   2.00000D 04 EV
+N2MIN =   1.00000D 08 1/CM3
+N2MAX =   1.00000D 16 1/CM3
+
+  Max. rel. Error:   0.930E+01 %
+  Mean rel. Error:   0.127E+01 %
+\end{verbatim}\end{small}
+
 
 \subsection{Impurity Radiation Losses}
 
@@ -390,7 +451,7 @@ Edge-localised modes (ELMs) are sudden disruptions in the core plasma, which rel
 q_{\mathrm{ELM}}(t)=\frac{2}{3}\frac{Q_{\mathrm{ELM}}}{\tau_{\mathrm{r}}}\times
 \left\{
 \begin{matrix}
-\frac{t}{\tau_{\mathrm{\mathrm{r}}}} & 
+\frac{t}{\tau_{\mathrm{\mathrm{r}}}} &
 0 \leq t \leq \tau_{\mathrm{r}} \\
 1-\frac{t-\tau_{\mathrm{r}}}{2\tau_{\mathrm{r}}} &
 \tau_{\mathrm{r}} < t \leq 3\tau_{\mathrm{r}}
@@ -412,16 +473,13 @@ q_{\parallel,\mathrm{tot}}=q_{\parallel}+q_{\mathrm{ELM}}(t).
 \end{equation}
 
 An alternative formulation to equation~\ref{triangular_elm}, to remove discontinuities in the first derivative of $q_{\mathrm{ELM}}$ with respect to time, is formulated as
-
 \begin{equation}
 \label{maxwell_boltzmann_elm}
 q_{\mathrm{ELM}} = Q_{\mathrm{ELM}}\times
 \frac{1}{N}\sqrt{\frac{2}{\pi}}
 \sum_{n=1}^{N} \frac{t^2}{a_{n}^3}\exp{\frac{-t^2}{2a_n^2}}
 \end{equation}
-
-which is recognisable as a sum over Maxwell-Boltzmann distrutions in time $t$ where the factors $a_i$ are given by
-
+which is recognizable as a sum over Maxwell-Boltzmann distributions in time $t$ where the factors $a_i$ are given by
 \begin{equation}
 \label{maxwell_boltzmann_elm_a}
 a_n = \Delta^{n-1}\frac{\tau_{\mathrm{r}}}{\sqrt{2}}.
@@ -483,9 +541,9 @@ The advected part of the fluxes are calculated according to the numerical scheme
 
 \section{Input and Output}\label{IO}
 
-Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~II. Some inputs can be switched to be dynamic, which requires additional files in the execution director. These files should only contain columns with numerical values and sizes are indicated. \\
+Here we provide a complete list of the input and output parameters of the code. The input is read from a file named {\tt input.txt} in the directory in which the code is executed. The input is read in the form of two FORTRAN namelists. The first namelist contains the settings of the numerical parameters for the code as listed in table~\ref{tab:input_numerics}. The second namelist contains the settings for the physics parameters as listed in table~~\ref{tab:input_physics}. Some inputs can be switched to be dynamic, which requires additional files in the execution director. These files should only contain columns with numerical values and sizes are indicated. \\
 
-The output is written in the execution directory in {\tt div1doutput.txt}. Firstly, most inputs that were provided via {\tt input.txt} and the {\tt *.dat} files have been appended to {\tt div1doutput.txt} and represent the actual values used by DIV1D for input verification. Secondly, the outputs in terms of states: {\tt density, velocity, temperature, neutral }, fluxes: {\tt Gamma\_n, Gamma\_mom, q\_parallel, neutral\_flux }, and sources: {\tt Source\_n, Source\_v, Source\_Q, Source\_neutral} are written. 
+The output is written in the execution directory in {\tt div1doutput.txt}. Firstly, most inputs that were provided via {\tt input.txt} and the {\tt *.dat} files have been appended to {\tt div1doutput.txt} and represent the actual values used by DIV1D for input verification. Secondly, the outputs in terms of states: {\tt density, velocity, temperature, neutral }, fluxes: {\tt Gamma\_n, Gamma\_mom, q\_parallel, neutral\_flux }, and sources: {\tt Source\_n, Source\_v, Source\_Q, Source\_neutral} are written.
 
 \begin{table}[h]
 \begin{center}
@@ -530,7 +588,7 @@ The output is written in the execution directory in {\tt div1doutput.txt}. First
 \begin{table}[h]
 \begin{center}
   \caption{{\bf Namelist {\tt div1d\_physics} setting parameters controlling the physics of the problem solved}.}
-  \label{tab:input_numerics}
+  \label{tab:input_physics}
   \begin{tabular}{|| l  | l ||}
     \hline\hline
     variable name                & description \\ \hline\hline
@@ -539,7 +597,7 @@ The output is written in the execution directory in {\tt div1doutput.txt}. First
     {\tt gamma}                  & real: sheath heat transmission factor (default: 6.5D0) \\ \hline
     {\tt sintheta}               & real: sinus of angle theta between B-field and target plate (default: 0.1D0) \\ \hline
     {\tt q\_parX}                & real: parallel heat flux at the X-point (default: 1.0D8~W/m$^2$) \\ \hline
-    {\tt flux\_expansion}        & real: expansion of total flux from X-point to target (default: 1.0D0) \\ \hline 
+    {\tt flux\_expansion}        & real: expansion of total flux from X-point to target (default: 1.0D0) \\ \hline
     {\tt initial\_n}             & real: initial, homogeneous particle density cq. density at X-point (default: 1.0D20~m$^{-3}$) \\ \hline
     {\tt density\_ramp\_rate}    & real: rate of change of X-point density (default: 0.0D0~/m$^3$/s) \\ \hline
     {\tt initial\_v}             & real: initial, homogeneous plasma velocity (default: 0.0D0~m/s) \\ \hline
@@ -570,7 +628,7 @@ The output is written in the execution directory in {\tt div1doutput.txt}. First
     {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
     {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
     {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
-    {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline  
+    {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline
     {\tt switch\_dyn\_nu} & integer: switch dynamic X-point density (default: 0)   \\ \hline
     {\tt switch\_dyn\_gas} & integer: switch dynamic gas puff source  (default: 0) (requires: {\tt dyn\_nu.dat(ntime) }) \\ \hline
     {\tt switch\_dyn\_rec} & integer: switch dynamic recycling coefficient (default: 0) (requires: {\tt dyn\_rec.dat(ntime) })   \\ \hline
@@ -644,8 +702,8 @@ introducing the flux expansion integral $\Phi_{\rm f}$ defined as
     \Phi_{\rm f} \equiv \int_0^1 {B\over B_{\rm X}} {\rm d}{\bar x}.
 \end{equation}
 Here, ${\bar x} \equiv x /L$ is the normalized $x$ coordinate. Using that $B \propto 1/R$ and assuming that the major radius varies linearly along the divertor leg this integral evaluates to
-\begin{equation}\label{FE_integral}
-    \Phi_{\rm f} = \int_0^1 {1 \over 1 + \varepsilon_{\rm f} {\bar x}} {\rm d}{\bar x} = {\l n( 1 + \varepsilon_{\rm f} ) \over \varepsilon_{\rm f}},
+\begin{equation}\label{FE_integral_}
+    \Phi_{\rm f} = \int_0^1 {1 \over 1 + \varepsilon_{\rm f} {\bar x}} {\rm d}{\bar x} = {\ln( 1 + \varepsilon_{\rm f} ) \over \varepsilon_{\rm f}},
 \end{equation}
 with the flux expansion parameter $\varepsilon_{\rm f}$ defined by $\varepsilon_{\rm f} \equiv (R_{\rm L}/R_{\rm X}) - 1$. A second modification to the extended 2 Point Model equations comes from the sheath boundary condition, which accounting to the flux expansion near the target is modified to
 \begin{equation}\label{2PM_sheath_heat_transmission_FE}
