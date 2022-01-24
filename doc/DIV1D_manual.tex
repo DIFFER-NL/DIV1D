@@ -680,14 +680,21 @@ while the target density is modified to
     n_{\rm L} = {\gamma^2 e^3 n_{\rm X}^3 T_{\rm X}^3 (1-f_{\rm mom})^3 \over 4 m q_{\parallel,\rm X}^2 (1-f_{\rm pwr})^2}.
 \end{equation}
 The power and momentum loss fractions $f_{\rm pwr}$ and $f_{\rm mom}$ are defined as
-\begin{equation}\label{power_loss_fraction}
-    f_{\rm pwr} \equiv \int_{x=L}^0 Q {\rm d}x \Big/ q_{\parallel,\rm X},
+%\begin{equation}\label{power_loss_fraction}
+%    f_{\rm pwr} \equiv \int_{x=L}^0 Q {\rm d}x \Big/ q_{\parallel,\rm X},
+%\end{equation}
+\begin{equation} \label{power_loss_fraction}
+f_{\rm pwr} \equiv \left(1-\frac{q_{\mathrm{\|,L}} }{q_{\mathrm{\|,X}}} \frac{B_{\mathrm{X}}}{B_{\mathrm{L}}}\right)=\int_{x=L}^{0}\left[\frac{v_{\|}}{B} \frac{\partial p}{\partial x}+\frac{Q}{B}\right] d x \frac{B_{\rm X}}{q_{\mathrm{\|,u}}}
 \end{equation}
 and
+%\begin{equation}\label{momentum_loss_fraction}
+%    f_{\rm mom} \equiv \int_{x=L}^0 S_{\rm mom} {\rm d}x \Big/ p_{\rm tot,X},
+%\end{equation}
 \begin{equation}\label{momentum_loss_fraction}
-    f_{\rm mom} \equiv \int_{x=L}^0 S_{\rm mom} {\rm d}x \Big/ p_{\rm tot,X},
+f_{\rm mom} \equiv 1-\frac{p_{\rm tot,L}}{p_{\rm tot,X}}=\int_{x=L}^{0}\left(-n m v_{\|}^{2} \frac{\partial B}{\partial x}+S_{\rm mom}\right) d x / p_{\rm tot,X}
 \end{equation}
-respectively. Also the equations for the extended 2 Point Model (\ref{extended_2PM_energy_balance}-\ref{extended_2PM_target_density}) are easily solved by iteration when the convective fraction, and the power and momentum loss fractions are known.
+
+respectively \cite{stangeby2018}. Also the equations for the extended 2 Point Model (\ref{extended_2PM_energy_balance}-\ref{extended_2PM_target_density}) are easily solved by iteration when the convective fraction, and the power and momentum loss fractions are known.
 
 Also flux expansion can be accounted for in the 2 Point model. In case of finite flux expansion, neglecting as usual the convective transport and assuming that all sources and sinks are well localized near the target the stationary energy equation becomes
 \begin{equation}
@@ -807,6 +814,10 @@ Ben Dudson, {\it SD1D: 1D divertor model for detachment studies}, 19 December 20
 \bibitem{stangeby}
 Peter C. Stangeby, 2000, {\it The Plasma Boundary of Magnetic Fusion Devices}, Institute of Physics Publishing, Dirac House, Temple Back, Bristol BS1 6BE,
 UK.
+
+\bibitem{stangeby2018}
+P.C. Stangeby, Plasma Phys. Control. Fusion {\bf 60} (2018) 44022. 
+
 
 \bibitem{EIRENE}
 {\tt http://www.eirene.de/}.
