@@ -53,4 +53,5 @@ Push: git push origin v1.0.0
 ### Version History
 * Version 1.0.0 merged to master by Westerhof and Frankemolle in 2020
 * Version 2.0.0 added flux expansion and dynamic inputs in 2021
-
+* Version 2.1.2 neutral background (important corrections for recombination and ionization friction)
+* Version 3.2.0 (2do) time-dependent impurity concentration with homogeneous profile + time dependent neutral background
