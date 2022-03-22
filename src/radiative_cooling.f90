@@ -1,0 +1,152 @@
+module radiative_cooling
+        ! module containing radiative cooling rates for low density high temperature plasmas from post et al 1977
+        
+        use physics_parameters, only : imp_con, 
+        use constants,          only : e_charge
+
+
+
+        implicit none
+        integer, parameter, private :: wp = KIND(1.0D0)
+
+        real(wp), private, dimension(3) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00/)*1.0d+03
+
+    !    real(wp), private, dimension(3,7) :: lithium3_coef = reshape( (/ &
+    !            
+    !            shape(lithium3_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+      !  real(wp), private, dimension(3,7) :: berylium4_coef = reshape( (/ &
+       !         /)
+       !         shape(berylium4_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+ 
+
+      !  real(wp), private, dimension(3,7) :: boron5_coef = reshape( (/ &
+      !          /)
+      !          shape(boron5_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+
+        real(wp), private, dimension(3,6) :: carbon6_coef = reshape( (/ &
+                 1.965300E+03, 4.572035E+03, 4.159590E+03, 1.871560E+03, 4.173889E+02, 3.699382E+01, &
+                 7.467599E+01, 4.549038E+02, 8.372937E+02, 7.402515E+02, 3.147607E+02, 5.164578E+01, &
+                 -2.120151E+01, -3.668933E-01, 7.295099E-01, -1.944827E-01, -1.263576E-01, -1.491027E-01 /               ), &
+                shape(carbon6_coef), order=(/1,2/)
+               ! A(0), A(1) ,... , A(6) 
+
+        real(wp), private, dimension(3,7) :: nitrogen7_coef = reshape( (/ &
+                /),&
+                shape(nitrogen7_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+
+       ! real(wp), private, dimension(3,7) :: oxygen8_coef = reshape( (/ &
+       !         /),&
+       !         shape(oxygen8_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+
+       ! real(wp), private, dimension(3,7) :: neon10_coef = reshape( (/ &
+       !         /),&
+       !         shape(neon10_coef), order=(/1,2/) 
+       !        ! tmax, A(0), A(1) ,... , A(6) 
+       ! real(wp), private, dimension(3,7) :: argon18_coef = reshape( (/ &
+       !         /),&
+       !         shape(argon18_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+       ! real(wp), private, dimension(3,7) :: krypton36_coef = reshape( (/ &
+      !          
+       !         shape(krypton36_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+      !  real(wp), private, dimension(3,7) :: molybdenum42_coef = reshape( (/ &
+                
+     !           shape(molybdenum42_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+       ! real(wp), private, dimension(3,7) :: tin50_coef = reshape( (/ &
+                
+     !           shape(tin50_coef), order=(/1,2/) 
+     !          ! tmax, A(0), A(1) ,... , A(6) 
+     !   real(wp), private, dimension(3,7) :: xenon54_coef = reshape( (/ &
+     !           
+     !           shape(xenon54_coef), order=(/1,2/) 
+               ! tmax, A(0), A(1) ,... , A(6) 
+     !   real(wp), private, dimension(3,7) :: tungsten74_coef = reshape( (/ &
+     !           
+     !         shape(tungsten74_coef), order=(/1,2/) 
+     !          ! tmax, A(0), A(1) ,... , A(6) 
+       
+contains
+      real(wp) function post_radiation( temperature , log_T , Z )
+        ! function to calculate the effective loss rate due to impurity
+        ! radiation rate coefficient [eV m^3/s]
+
+        implicit none
+        integer :: Z
+        integer :: n
+        real(wp) :: temperature, log_T, post_radiation
+        post_radiation = 0.0d+0
+        !log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)
+
+        if( temperature .lt. tmax(1)*1.0d+3 ) then
+            m = 1
+        elseif( temperature .lt. tmax(2)*1.0d+3 ) then
+            m = 2
+        elseif( temperature .lt. tmax(3)*1.0d+3 ) then
+            m = 3
+        else              
+            post_radiation = 0.0d+1
+            return
+        endif        
+ 
+
+        select case (Z)
+        case( 3 )
+                ! lithium
+
+        case( 4 )
+                ! berylium
+        case( 5 )
+                ! boron
+        case( 6 )
+                ! carbon     
+                do  n = 6,2       
+                post_radiation = car6_coef(m,n)*log_T**(n-1) + post_radiation
+                enddo
+                post_radiation = car6_coef(m,1) + post_radiation   
+               ! post_radiation = post_radiation*imp_con             
+        case( 7 )
+                ! nitrogen
+
+        case( 8 )
+                ! oxygen
+
+        case( 10 )
+                ! neon
+
+        case( 18 )
+                ! argon
+
+        case( 36 )
+                ! krypton
+
+        case( 42 )
+                ! molybdenum
+
+        case( 50 ) 
+                ! tin
+
+        case( 54 )
+                ! xenon
+
+        case( 74 )
+                ! tungsten             
+
+        case default
+           ! no impurity radiation
+           post_radiation = 0.0d+1
+           return
+        end select
+
+        post_radiation = (1.0d-13/e_charge)*1.0d+1**post_radiation
+        return
+      end function post_radiation
+
+
+end module radiative_cooling

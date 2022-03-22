@@ -26,7 +26,8 @@ module physics_parameters
    real( wp ) :: neutral_residence_time = 1.0d+20     ! time scale on which neutrals are lost from the SOL [s]
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
-   real( wp ) :: carbon_concentration   = 1.0d-2      ! the concentration of carbon impurity ions
+   real( wp ) :: imp_con                = 1.0d-2      ! the concentration of impurity ions (default = 1%)
+   integer    :: imp_Z                  = 6           ! the Z value of the impurity used (default = carbon)
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]
@@ -55,7 +56,7 @@ module physics_parameters
    integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
    integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from R.dat [-]
    integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from RL.dat
-   integer    :: switch_car_con_prf     = 0           ! spatial carbon concentration profile   
+   integer    :: switch_dyn_imp_con     = 0           ! spatial carbon concentration profile   
    integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition 
    integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction 
 
@@ -64,9 +65,9 @@ module physics_parameters
   real( wp ), allocatable :: dyn_dnu(:) ! derivative for ODE solver
   real( wp ), allocatable :: dyn_gas(:) ! gas source [1/m2] [0,->)
   real( wp ), allocatable :: dyn_rec(:)   ! recycling coefficient [0-1]
-  real( wp ), allocatable :: dyn_red_frc(:) ! redistributed fraction
+  real( wp ), allocatable :: dyn_red_frc(:) ! redistributed fraction [0-1]
   real( wp ), allocatable :: dyn_rad_los(:)  ! radial loss factor [0-1]
-  real( wp ), allocatable :: car_con_prf(:) ! carbon concentration profile [0-1]
+  real( wp ), allocatable :: dyn_imp_con(:) ! impurity concentration profile [0-1]
   real( wp ), allocatable :: gas_puff(:) ! gas puff distribution ( this is now globally accessable )
   real( wp ), allocatable :: dyn_qparX(:) ! parallel heat flux [0,->)
 contains
@@ -79,7 +80,7 @@ contains
       allocate( dyn_gas(ntime) )
       allocate( dyn_rec(ntime) ) 
       allocate( dyn_rad_los(ntime) )
-      allocate( car_con_prf(Nx) )
+      allocate( dyn_imp_con(ntime) )
       allocate( dyn_qparX(ntime) )
       allocate( dyn_red_frc(ntime) )
 
@@ -107,8 +108,7 @@ contains
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &                     ! switch_X_vel_con, & 
-                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_car_con_prf,&
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &                                                   switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_dyn_imp_con,&
                                switch_dyn_qpar, switch_dyn_red_frc
 
 
@@ -117,23 +117,39 @@ contains
       write(*,*) 'physics read error =', error
         
       ! %%%%%%%%% read spatial profiles of input %%%%%%%% !  
-      ! carbon profile
-      if (switch_car_con_prf .eq. 1) then
-        open(4, file = 'car_con_prf.dat', status= 'old')
-        do i = 1,Nx
-        read(4,*) car_con_prf(i) 
-        car_con_prf(i) = min(max(car_con_prf(i),0.0d+0),1.0d+0)
-        end do
-        close(4)
-        write(*,*) "test_dfCdx=1"
-      else
-        do i = 1,Nx
-        car_con_prf(i) = min(max(carbon_concentration,0.0d+0),1.0d+0)
-        end do
-        write(*,*) "test_dfCdx=0"
-      endif
+      ! carbon profile (LEGACY)
+      !if (switch_car_con_prf .eq. 1) then
+      !  open(4, file = 'car_con_prf.dat', status= 'old')
+      !  do i = 1,Nx
+      !  read(4,*) car_con_prf(i) 
+      !  car_con_prf(i) = min(max(car_con_prf(i),0.0d+0),1.0d+0)
+      !  end do
+      !  close(4)
+      !  write(*,*) "test_dfCdx=1"
+      !else
+      !  do i = 1,Nx
+      !  car_con_prf(i) = min(max(carbon_concentration,0.0d+0),1.0d+0)
+      !  end do
+      !  write(*,*) "test_dfCdx=0"
+      !endif
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
+      ! -------- impurity concentration -------!
+      if (switch_dyn_imp_con .eq. 1) then
+        open(1, file = 'dyn_imp_con.dat', status = 'old', IOSTAT = error)
+        write(*,*) 'open dyn imp con =', error
+        do i = 1,ntime
+         read(1,*, IOSTAT = error) dyn_imp_con(i)
+         dyn_imp_con(i) = min(max(dyn_imp_con(i)))
+         write(*,*) 'read dyn imp con =', error
+        end do
+        close(1)
+      else
+        do i = 1,ntime
+        dyn_imp_con(i) = min(max(imp_con,0.0d+0),1.0d+0)
+        end do
+        write(*,*) 'dimpdt=0'
+      endif
       ! -------- upstream heat flux -----------!
       if (switch_dyn_qpar .eq. 1) then
       open(1, file = 'dyn_qpar.dat', status = 'old')
@@ -146,6 +162,7 @@ contains
        do i= 1,ntime
         dyn_qparX(i) = q_parX
        end do 
+       write(*,*) 'dqdt=0'
       endif
       ! ------- upstream density ------- !
       if (switch_dyn_nu .eq. 1) then
@@ -170,7 +187,7 @@ contains
                dyn_nu(i) = initial_n
                dyn_dnu(i) = 0.0d+0
         end do
-        write(*,*) "test_dndt=0"  
+        write(*,*) "dndt=0"  
       endif
 
       ! ------- Recycling ------!
@@ -181,12 +198,11 @@ contains
          dyn_rec(i) = min(max(dyn_rec(i),0.0d+0),1.0d+0)
         end do
         close(2)
-        write(*,*) "test_dRdt=1"
-      else
+       else
         do i = 1,ntime
          dyn_rec(i) = min(max(recycling,0.0d+0),1.0d+0)
         end do
-        write(*,*)  "test_dRdt=0"
+        write(*,*)  "dRdt=0"
       endif 
 
       ! -------- Gas puff -------!
@@ -197,12 +213,12 @@ contains
         dyn_gas(i) = max(dyn_gas(i),0.0d+0)
         end do
         close(3)
-        write(*,*) "test_dgdt=1"
+        write(*,*) "dgdt=1"
       else      
         do i = 1,ntime
         dyn_gas(i) = max(gas_puff_source,0.0d+0) 
         end do
-        write(*,*) "test_dgdt=0"  
+        write(*,*) "dgdt=0"  
       endif
 
       ! -------- Radial Loss fraction ----- !
@@ -213,12 +229,12 @@ contains
         dyn_rad_los(i) = min(max(dyn_rad_los(i),0.0d+0),1.0d+0)
         end do
         close(4)
-        write(*,*) "test_dRLdt=1"
+        write(*,*) "dRLdt=1"
       else
         do i = 1,ntime
         dyn_rad_los(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
         end do
-        write(*,*) "test_dRLdt=0"
+        write(*,*) "dRLdt=0"
       endif
       
       
@@ -230,12 +246,12 @@ contains
         dyn_red_frc(i) = min(max(dyn_red_frc(i),0.0d+0),1.0d+0)
         end do
         close(4)
-        write(*,*) "test_dfRLdt=1"
+        write(*,*) "dfRLdt=1"
       else
         do i = 1,ntime
         dyn_red_frc(i) = min(max(redistributed_fraction,0.0d+0),1.0d+0)
         end do
-        write(*,*) "test_dfRLdt=0"
+        write(*,*) "dfRLdt=0"
       endif
       ! %%%%%%%%%%%% end read time dependent parameters %%%%%%%% !
 
