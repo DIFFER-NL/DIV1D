@@ -26,8 +26,8 @@ module physics_parameters
    real( wp ) :: neutral_residence_time = 1.0d+20     ! time scale on which neutrals are lost from the SOL [s]
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
-   real( wp ) :: imp_con                = 1.0d-2      ! the concentration of impurity ions (default = 1%)
-   integer    :: imp_Z                  = 6           ! the Z value of the impurity used (default = carbon)
+   real( wp ) :: impurity_concentration = 0.0d+1      ! the concentration of impurity ions (default = 1%)
+   integer    :: impurity_Z             = 6           ! the Z value of the impurity used (default = carbon)
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]
@@ -48,17 +48,16 @@ module physics_parameters
    integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
    real( wp ) :: radial_loss_width      = 1.0d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
-!   integer    :: switch_X_vel_con       = 0           ! switch to constrain the upstream velocity to zero gradient
 
 
 !  time dependent settings
-   integer    :: switch_dyn_nu          = 0           ! time dependent plasma X point density requested from nu.dat (perturbation on initial_n)
-   integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from gas.dat [/m^2 s]
-   integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from R.dat [-]
-   integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from RL.dat
-   integer    :: switch_dyn_imp_con     = 0           ! spatial carbon concentration profile   
-   integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition 
-   integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction 
+   integer    :: switch_dyn_nu          = 0           ! switch now depends on initial_n value .leq. -1 !  time dependent plasma X point density requested from dyn_nu.dat (perturbation on initial_n)
+   integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from dyn_gas.dat [/m^2 s]
+   integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from dyn_rec.dat [-]
+   integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from dyn_rad_loss.dat
+   integer    :: switch_dyn_imp_con     = 0           ! time dependent impurity concentration from dyn_imp_con.dat   
+   integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition from dyn_qpar.dat 
+   integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction from dyn_red_frc.dat
 
 
   real( wp ), allocatable :: dyn_nu(:)  ! density of boundary condition 		
@@ -67,7 +66,7 @@ module physics_parameters
   real( wp ), allocatable :: dyn_rec(:)   ! recycling coefficient [0-1]
   real( wp ), allocatable :: dyn_red_frc(:) ! redistributed fraction [0-1]
   real( wp ), allocatable :: dyn_rad_los(:)  ! radial loss factor [0-1]
-  real( wp ), allocatable :: dyn_imp_con(:) ! impurity concentration profile [0-1]
+  real( wp ), allocatable :: dyn_imp_con(:) ! impurity concentration [0-1]
   real( wp ), allocatable :: gas_puff(:) ! gas puff distribution ( this is now globally accessable )
   real( wp ), allocatable :: dyn_qparX(:) ! parallel heat flux [0,->)
 contains
@@ -103,19 +102,27 @@ contains
 !                               switch_dyn_qpar, switch_dyn_red_frc
 
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
-                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling,  carbon_concentration, &
+                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, impurity_concentration, impurity_Z, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &                                                   switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_dyn_imp_con,&
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &              
+                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_dyn_imp_con,&
                                switch_dyn_qpar, switch_dyn_red_frc
 
 
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
-        
+       
+      !if statement 
+      !if imp_Z = 6
+      !if ( carbon_concentration .neq. 0 )
+      !imp_con = carbon_concentration 
+      !endif
+      !if carbon_concentration
+
       ! %%%%%%%%% read spatial profiles of input %%%%%%%% !  
       ! carbon profile (LEGACY)
       !if (switch_car_con_prf .eq. 1) then
@@ -140,13 +147,13 @@ contains
         write(*,*) 'open dyn imp con =', error
         do i = 1,ntime
          read(1,*, IOSTAT = error) dyn_imp_con(i)
-         dyn_imp_con(i) = min(max(dyn_imp_con(i)))
-         write(*,*) 'read dyn imp con =', error
+         dyn_imp_con(i) = min(max(dyn_imp_con(i),0.0d+0),1.0d+0)
+         write(*,*) 'read dyn_imp_con.dat =', error
         end do
         close(1)
       else
         do i = 1,ntime
-        dyn_imp_con(i) = min(max(imp_con,0.0d+0),1.0d+0)
+        dyn_imp_con(i) = min(max(impurity_concentration,0.0d+0),1.0d+0)
         end do
         write(*,*) 'dimpdt=0'
       endif

@@ -1,7 +1,7 @@
-module radiative_cooling
+module radiative_cooling_functions_post1977
         ! module containing radiative cooling rates for low density high temperature plasmas from post et al 1977
         
-        use physics_parameters, only : imp_con, 
+        use physics_parameters, only : impurity_concentration 
         use constants,          only : e_charge
 
 
@@ -29,13 +29,13 @@ module radiative_cooling
         real(wp), private, dimension(3,6) :: carbon6_coef = reshape( (/ &
                  1.965300E+03, 4.572035E+03, 4.159590E+03, 1.871560E+03, 4.173889E+02, 3.699382E+01, &
                  7.467599E+01, 4.549038E+02, 8.372937E+02, 7.402515E+02, 3.147607E+02, 5.164578E+01, &
-                 -2.120151E+01, -3.668933E-01, 7.295099E-01, -1.944827E-01, -1.263576E-01, -1.491027E-01 /               ), &
-                shape(carbon6_coef), order=(/1,2/)
+                 -2.120151E+01, -3.668933E-01, 7.295099E-01, -1.944827E-01, -1.263576E-01, -1.491027E-01 /), &
+                shape(carbon6_coef), order=(/1,2/) )
                ! A(0), A(1) ,... , A(6) 
 
-        real(wp), private, dimension(3,7) :: nitrogen7_coef = reshape( (/ &
-                /),&
-                shape(nitrogen7_coef), order=(/1,2/) 
+       ! real(wp), private, dimension(3,7) :: nitrogen7_coef = reshape( (/ &
+       !         /),&
+       !         shape(nitrogen7_coef), order=(/1,2/) 
                ! tmax, A(0), A(1) ,... , A(6) 
 
        ! real(wp), private, dimension(3,7) :: oxygen8_coef = reshape( (/ &
@@ -73,14 +73,14 @@ module radiative_cooling
      !          ! tmax, A(0), A(1) ,... , A(6) 
        
 contains
-      real(wp) function post_radiation( temperature , log_T , Z )
+      real(wp) function post_radiation( temperature , log_T , impurity_Z )
         ! function to calculate the effective loss rate due to impurity
         ! radiation rate coefficient [eV m^3/s]
 
         implicit none
         integer :: Z
-        integer :: n
-        real(wp) :: temperature, log_T, post_radiation
+        integer :: n, m, impurity_Z
+        real(wp) :: temperature, log_T ! post_radiation
         post_radiation = 0.0d+0
         !log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)
 
@@ -96,7 +96,7 @@ contains
         endif        
  
 
-        select case (Z)
+        select case (impurity_Z)
         case( 3 )
                 ! lithium
 
@@ -106,10 +106,11 @@ contains
                 ! boron
         case( 6 )
                 ! carbon     
-                do  n = 6,2       
-                post_radiation = car6_coef(m,n)*log_T**(n-1) + post_radiation
+                do  n = 6,2,-1       
+                post_radiation = carbon6_coef(m,n)*log_T**(n-1) + post_radiation
                 enddo
-                post_radiation = car6_coef(m,1) + post_radiation   
+                post_radiation = carbon6_coef(m,1) + post_radiation  
+!               write(*,*) 'inside post radiation ', post_radiation 
                ! post_radiation = post_radiation*imp_con             
         case( 7 )
                 ! nitrogen
@@ -143,10 +144,11 @@ contains
            post_radiation = 0.0d+1
            return
         end select
-
+        ! translate erg/(cm3.s) to eV/(m3.s) and change log10(Lz) to Lz
         post_radiation = (1.0d-13/e_charge)*1.0d+1**post_radiation
+        ! this results in Lz (eV/[m3.s])
         return
       end function post_radiation
 
 
-end module radiative_cooling
+end module radiative_cooling_functions_post1977

@@ -2,9 +2,10 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : Nx, switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_recombenergy
-   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, carbon_concentration, &
-                                   minimum_temperature, minimum_density, mass, car_con_prf
+   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, dyn_imp_con, impurity_concentration, impurity_Z, &
+                                   minimum_temperature, minimum_density, mass
    use constants,           only : e_charge
+   use radiative_cooling_functions_post1977
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -270,35 +271,23 @@ contains
       return
    end function recombenergy
 
-   real(wp) function impurity_radiation( temperature, ix) 
+   real(wp) function impurity_radiation( temperature,itime ) 
       ! function to calculate the effective loss rate due to inpurity radiation rate coefficient [eV m^3/s]
       implicit none
-      integer :: ix
-      real(wp) :: temperature, log_T, carbon_radiation
+      real(wp) :: temperature, log_T 
+      integer :: itime 
       impurity_radiation = 0.0d+0
-      ! case Carbon
-      carbon_radiation = 0.0d+0
+      
       if( case_AMJUEL ) then
          ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
          log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)
-         impurity_radiation = post_radiation(temperature,log_T, imp_Z)
-        
-
-  !       if( temperature .lt. 2.0d+1 ) then
-  !          carbon_radiation = ( 1.965300d3 +log_T*( 4.572039d3 +log_T*( 4.159590d3 +log_T*( 1.871560d3 +log_T*( 4.173889d2 +log_T* 3.699382d1 )))))
-  !       elseif( temperature .lt. 2.0d+2 ) then
-  !          carbon_radiation = ( 7.467599d1 +log_T*( 4.549038d2 +log_T*( 8.372937d2 +log_T*( 7.402515d2 +log_T*( 3.147607d2 +log_T* 5.164578d1 )))))
-  !       elseif( temperature .lt. 2.0d+3 ) then
-  !          carbon_radiation = (-2.120151d1 +log_T*(-3.668933d-1+log_T*( 7.295099d-1+log_T*(-1.944827d-1+log_T*(-1.263576d-1-log_T* 1.491027d-1)))))
-  !       endif
-  !       ! transform from erg and cm to eV and m
-  !       carbon_radiation = (1.0d-13/e_charge)*1.0d+1**carbon_radiation
+         impurity_radiation = post_radiation(temperature,log_T, impurity_Z)
       else
-         ! use the fit function from SD1D
-         carbon_radiation = 2.0d-31/e_charge * (max(temperature,1.0d+0)/1.0d+1)**3 / (1.0d+0 + (max(temperature,1.0d+0)/1.0d+1)**4.5d+0)
+         ! use the fit function from SD1D for carbon
+         impurity_radiation = 2.0d-31/e_charge * (max(temperature,1.0d+0)/1.0d+1)**3 / (1.0d+0 + (max(temperature,1.0d+0)/1.0d+1)**4.5d+0)
       endif
 
-      impurity_radiation = carbon_radiation*car_con_prf(ix)
+      impurity_radiation = impurity_radiation*dyn_imp_con(itime)
       return
    end function impurity_radiation
 

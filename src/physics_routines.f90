@@ -6,7 +6,7 @@ module physics_routines
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
                                   gas_puff_source, gas_puff_location, gas_puff_width, initial_a, &
-                                  dyn_nu, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, car_con_prf, gas_puff, dyn_red_frc, dyn_qparX!, &
+                                  dyn_nu, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX!, &
                                  ! switch_X_vel_con
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources,&
@@ -210,7 +210,7 @@ contains
          rate_exc(ix) = density(ix) * neutral(ix) * excitation(density(ix),temperature(ix))
          rate_rec(ix) = density(ix) * density(ix) * recombination(density(ix),temperature(ix))
          rate_ree(ix) = density(ix) * density(ix) * recombenergy(density(ix),temperature(ix))
-         rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix),ix)
+         rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix),itime)
       enddo
       ! the particle sources
       neutral_source = rate_rec - rate_ion + gas_puff * dyn_gas(itime)
