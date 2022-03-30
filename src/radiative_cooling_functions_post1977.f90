@@ -9,7 +9,7 @@ module radiative_cooling_functions_post1977
         implicit none
         integer, parameter, private :: wp = KIND(1.0D0)
 
-        real(wp), private, dimension(3) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00/)*1.0d+03
+        real(wp), private, dimension(3) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00/)*1.0d+03 ! from keV to eV
 
     !    real(wp), private, dimension(3,7) :: lithium3_coef = reshape( (/ &
     !            
@@ -30,7 +30,7 @@ module radiative_cooling_functions_post1977
                  1.965300E+03, 4.572035E+03, 4.159590E+03, 1.871560E+03, 4.173889E+02, 3.699382E+01, &
                  7.467599E+01, 4.549038E+02, 8.372937E+02, 7.402515E+02, 3.147607E+02, 5.164578E+01, &
                  -2.120151E+01, -3.668933E-01, 7.295099E-01, -1.944827E-01, -1.263576E-01, -1.491027E-01 /), &
-                shape(carbon6_coef), order=(/1,2/) )
+                shape(carbon6_coef), order=(/2,1/) )
                ! A(0), A(1) ,... , A(6) 
 
        ! real(wp), private, dimension(3,7) :: nitrogen7_coef = reshape( (/ &
@@ -76,6 +76,8 @@ contains
       real(wp) function post_radiation( temperature , log_T , impurity_Z )
         ! function to calculate the effective loss rate due to impurity
         ! radiation rate coefficient [eV m^3/s]
+        ! temperature is in eV
+        ! log_T is in keV
 
         implicit none
         integer :: Z
@@ -84,11 +86,11 @@ contains
         post_radiation = 0.0d+0
         !log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)
 
-        if( temperature .lt. tmax(1)*1.0d+3 ) then
+        if( temperature .lt. tmax(1) ) then
             m = 1
-        elseif( temperature .lt. tmax(2)*1.0d+3 ) then
+        elseif( temperature .lt. tmax(2) ) then
             m = 2
-        elseif( temperature .lt. tmax(3)*1.0d+3 ) then
+        elseif( temperature .lt. tmax(3) ) then
             m = 3
         else              
             post_radiation = 0.0d+1
@@ -107,11 +109,15 @@ contains
         case( 6 )
                 ! carbon     
                 do  n = 6,2,-1       
-                post_radiation = carbon6_coef(m,n)*log_T**(n-1) + post_radiation
+                post_radiation = carbon6_coef(m,n)*(log_T**(n-1)) + post_radiation
+
+           !     write(*,*) 'm = ', m
+           !     write(*,*) 'n = ', n
+           !     write(*,*) 'coef  = ', carbon6_coef(m,n) 
+              
                 enddo
                 post_radiation = carbon6_coef(m,1) + post_radiation  
-!               write(*,*) 'inside post radiation ', post_radiation 
-               ! post_radiation = post_radiation*imp_con             
+                ! post_radiation = post_radiation*imp_con             
         case( 7 )
                 ! nitrogen
 

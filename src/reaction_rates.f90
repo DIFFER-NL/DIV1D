@@ -280,8 +280,8 @@ contains
       
       if( case_AMJUEL ) then
          ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
-         log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)
-         impurity_radiation = post_radiation(temperature,log_T, impurity_Z)
+         log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)   ! from eV to keV
+         impurity_radiation = post_radiation(temperature,log_T, impurity_Z) ! so temperature is in eV and log_T in keV
       else
          ! use the fit function from SD1D for carbon
          impurity_radiation = 2.0d-31/e_charge * (max(temperature,1.0d+0)/1.0d+1)**3 / (1.0d+0 + (max(temperature,1.0d+0)/1.0d+1)**4.5d+0)
