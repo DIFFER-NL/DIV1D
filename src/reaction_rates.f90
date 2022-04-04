@@ -2,7 +2,7 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : Nx, switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_recombenergy
-   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, dyn_imp_con, impurity_concentration, impurity_Z, &
+   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, dyn_imp_con, impurity_concentration, impurity_Z, num_impurities, &
                                    minimum_temperature, minimum_density, mass
    use constants,           only : e_charge
    use radiative_cooling_functions_post1977
@@ -271,23 +271,27 @@ contains
       return
    end function recombenergy
 
-   real(wp) function impurity_radiation( temperature,itime ) 
+   real(wp) function impurity_radiation( temperature,itime) 
       ! function to calculate the effective loss rate due to inpurity radiation rate coefficient [eV m^3/s]
       implicit none
       real(wp) :: temperature, log_T 
-      integer :: itime 
+      integer :: itime, iz
       impurity_radiation = 0.0d+0
       
       if( case_AMJUEL ) then
          ! fit function Post et al. 1977 extrapolated below its validity range of 3 eV
          log_T = log10(max(temperature,minimum_temperature,0.1d+0)/1.0d+3)   ! from eV to keV
-         impurity_radiation = post_radiation(temperature,log_T, impurity_Z) ! so temperature is in eV and log_T in keV
+         do iz = 1, num_impurities
+                
+         impurity_radiation = post_radiation(temperature,log_T, impurity_Z(iz)) * dyn_imp_con(iz,itime) + impurity_radiation
+                                         ! temperature is in eV and log_T in keV  
+         enddo
       else
          ! use the fit function from SD1D for carbon
+         iz = 1
          impurity_radiation = 2.0d-31/e_charge * (max(temperature,1.0d+0)/1.0d+1)**3 / (1.0d+0 + (max(temperature,1.0d+0)/1.0d+1)**4.5d+0)
+         impurity_radiation = impurity_radiation * dyn_imp_con(1,itime)
       endif
-
-      impurity_radiation = impurity_radiation*dyn_imp_con(itime)
       return
    end function impurity_radiation
 

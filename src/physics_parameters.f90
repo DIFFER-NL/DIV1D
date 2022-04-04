@@ -26,8 +26,9 @@ module physics_parameters
    real( wp ) :: neutral_residence_time = 1.0d+20     ! time scale on which neutrals are lost from the SOL [s]
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
-   real( wp ) :: impurity_concentration = 0.0d+1      ! the concentration of impurity ions (default = 1%)
-   integer    :: impurity_Z             = 6           ! the Z value of the impurity used (default = carbon)
+   integer    :: num_impurities         = 5           ! number of impurities in the list (this is not yet dynamic in size)
+   real( wp ) :: impurity_concentration(5) =(/ 0.0d+1,0.0d+1,0.0d+1,0.0d+1,0.0d+1 /)  ! the concentration of impurity ions (default = 1%)
+   integer    :: impurity_Z(5)             =(/ 6,0,0,0,0 /)          ! the Z value of the impurity used (default = carbon)
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]
@@ -66,22 +67,27 @@ module physics_parameters
   real( wp ), allocatable :: dyn_rec(:)   ! recycling coefficient [0-1]
   real( wp ), allocatable :: dyn_red_frc(:) ! redistributed fraction [0-1]
   real( wp ), allocatable :: dyn_rad_los(:)  ! radial loss factor [0-1]
-  real( wp ), allocatable :: dyn_imp_con(:) ! impurity concentration [0-1]
+  real( wp ), allocatable :: dyn_imp_con(:,:) ! impurity concentration [0-1]
   real( wp ), allocatable :: gas_puff(:) ! gas puff distribution ( this is now globally accessable )
   real( wp ), allocatable :: dyn_qparX(:) ! parallel heat flux [0,->)
+
+
 contains
 
    subroutine read_physics_parameters( error )
       implicit none
-      integer :: error, i
-      allocate( dyn_nu(ntime) )
-      allocate( dyn_dnu(ntime) )
-      allocate( dyn_gas(ntime) )
-      allocate( dyn_rec(ntime) ) 
-      allocate( dyn_rad_los(ntime) )
-      allocate( dyn_imp_con(ntime) )
-      allocate( dyn_qparX(ntime) )
-      allocate( dyn_red_frc(ntime) )
+      integer :: error, i, num_impurities, z
+      num_impurities = 0
+!      z = size(impurity_concentration)
+!      allocate( dyn_imp_con(z,ntime) )
+! 
+!      allocate( dyn_nu(ntime) )
+!      allocate( dyn_dnu(ntime) )
+!      allocate( dyn_gas(ntime) )
+!      allocate( dyn_rec(ntime) ) 
+!      allocate( dyn_rad_los(ntime) )
+!      allocate( dyn_qparX(ntime) )
+!      allocate( dyn_red_frc(ntime) )
 
 !      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, dndt, initial_v, initial_T, initial_a, density_ramp_rate, &
  !                              energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, dRdt, carbon_concentration, &
@@ -115,7 +121,25 @@ contains
       error = 0
       read(*, div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
-       
+
+!     dynamic size of impurity array depending on impurities that are listed
+!      do i = 1,size(impurity_concentration)
+!     if( impurity_concentration(i) .gt. 0 )
+!      num_impurities = num_impurities+1
+!      endif
+!      enddo
+        
+      num_impurities = size(impurity_concentration)
+      allocate( dyn_imp_con(num_impurities,ntime) )
+ 
+      allocate( dyn_nu(ntime) )
+      allocate( dyn_dnu(ntime) )
+      allocate( dyn_gas(ntime) )
+      allocate( dyn_rec(ntime) ) 
+      allocate( dyn_rad_los(ntime) )
+      allocate( dyn_qparX(ntime) )
+      allocate( dyn_red_frc(ntime) )
+
       !if statement 
       !if imp_Z = 6
       !if ( carbon_concentration .neq. 0 )
@@ -142,21 +166,28 @@ contains
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
       ! -------- impurity concentration -------!
-      if (switch_dyn_imp_con .eq. 1) then
+      do z = 1,num_impurities
+      if ( impurity_concentration(z) .eq. -1 ) then
+!      if (switch_dyn_imp_con .eq. 1) then
         open(1, file = 'dyn_imp_con.dat', status = 'old', IOSTAT = error)
         write(*,*) 'open dyn imp con =', error
         do i = 1,ntime
-         read(1,*, IOSTAT = error) dyn_imp_con(i)
-         dyn_imp_con(i) = min(max(dyn_imp_con(i),0.0d+0),1.0d+0)
+   !      do z = 1,num_impurities
+         read(1,*, IOSTAT = error) dyn_imp_con(z,i)
+         dyn_imp_con(z,i) = min(max(dyn_imp_con(z,i),0.0d+0),1.0d+0)
          write(*,*) 'read dyn_imp_con.dat =', error
-        end do
+         end do
+    !    end do
         close(1)
-      else
+       else
         do i = 1,ntime
-        dyn_imp_con(i) = min(max(impurity_concentration,0.0d+0),1.0d+0)
+      !  do z = 1,num_impurities
+        dyn_imp_con(z,i) = min(max(impurity_concentration(z),0.0d+0),1.0d+0)
+      !  end do
         end do
         write(*,*) 'dimpdt=0'
       endif
+      enddo
       ! -------- upstream heat flux -----------!
       if (switch_dyn_qpar .eq. 1) then
       open(1, file = 'dyn_qpar.dat', status = 'old')

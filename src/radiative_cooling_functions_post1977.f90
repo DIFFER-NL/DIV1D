@@ -9,7 +9,7 @@ module radiative_cooling_functions_post1977
         implicit none
         integer, parameter, private :: wp = KIND(1.0D0)
 
-        real(wp), private, dimension(3) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00/)*1.0d+03 ! from keV to eV
+        real(wp), private, dimension(5) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
 
     !    real(wp), private, dimension(3,7) :: lithium3_coef = reshape( (/ &
     !            
@@ -26,17 +26,24 @@ module radiative_cooling_functions_post1977
       !          shape(boron5_coef), order=(/1,2/) 
                ! tmax, A(0), A(1) ,... , A(6) 
 
-        real(wp), private, dimension(3,6) :: carbon6_coef = reshape( (/ &
+        real(wp), private, dimension(5,6) :: carbon6_coef = reshape( (/ &
                  1.965300E+03, 4.572035E+03, 4.159590E+03, 1.871560E+03, 4.173889E+02, 3.699382E+01, &
                  7.467599E+01, 4.549038E+02, 8.372937E+02, 7.402515E+02, 3.147607E+02, 5.164578E+01, &
-                 -2.120151E+01, -3.668933E-01, 7.295099E-01, -1.944827E-01, -1.263576E-01, -1.491027E-01 /), &
+                 -2.120151E+01, -3.668933E-01, 7.295099E-01, -1.944827E-01, -1.263576E-01, -1.491027E-01, &
+                 -2.121979E+01, -2.346986E-01, 4.093794E-01, 7.874548E-02, -1.841379E-01, 5.590744E-02, &
+                 -2.476796E+01, 9.408181E+00, -9.657446E+00, 4.999161E+00, -1.237382E+00, 1.160610E-01 /), &
                 shape(carbon6_coef), order=(/2,1/) )
                ! A(0), A(1) ,... , A(6) 
 
-       ! real(wp), private, dimension(3,7) :: nitrogen7_coef = reshape( (/ &
-       !         /),&
-       !         shape(nitrogen7_coef), order=(/1,2/) 
-               ! tmax, A(0), A(1) ,... , A(6) 
+        real(wp), private, dimension(5,6) :: nitrogen7_coef = reshape( (/ &
+                -1.967182E+02,-3.615155E+01,-2.093912E+01,-2.093039E+01,-9.452522E+00, &  ! A(0)
+                -2.429049E+02,-3.943802E+01,-5.677397E-01,-6.617905E-01,-3.583144E+01, &  ! A(1)
+                -7.454123E+01,-5.564129E+00, 7.664689E-01, 1.146777E+00, 4.386446E+01, &  ! A(2)
+                 3.126366E+01, 5.140343E+01,-2.610450E-01,-7.390625E-01,-2.639331E+01, &  ! A(3)
+                 2.166881E+01, 4.369243E+01, 3.464473E-01, 3.042676E-01, 7.890268E+00, &  ! A(4)
+                 3.300054E+00, 1.027448E+01, 6.723385E-01,-6.024562E-02,-9.366682E-01 /), &
+                shape(nitrogen7_coef), order=(/1,2/)  )
+                ! the order in which it fills the matrix is 1: walk right, 2: walk down
 
        ! real(wp), private, dimension(3,7) :: oxygen8_coef = reshape( (/ &
        !         /),&
@@ -92,6 +99,10 @@ contains
             m = 2
         elseif( temperature .lt. tmax(3) ) then
             m = 3
+        elseif( temperature .lt. tmax(4) ) then
+            m = 4
+        elseif( temperature .lt. tmax(5) ) then
+            m = 5        
         else              
             post_radiation = 0.0d+1
             return
@@ -117,10 +128,19 @@ contains
               
                 enddo
                 post_radiation = carbon6_coef(m,1) + post_radiation  
-                ! post_radiation = post_radiation*imp_con             
+                ! post_radiation = post_radiation*imp_con   ! this multiplication is done in higher function           
         case( 7 )
                 ! nitrogen
+             do  n = 6,2,-1       
+                post_radiation = nitrogen7_coef(m,n)*(log_T**(n-1)) + post_radiation
 
+            !    write(*,*) 'm = ', m
+            !    write(*,*) 'n = ', n
+            !    write(*,*) 'coef  = ', nitrogen7_coef(m,n)  ! check if the correct coefficient it taken
+              
+                enddo
+                post_radiation = nitrogen7_coef(m,1) + post_radiation  
+                ! post_radiation = post_radiation*imp_con   ! this multiplication is done in higher function           
         case( 8 )
                 ! oxygen
 
