@@ -27,8 +27,8 @@ module physics_parameters
    real( wp ) :: minimum_density        = 1.0d+4      ! densities are not allowed to become smaller than this value [/m^3]
    real( wp ) :: minimum_temperature    = 1.0d-1      ! the temperature is not allowed to drop below this value [eV]
    integer    :: num_impurities         = 5           ! number of impurities in the list (this is not yet dynamic in size)
-   real( wp ) :: impurity_concentration(5) =(/ 0.0d+1,0.0d+1,0.0d+1,0.0d+1,0.0d+1 /)  ! the concentration of impurity ions (default = 1%)
-   integer    :: impurity_Z(5)             =(/ 6,0,0,0,0 /)          ! the Z value of the impurity used (default = carbon)
+   real( wp ) :: impurity_concentration(5) =(/0.0d+1,0.0d+1,0.0d+1,0.0d+1,0.0d+1/)  ! the concentration of impurity ions (default = 1%)
+   integer    :: impurity_Z(5)             =(/6,0,0,0,0/)          ! the Z value of the impurity used (default = carbon)
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]
@@ -89,23 +89,6 @@ contains
 !      allocate( dyn_qparX(ntime) )
 !      allocate( dyn_red_frc(ntime) )
 
-!      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, initial_n, dndt, initial_v, initial_T, initial_a, density_ramp_rate, &
- !                              energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, dRdt, carbon_concentration, &
-!                               case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
-!                               minimum_temperature, minimum_density, gas_puff_source, dgdt, gas_puff_location, gas_puff_width, &
-!                               elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
-!                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-!                               radial_loss_factor, dRLdt, radial_loss_gaussian, radial_loss_width, radial_loss_location
-
-!      namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
-!                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling,  carbon_concentration, &
-!                               case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
-!                               minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
-!                               elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
-!                               switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-!                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &
-!                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_car_con_prf,&
-!                               switch_dyn_qpar, switch_dyn_red_frc
 
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, impurity_concentration, impurity_Z, &
@@ -119,17 +102,12 @@ contains
 
 
       error = 0
-      read(*, div1d_physics, IOSTAT = error)
+!      open(1, file = 'input.txt', status = 'old')
+      read(*,div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
-
-!     dynamic size of impurity array depending on impurities that are listed
-!      do i = 1,size(impurity_concentration)
-!     if( impurity_concentration(i) .gt. 0 )
-!      num_impurities = num_impurities+1
-!      endif
-!      enddo
+!      close(1) 
         
-      num_impurities = size(impurity_concentration)
+      num_impurities = 5 ! size(impurity_concentration)
       allocate( dyn_imp_con(num_impurities,ntime) )
  
       allocate( dyn_nu(ntime) )
@@ -140,42 +118,19 @@ contains
       allocate( dyn_qparX(ntime) )
       allocate( dyn_red_frc(ntime) )
 
-      !if statement 
-      !if imp_Z = 6
-      !if ( carbon_concentration .neq. 0 )
-      !imp_con = carbon_concentration 
-      !endif
-      !if carbon_concentration
 
-      ! %%%%%%%%% read spatial profiles of input %%%%%%%% !  
-      ! carbon profile (LEGACY)
-      !if (switch_car_con_prf .eq. 1) then
-      !  open(4, file = 'car_con_prf.dat', status= 'old')
-      !  do i = 1,Nx
-      !  read(4,*) car_con_prf(i) 
-      !  car_con_prf(i) = min(max(car_con_prf(i),0.0d+0),1.0d+0)
-      !  end do
-      !  close(4)
-      !  write(*,*) "test_dfCdx=1"
-      !else
-      !  do i = 1,Nx
-      !  car_con_prf(i) = min(max(carbon_concentration,0.0d+0),1.0d+0)
-      !  end do
-      !  write(*,*) "test_dfCdx=0"
-      !endif
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
       ! -------- impurity concentration -------!
       do z = 1,num_impurities
       if ( impurity_concentration(z) .eq. -1 ) then
 !      if (switch_dyn_imp_con .eq. 1) then
-        open(1, file = 'dyn_imp_con.dat', status = 'old', IOSTAT = error)
-        write(*,*) 'open dyn imp con =', error
+        open(1, file = 'dyn_imp_con.dat', status = 'old')
         do i = 1,ntime
    !      do z = 1,num_impurities
-         read(1,*, IOSTAT = error) dyn_imp_con(z,i)
+         read(1,*) dyn_imp_con(z,i)
          dyn_imp_con(z,i) = min(max(dyn_imp_con(z,i),0.0d+0),1.0d+0)
-         write(*,*) 'read dyn_imp_con.dat =', error
+       !  write(*,*) 'read dyn_imp_con.dat =0'
          end do
     !    end do
         close(1)
@@ -185,7 +140,7 @@ contains
         dyn_imp_con(z,i) = min(max(impurity_concentration(z),0.0d+0),1.0d+0)
       !  end do
         end do
-        write(*,*) 'dimpdt=0'
+       ! write(*,*) 'dimpdt=0'
       endif
       enddo
       ! -------- upstream heat flux -----------!
@@ -200,7 +155,7 @@ contains
        do i= 1,ntime
         dyn_qparX(i) = q_parX
        end do 
-       write(*,*) 'dqdt=0'
+      ! write(*,*) 'dqdt=0'
       endif
       ! ------- upstream density ------- !
       if (switch_dyn_nu .eq. 1) then
@@ -225,7 +180,7 @@ contains
                dyn_nu(i) = initial_n
                dyn_dnu(i) = 0.0d+0
         end do
-        write(*,*) "dndt=0"  
+      !  write(*,*) "dndt=0"  
       endif
 
       ! ------- Recycling ------!
@@ -240,7 +195,7 @@ contains
         do i = 1,ntime
          dyn_rec(i) = min(max(recycling,0.0d+0),1.0d+0)
         end do
-        write(*,*)  "dRdt=0"
+       ! write(*,*)  "dRdt=0"
       endif 
 
       ! -------- Gas puff -------!
@@ -256,7 +211,7 @@ contains
         do i = 1,ntime
         dyn_gas(i) = max(gas_puff_source,0.0d+0) 
         end do
-        write(*,*) "dgdt=0"  
+       ! write(*,*) "dgdt=0"  
       endif
 
       ! -------- Radial Loss fraction ----- !
@@ -272,7 +227,7 @@ contains
         do i = 1,ntime
         dyn_rad_los(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
         end do
-        write(*,*) "dRLdt=0"
+       ! write(*,*) "dRLdt=0"
       endif
       
       
@@ -289,7 +244,7 @@ contains
         do i = 1,ntime
         dyn_red_frc(i) = min(max(redistributed_fraction,0.0d+0),1.0d+0)
         end do
-        write(*,*) "dfRLdt=0"
+       ! write(*,*) "dfRLdt=0"
       endif
       ! %%%%%%%%%%%% end read time dependent parameters %%%%%%%% !
 
