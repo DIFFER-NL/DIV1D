@@ -200,8 +200,8 @@ subroutine write_header
    implicit none
    integer :: i
    integer, parameter :: wp = KIND(1.0D0)
-
-   ! note these lists should still be completed (GD, complete now?)
+   ! NOTE that the tag is HARDCODED for backward compatibility in reading the outputs with Matlab! 
+   write( 10, * ) 'git tag: v3.0.2'
    write( 10, * ) 'numerics parameters:'
    write( 10, * ) '   Nx         = ', Nx
    write( 10, * ) '   ntime      = ', ntime
