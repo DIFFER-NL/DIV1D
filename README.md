@@ -49,7 +49,8 @@ Version X.Y.Z of DIV1D:
 * Z is raised when a new version only contains small changes.
 Tag: git tag -a v1.0.0 -m "Version 1.0.0 of DIV1D".
 Show: git show v1.0.0
-Push: git push origin v1.0.0
+Push: git push origin v1.0.0 (you have to specifically use the tag)
+Alternatively use git push origin (upstream) --follow-tags
 ### Version History
 * Version 1.0.0 merged to master by Westerhof and Frankemolle in 2020
 * Version 2.0.0 added flux expansion and dynamic inputs in 2021
