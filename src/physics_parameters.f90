@@ -81,15 +81,15 @@ contains
       num_impurities = 0
 
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
-                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, impurity_concentration, impurity_Z, &
+                               energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, num_impurities, impurity_concentration, impurity_Z, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
                                radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location            
-                              
+                              !density_ramp_rate
       error = 0
-!      open(1, file = 'input.txt', status = 'old')
+!      open(, file = 'input.txt', status = 'old')
       read(*,div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
 !      close(1) 
