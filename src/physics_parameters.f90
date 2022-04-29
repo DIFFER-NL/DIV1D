@@ -52,17 +52,18 @@ module physics_parameters
 
 
 !  time dependent settings
-   integer    :: switch_dyn_nu          = 0           ! switch now depends on initial_n value .leq. -1 !  time dependent plasma X point density requested from dyn_nu.dat (perturbation on initial_n)
-   integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from dyn_gas.dat [/m^2 s]
-   integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from dyn_rec.dat [-]
-   integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from dyn_rad_loss.dat
-   integer    :: switch_dyn_imp_con     = 0           ! time dependent impurity concentration from dyn_imp_con.dat   
-   integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition from dyn_qpar.dat 
-   integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction from dyn_red_frc.dat
+ !  integer    :: switch_dyn_nu          = 0           ! switch now depends on initial_n value .leq. -1 !  time dependent plasma X point density requested from dyn_nu.dat (perturbation on initial_n)
+ !  integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from dyn_gas.dat [/m^2 s]
+ !  integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from dyn_rec.dat [-]
+ !  integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from dyn_rad_loss.dat
+ !  integer    :: switch_dyn_imp_con     = 0           ! time dependent impurity concentration from dyn_imp_con.dat   
+ !  integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition from dyn_qpar.dat 
+ !  integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction from dyn_red_frc.dat
 
 
   real( wp ), allocatable :: dyn_nu(:)  ! density of boundary condition 		
   real( wp ), allocatable :: dyn_dnu(:) ! derivative for ODE solver
+  real( wp ), allocatable :: dyn_nb(:)  ! neutral background instead of initial_a
   real( wp ), allocatable :: dyn_gas(:) ! gas source [1/m2] [0,->)
   real( wp ), allocatable :: dyn_rec(:)   ! recycling coefficient [0-1]
   real( wp ), allocatable :: dyn_red_frc(:) ! redistributed fraction [0-1]
@@ -78,17 +79,6 @@ contains
       implicit none
       integer :: error, i, num_impurities, z
       num_impurities = 0
-!      z = size(impurity_concentration)
-!      allocate( dyn_imp_con(z,ntime) )
-! 
-!      allocate( dyn_nu(ntime) )
-!      allocate( dyn_dnu(ntime) )
-!      allocate( dyn_gas(ntime) )
-!      allocate( dyn_rec(ntime) ) 
-!      allocate( dyn_rad_los(ntime) )
-!      allocate( dyn_qparX(ntime) )
-!      allocate( dyn_red_frc(ntime) )
-
 
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, impurity_concentration, impurity_Z, &
@@ -96,11 +86,8 @@ contains
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
                                switch_elm_density, switch_elm_heat_flux, switch_elm_series, gaussian_elm, &
-                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location, &              
-                               switch_dyn_nu, switch_dyn_gas, switch_dyn_rec, switch_dyn_rad_los, switch_dyn_imp_con,&
-                               switch_dyn_qpar, switch_dyn_red_frc
-
-
+                               radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location            
+                              
       error = 0
 !      open(1, file = 'input.txt', status = 'old')
       read(*,div1d_physics, IOSTAT = error)
@@ -109,8 +96,8 @@ contains
         
       num_impurities = 5 ! size(impurity_concentration)
       allocate( dyn_imp_con(num_impurities,ntime) )
- 
       allocate( dyn_nu(ntime) )
+      allocate( dyn_nb(ntime) )
       allocate( dyn_dnu(ntime) )
       allocate( dyn_gas(ntime) )
       allocate( dyn_rec(ntime) ) 
@@ -143,28 +130,14 @@ contains
        ! write(*,*) 'dimpdt=0'
       endif
       enddo
-      ! -------- upstream heat flux -----------!
-      if (switch_dyn_qpar .eq. 1) then
-      open(1, file = 'dyn_qpar.dat', status = 'old')
-       do i =  1,ntime
-        read(1,*) dyn_qparX(i)
-       end do
-       close(1)
-       q_parX = dyn_qparX(1) ! overwrite q_parX -> turns it to  absolute input
-      else
-       do i= 1,ntime
-        dyn_qparX(i) = q_parX
-       end do 
-      ! write(*,*) 'dqdt=0'
-      endif
       ! ------- upstream density ------- !
-      if (switch_dyn_nu .eq. 1) then
+      if (initial_n .lt. 0.0d+0) then
       open(1, file = 'dyn_nu.dat', status = 'old')
        do i =  1,ntime
         read(1,*) dyn_nu(i)
        end do
        close(1)
-       initial_n = dyn_nu(1) ! overwrite initial_n -> this turns it to  absolute input
+       !initial_n = dyn_nu(1) ! overwrite initial_n -> this turns it to  absolute input
        ! derivatives for ODE solver
        do i = 1,ntime-1 ! forward difference
        dyn_dnu(i) = min( ( dyn_nu(i + 1) - dyn_nu(i) ) / delta_t ,1.0d+34) ! note that prescribing the derivative can result in
@@ -183,8 +156,40 @@ contains
       !  write(*,*) "dndt=0"  
       endif
 
+    ! ------- neutral background ------- !
+      if (initial_a .lt. 0.0d+0) then
+      open(1, file = 'dyn_nb.dat', status = 'old')
+       do i =  1,ntime
+        read(1,*) dyn_nb(i)
+       end do
+       close(1)
+       !initial_a = dyn_nb(1) ! overwrite initial_a -> this turns it to  absolute input
+       ! derivatives for ODE solver
+      else
+        do i = 1,ntime
+               dyn_nu(i) = initial_a
+        end do
+      !  write(*,*) "dndt=0"  
+      endif
+
+
+     ! -------- upstream heat flux -----------!
+      if (q_parX .lt. 0.0d+0) then
+      open(1, file = 'dyn_qpar.dat', status = 'old')
+       do i =  1,ntime
+        read(1,*) dyn_qparX(i)
+       end do
+       close(1)
+       !q_parX = dyn_qparX(1) ! overwrite q_parX -> turns it to  absolute input
+      else
+       do i= 1,ntime
+        dyn_qparX(i) = q_parX
+       end do 
+      ! write(*,*) 'dqdt=0'
+      endif
+  
       ! ------- Recycling ------!
-      if (switch_dyn_rec .eq. 1) then
+      if (recycling .lt. 0.0d+0) then
         open(2, file = 'dyn_rec.dat', status = 'old')
         do i = 1,ntime
          read(2,*) dyn_rec(i)
@@ -199,7 +204,7 @@ contains
       endif 
 
       ! -------- Gas puff -------!
-      if (switch_dyn_gas .eq. 1) then
+      if (gas_puff_source .lt. 0.0d+0) then
         open(3, file = 'dyn_gas.dat', status = 'old')
         do i = 1,ntime
         read(3,*) dyn_gas(i) 
@@ -215,7 +220,7 @@ contains
       endif
 
       ! -------- Radial Loss fraction ----- !
-      if (switch_dyn_rad_los .eq. 1) then
+      if (radial_loss_factor .lt. 0.0d+0) then
         open(4, file = 'dyn_rad_los.dat', status= 'old')
         do i = 1,ntime
         read(4,*) dyn_rad_los(i) 
@@ -232,7 +237,7 @@ contains
       
       
       ! ------------- redistribution fraction --------------! 
-      if (switch_dyn_red_frc .eq. 1) then
+      if (redistributed_fraction .lt. 0.0d+0) then
         open(4, file = 'dyn_red_frc.dat', status= 'old')
         do i = 1,ntime
         read(4,*) dyn_red_frc(i) 

@@ -247,13 +247,13 @@ subroutine write_header
    write( 10, * ) '   radial_loss_gaussian    = ', radial_loss_gaussian
    write( 10, * ) '   radial_loss_width       = ', radial_loss_width
    write( 10, * ) '   radial_loss_location    = ', radial_loss_location
-   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
-   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
-   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
-   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
-   write( 10, * ) '   switch_dyn_imp_con      = ', switch_dyn_imp_con
-   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
-   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
+!   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
+!   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
+!   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
+!   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
+!   write( 10, * ) '   switch_dyn_imp_con      = ', switch_dyn_imp_con
+!   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
+!   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
 
    write( 10, '(A195)' ) ' X [m]   gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
    write( 10, '(13(1PE15.6))' ) ( x(i), gas_puff(i), B_field(i), i=1,Nx )
@@ -263,7 +263,7 @@ end subroutine write_header
 
 
 subroutine write_solution( time )
-   use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc, dyn_imp_con, num_impurities
+   use physics_parameters, only : dyn_gas, dyn_nu, dyn_nb, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc, dyn_imp_con, num_impurities
    use numerics_parameters, only : Nx, delta_t
    use grid_data, only : x, B_field
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
@@ -278,6 +278,7 @@ subroutine write_solution( time )
    write( 10, * ) 'time        = ', time
    write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)
    write( 10, * ) 'dyn_nu      = ', dyn_nu(itime)
+   write( 10, * ) 'dyn_nb      = ', dyn_nu(itime)
    write( 10, * ) 'dyn_rec     = ', dyn_rec(itime)
    write( 10, * ) 'dyn_rad_los = ', dyn_rad_los(itime)
    write( 10, * ) 'dyn_qparX   = ', dyn_qparX(itime)
