@@ -78,6 +78,9 @@ contains
    subroutine read_physics_parameters( error )
       implicit none
       integer :: error, i, num_impurities, z
+
+    !  integer, parameter, private :: wp = KIND(1.0D0)
+    !  real( wp ) :: tmp_imp
       num_impurities = 0
 
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
@@ -115,7 +118,7 @@ contains
         open(1, file = 'dyn_imp_con.dat', status = 'old')
         do i = 1,ntime
    !      do z = 1,num_impurities
-         read(1,*) dyn_imp_con(z,i)
+         read(1,*) dyn_imp_con(z,i) ! (row, column)
          dyn_imp_con(z,i) = min(max(dyn_imp_con(z,i),0.0d+0),1.0d+0)
        !  write(*,*) 'read dyn_imp_con.dat =0'
          end do
@@ -254,7 +257,7 @@ contains
       ! %%%%%%%%%%%% end read time dependent parameters %%%%%%%% !
 
       ! correct the desired normalizations
-      if( density_norm .eq. 0.0d+0 ) density_norm = initial_n
+      if( density_norm .eq. 0.0d+0 ) density_norm = 1.0d+19   !initial_n
       if( temperature_norm .eq. 0.0d+0 ) temperature_norm = 1.0e+0
       if( velocity_norm .eq. 0.0d+0 ) velocity_norm = sqrt( 2.0d+0 * temperature_norm / mass )
       momentum_norm = mass * density_norm * velocity_norm
