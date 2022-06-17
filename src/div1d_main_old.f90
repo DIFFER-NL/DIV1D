@@ -30,12 +30,6 @@ program div1d
    real(wp), allocatable :: abstol_vector(:), rwork(:)
    type (VODE_OPTS) :: options
 
-   ! the following is used to format for Matlab integration
-   real(wp), allocatable :: float__div1d(:)
-   integer,  allocatable :: int_div1d(:)
-   logical               :: log_phys
-
-
    ! time the program execution time exluding external system calls (ifortran, gfortran) incl external system calls (solaris f90)
    real(wp) :: T1,T2
    call cpu_time(T1)
@@ -45,39 +39,6 @@ program div1d
    call read_physics_parameters(input_error_physics)
    input_error = input_error_numerics + 10*input_error_physics
    if( input_error .ne. 0 ) call error_report(input_error, restart_error, time_step_error)
-
-   ! cast inputs to those needed by wrapper
-        float_div1d(1) = gamma
-        float_div1d(2) = L
-        float_div1d(3) = sintheta
-        float_div1d(4) = mass
-        float_div1d(5) = Gamma_X
-        float_div1d(6) = q_parX
-        float_div1d(7) = flux_expansion
-        float_div1d(8) = initial_n
-        float_div1d(9) = initial_a
-        float_div1d(10) = initial_v
-        float_div1d(11) = initial_T
-        float_div1d(12) = density_ramp_rate
-        float_div1d(13) = ...
-
-        int_div1d(1) = num_impurites
-        int_div1d(2:6) = impurity_Z
-        int_div1d(7) = elm_start_time
-        int_div1d(8) = elm_ramp_time
-        int_div1d(9) = elm_time_between
-        int_div1d(10)= switch_elm_heat_flux
-        int_div1d(11)= switch_elm_density
-        int_div1d(12)= switch_elm_series
-        int_div1d(13)= radial_loss_gaussian
-        int_div1d(14) = Nx
-        int_div1d(15) = ntime
-        int_div1d(16) = nout
-        int_div1d(17) = method
-        int_div1d(18) = .... 
-
-        log_phys = case_AMJUEL
-
 
    ! initialize the grid
    call initialize_grid
@@ -163,43 +124,18 @@ program div1d
       iwork(2) = mu
       iwork(6) = max_step ! maximum number of internal iterations
    endif
-        
-       
-   
-   call run_div1d(y, ydot, &
-                density, velocity, temperature, neutral,&
-                Gamma_n, Gamma_mom, pressure, q_parallel,&
-                Source_n, Source_v, Source_Q, source_neutral,&
-                x, xcb, delta_x, delta_xcb, B_field, B_field_cb,&
-                e_charge,, c, K_B, amu, me, pi,&
-                options, bounded_components, lower_bounds,&
-                upper_bounds, abstol_vector,&
-                float_div1d, int_div1d, log_phys)
-                  
+
    istate = 1
    do istep=1, ntime
       write(*,*) 'start integration step nr.', istep
       end_time = start_time+delta_t
-
-     if( method .gt. 0 ) then
+      if( method .gt. 0 ) then
          ! we use dvode_f90 for the integration
          ! CALL DVODE_F90(F,NEQ,Y,T,TOUT,ITASK,ISTATE,OPTIONS,J_FCN=JAC,G_FCN=GEX)
          itask = 1 ! for normal computation in dvode_f90 till end_time
-   !      call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
-
-        call run_div1d(y, ydot, &
-                density, velocity, temperature, neutral,&
-                Gamma_n, Gamma_mom, pressure, q_parallel,&
-                Source_n, Source_v, Source_Q, source_neutral,&
-                x, xcb, delta_x, delta_xcb, B_field, B_field_cb,&
-                e_charge,, c, K_B, amu, me, pi,&
-                options, bounded_components, lower_bounds,&
-                upper_bounds, abstol_vector,&
-                float_div1d, int_div1d, log_phys)
-
-
+         call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
       elseif( method .lt. 0 ) then
-   !      ! we use dlsode.f for the integration
+         ! we use dlsode.f for the integration
          itask = 1 ! for normal computation in dvode_f90 till end_time
          itol = 2 ! the absolute error tolerance is specified in an array
          iopt = 1 ! optional inputs (upper and lower half bandwidths of the Jacobian)
@@ -208,35 +144,35 @@ program div1d
       else
          call rk4( right_hand_side, 4*Nx, y, start_time, end_time )
       endif
-   !   ! make sure that the solution respects the minimum density and temperature
-   !   call y2nvt( Nx, y, density, velocity, temperature, neutral )
-   !   do ix = 1, Nx
-   !      if( temperature(ix) .lt. minimum_temperature) temperature(ix) = minimum_temperature
-   !      ! if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
-   !      ! if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
-   !   enddo
-    !  call nvt2y( Nx, density, velocity, temperature, neutral, y )
-   !   time_step_error = istate
-   !   if( istate .ne. 2 .and. method .gt. 0 ) then
-   !      attempt = 0
-   !      do while( istate .ne. 2 .and. attempt .le. max_attempts )
-   !         ! first try calling dvode again with istate = 1
-   !         attempt = attempt + 1
-   !         write(*,*) 'trying to continue integration. attempt nr.', attempt
-   !         istate = 1
-   !         call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
-   !      enddo
-   !      if( istate .ne. 2 ) then 
-   !         call error_report(input_error, restart_error, time_step_error)
-   !      else
-   !         write(*,*) 'success on ', attempt, 'th attempt. continuing'
-   !      endif
-   !   endif
+      ! make sure that the solution respects the minimum density and temperature
+      call y2nvt( Nx, y, density, velocity, temperature, neutral )
+      do ix = 1, Nx
+         if( temperature(ix) .lt. minimum_temperature) temperature(ix) = minimum_temperature
+         ! if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
+         ! if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
+      enddo
+      call nvt2y( Nx, density, velocity, temperature, neutral, y )
+      time_step_error = istate
+      if( istate .ne. 2 .and. method .gt. 0 ) then
+         attempt = 0
+         do while( istate .ne. 2 .and. attempt .le. max_attempts )
+            ! first try calling dvode again with istate = 1
+            attempt = attempt + 1
+            write(*,*) 'trying to continue integration. attempt nr.', attempt
+            istate = 1
+            call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
+         enddo
+         if( istate .ne. 2 ) then 
+            call error_report(input_error, restart_error, time_step_error)
+         else
+            write(*,*) 'success on ', attempt, 'th attempt. continuing'
+         endif
+      endif
       if( mod( istep, nout ) .eq. 0 ) then
          ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
          ! calculate the fluxes
          call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
-   !      ! calculate the sources
+         ! calculate the sources
          call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
          call write_solution( end_time )
       endif
