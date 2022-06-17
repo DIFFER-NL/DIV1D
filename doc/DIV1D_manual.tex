@@ -97,7 +97,7 @@ The energy balance contains both heat sinks and sources associated with charge e
         &- n^2 \xi_Z L_Z(T)
 \end{split}
 \end{equation}
-where the first line represents the losses to the neutrals due to charge exchange and recombination and the second line is a source term from friction with the neutrals that comes from ionization of (assumed momentum less) neutrals. The third line comes from ionization and the associated excitation, where $E_{\rm ion} = 13.6$~eV is the ionization energy and $E_{\rm exc}$ is the energy loss per excitation. In practice these are typically combined into an effective energy loss per ionization (see the paragraph below on the implemented reaction rates). The fourth line represents the effective energy balance from three-body and radiative recombination. Finally, the last line $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$ for the specified impurity.
+where the first line represents the losses to the neutrals due to charge exchange and recombination and the second line is a source term from friction with the neutrals that comes from ionization of (assumed momentum less) neutrals. The third line comes from ionization and the associated excitation, where $E_{\rm ion} = 13.6$~eV is the ionization energy and $E_{\rm exc}$ is the energy loss per excitation. In practice these are typically combined into an effective energy loss per ionization (see the paragraph below on the implemented reaction rates). The fourth line represents the effective energy balance from three-body and radiative recombination. Finally, the last line $L_Z(T)$ is the radiative cooling rate of the impurity with concentration $\xi$ for up to five specified impurities. 
 
 What is a sink for the plasma density is a source for the neutral particles, while additional neutral particle sources are associated with gas puff, redistribution of recycled neutrals or a possible exchange with a neutral background, such that
 \begin{equation}\label{neutral_source}
@@ -135,7 +135,7 @@ Four input parameters exist which the user can employ to shape the radial losses
 radial\_loss\_factor ($\eta_{\perp}$),
 radial\_loss\_gaussian (choice of loss profile),
 radial\_loss\_width ($\mathrm{\Delta}x$), and
-radial\_loss\_location ($x_0$). See table~2.
+radial\_loss\_location ($x_0$). See table~2. Although this feature was translated into the flux expansion factor, it might be usefull again when extending to the core scrape-off layer. 
 
 \section{Atomic Rates}\label{rates}
 
@@ -425,14 +425,33 @@ where $\xi_Z$ is the concentration of the impurity. Post et al.\cite{post1977} t
 \end{equation}
 where $T_{\rm keV}$ is the temperature in keV.
 
-In the present code version the radiation cooling function of Carbon is implemented. The coefficients of the fit function are given in the following table for various temperature ranges
+In the present code version the radiation cooling function of Carbon and Nitrogen are implemented, but any impurity tabulated by Post et al \cite{post1977} can readily be added. The coefficients of the Carbon fit function are given in the following table for various temperature ranges
+%\begin{small}\begin{verbatim}
+%  TMIN   TMAX       A(0)          A(1)          A(2)          A(3)          A(4)          A(5)
+%     3     20   1.965300E+03  4.572039E+03  4.159590E+03  1.871560E+03  4.173889E+02  3.699382E+01
+%    20    200   7.467599E+01  4.549038E+02  8.372937E+02  7.402515E+02  3.147607E+02  5.164578E+01
+%   200   2000  -2.120151E+01 -3.668933E-01  7.295099E-01 -1.944827E-01 -1.263576E-01 -1.491027E-01
+%\end{verbatim}\end{small}
+%The Carbon table for energy losses from Post et al.
 \begin{small}\begin{verbatim}
-  TMIN   TMAX       A(0)          A(1)          A(2)          A(3)          A(4)          A(5)
-     3     20   1.965300E+03  4.572039E+03  4.159590E+03  1.871560E+03  4.173889E+02  3.699382E+01
-    20    200   7.467599E+01  4.549038E+02  8.372937E+02  7.402515E+02  3.147607E+02  5.164578E+01
-   200   2000  -2.120151E+01 -3.668933E-01  7.295099E-01 -1.944827E-01 -1.263576E-01 -1.491027E-01
-\end{verbatim}\end{small}
-Note that in order to convert to units of [W m$^3$] 13 is to be subtracted from the coefficient A(0).
+  TMAX         A(0)           A(1)            A(2)           A(3)           A(4)         A(5)
+     20   1.965300E+03, 	4.572035E+03, 	4.159590E+03,   1.871560E+03, 	 4.173889E+02,  3.699382E+01, 
+    200   7.467599E+01, 	4.549038E+02, 	8.372937E+02,   7.402515E+02, 	 3.147607E+02,  5.164578E+01, 
+   2000  -2.120151E+01, -3.668933E-01, 	7.295099E-01,  -1.944827E-01,  -1.263576E-01, -1.491027E-01, 
+  20000   2.121979E+01, -2.346986E-01,  4.093794E-01,   7.874548E-02,  -1.841379E-01,  5.590744E-02, 
+ 100000  -2.476796E+01,  9.408181E+00, -9.657446E+00,   4.999161E+00,  -1.237382E+00,  1.160610E-01, 
+	  \end{verbatim}\end{small}
+The Nitrogen table for energy losses from Post et al. is given in the following table
+      \begin{small} \begin{verbatim}
+      TMAX	 20,           200,          2000,         20000,        100000,
+      A(0)	-1.967182E+02,-3.615155E+01,-2.093912E+01,-2.093039E+01,-9.452522E+00, 
+      A(1)	-2.429049E+02,-3.943802E+01,-5.677397E-01,-6.617905E-01,-3.583144E+01,
+      A(2)	-7.454123E+01,-5.564129E+00, 7.664689E-01, 1.146777E+00, 4.386446E+01,
+      A(3)	 3.126366E+01, 5.140343E+01,-2.610450E-01,-7.390625E-01,-2.639331E+01,
+      A(4)	 2.166881E+01, 4.369243E+01, 3.464473E-01, 3.042676E-01, 7.890268E+00,
+      A(5)	 3.300054E+00, 1.027448E+01, 6.723385E-01,-6.024562E-02,-9.366682E-01,
+      	\end{verbatim}  \end{small}
+Note that in order to convert to units of [W m$^3$] requires multiplication of $L_{Z}$ with $10^{-13}/e_{charge}$ . %is to be subtracted from the coefficient A(0).
 
 An alternative for the cooling rate of Carbon according to Post et al. is provided in an expression from Havlickova \cite{havlickova2013}
 \begin{equation}
@@ -587,7 +606,7 @@ The output is written in the execution directory in {\tt div1doutput.txt}. First
 \end{table}
 \begin{table}[h]
 \begin{center}
-  \caption{{\bf Namelist {\tt div1d\_physics} setting parameters controlling the physics of the problem solved}.}
+  \caption{{\bf Namelist {\tt div1d\_physics} setting parameters controlling the physics of the problem solved}. }
   \label{tab:input_physics}
   \begin{tabular}{|| l  | l ||}
     \hline\hline
@@ -596,18 +615,26 @@ The output is written in the execution directory in {\tt div1doutput.txt}. First
     {\tt mass}                   & real: mass of the main plasma ion (default: 3.3436D-17~kg for D) \\ \hline
     {\tt gamma}                  & real: sheath heat transmission factor (default: 6.5D0) \\ \hline
     {\tt sintheta}               & real: sinus of angle theta between B-field and target plate (default: 0.1D0) \\ \hline
-    {\tt q\_parX}                & real: parallel heat flux at the X-point (default: 1.0D8~W/m$^2$) \\ \hline
+    {\tt q\_parX}                & real: parallel heat flux at the X-point (default: 1.0D8~W/m$^2$)	\\
+    				& (dynamic: set to -1 and provide {\tt dyn\_qpar.dat(ntime) }) \\ \hline
     {\tt flux\_expansion}        & real: expansion of total flux from X-point to target (default: 1.0D0) \\ \hline
-    {\tt initial\_n}             & real: initial, homogeneous particle density cq. density at X-point (default: 1.0D20~m$^{-3}$) \\ \hline
+    {\tt initial\_n}             & real: initial, homogeneous particle density cq. density at X-point (default: 1.0D20~m$^{-3}$) \\ 
+    				& (dynamic: set to -1 and provide {\tt dyn\_nu.dat(ntime) }) \\ \hline
     {\tt density\_ramp\_rate}    & real: rate of change of X-point density (default: 0.0D0~/m$^3$/s) \\ \hline
     {\tt initial\_v}             & real: initial, homogeneous plasma velocity (default: 0.0D0~m/s) \\ \hline
     {\tt initial\_T}             & real: initial, homogeneous plasma temperature (default: 1.0D2~eV) \\ \hline
-    {\tt initial\_a}             & real: initial, homogeneous neutral density (default: 0.0D0~m$^{-3}$) \\ \hline
-    {\tt carbon\_concentration}  & real: concentration of Carbon impurity ions (default: 1.0D-2) \\ \hline
-    {\tt recycling}              & real: fraction of ion flux on target recycled as neutral (default: 1.0D0) \\ \hline
-    {\tt redistributed\_fraction}& real: fraction of recycling neutral that is evenly distributed along the divertor leg (default: 0.0D0) \\ \hline
+    {\tt initial\_a}             & real: (initial, homogeneous neutral density) and (homogeneous neutral background density) \\ 
+    &  (default: 0.0D0~m$^{-3}$) (dynamic: set to -1 and provide {\tt dyn\_nb.dat(ntime) }) \\ \hline
+    {\tt impurity\_Z}  & real: atomic number impurity ions (default: [6 0 0 0 0]) \\ \hline
+    {\tt impurity\_concentration}  & real: concentration of impurity ions (default: [1 1 1 1 1]0.0D+1) \\ 
+     & (dynamic: set to [-1 0 -1 0 0] and provide {\tt dyn\_imp\_con.dat(5,ntime) }) \\ \hline
+    {\tt recycling}              & real: fraction of ion flux on target recycled as neutral (default: 1.0D0) \\ 
+     & (dynamic: set to -1 and provide {\tt dyn\_rec.dat(ntime) }) \\ \hline
+    {\tt redistributed\_fraction}& real: fraction of recycling neutral that is evenly distributed along the divertor leg (default: 0.0D0) \\
+     & (dynamic: set to -1 and provide {\tt dyn\_red\_frc.dat(ntime) }) \\ \hline
     {\tt neutral\_residence\_time}& real: time scale in which neutral are lost from the SOL (default: 1.0D20~s) \\ \hline
-    {\tt gas\_puff\_source}      & real: total particle source from gass puff along flux tube (default: 0.0D0~m$^{-2}$) \\ \hline
+    {\tt gas\_puff\_source}      & real: total particle source from gass puff along flux tube (default: 0.0D0~m$^{-2}$) \\ 
+     & (dynamic: set to -1 and provide {\tt dyn\_gas.dat(ntime) }) \\ \hline
     {\tt gas\_puff\_location}    & real: location of gass puff along flux tube (default: 0.0D0~m) \\ \hline
     {\tt gas\_puff\_width}       & real: Gaussian width of gass puff region along flux tube (default: 1.0D20~m) \\ \hline
     {\tt charge\_exchange\_model}& character string selecting the charge exchange model (default: {\tt AMJUEL}) \\ \hline
@@ -625,17 +652,18 @@ The output is written in the execution directory in {\tt div1doutput.txt}. First
     {\tt switch\_elm\_density}   & integer: turns off (0) or on (1) the ELM contribution to the particle flux (default: 0) \\ \hline
     {\tt switch\_elm\_series}    & integer: turns off (0) or on (1) the multi-ELM sequence (default: 0) \\ \hline
     {\tt gaussian\_elm}      & integer: chooses triangular (0) or gaussian (1) ELM (default: 0) \\ \hline
-    {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ \hline
+    {\tt radial\_loss\_factor} & real: set fraction of qparX which is lost (except for radial\_loss\_gaussian=-1) (default: 0) \\ 
+     & (dynamic: set to -1 and provide {\tt dyn\_rad\_los.dat(ntime) }) \\ \hline
     {\tt radial\_loss\_gaussian} & integer: chooses constant (0), gaussian (1) or locally dependent (-1) loss profile (default: 0) \\ \hline
     {\tt radial\_loss\_width}  & real: sets width of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 1d+20) \\ \hline
     {\tt radial\_loss\_location} & real: sets peak position of gaussian, only necessary if radial\_loss\_gaussian=1 (default: 0) \\ \hline
-    {\tt switch\_dyn\_nu} & integer: switch dynamic X-point density (default: 0)   \\ \hline
-    {\tt switch\_dyn\_gas} & integer: switch dynamic gas puff source  (default: 0) (requires: {\tt dyn\_nu.dat(ntime) }) \\ \hline
-    {\tt switch\_dyn\_rec} & integer: switch dynamic recycling coefficient (default: 0) (requires: {\tt dyn\_rec.dat(ntime) })   \\ \hline
-    {\tt switch\_dyn\_rad\_los} & integer:  switch dynamic radial los factor (default: 0) (requires: {\tt dyn\_rad\_los.dat(ntime) })  \\ \hline
-    {\tt switch\_car\_con\_prf} & integer: switch carbon concentration profile (default: 0) (requires: {\tt car\_con\_prf.dat(Nx) }) \\ \hline
-    {\tt switch\_dyn\_qpar} & integer: switch dynamic X-point heat flux (default: 0) (requires: {\tt dyn\_qpar.dat(ntime) })  \\ \hline
-    {\tt switch\_dyn\_red\_frc} & integer: switch dynamic redistribution fraction (default: 0)  (requires: {\tt dyn\_red\_frc.dat(ntime) })  \\ \hline
+   % {\tt switch\_dyn\_nu} & integer: switch dynamic X-point density (default: 0)   \\ \hline
+   % {\tt switch\_dyn\_gas} & integer: switch dynamic gas puff source  (default: 0) (requires: {\tt dyn\_nu.dat(ntime) }) \\ \hline
+   % {\tt switch\_dyn\_rec} & integer: switch dynamic recycling coefficient (default: 0) (requires: {\tt dyn\_rec.dat(ntime) })   \\ \hline
+   % {\tt switch\_dyn\_rad\_los} & integer:  switch dynamic radial los factor (default: 0) (requires: {\tt dyn\_rad\_los.dat(ntime) })  \\ \hline
+   % {\tt switch\_car\_con\_prf} & integer: switch carbon concentration profile (default: 0) (requires: {\tt car\_con\_prf.dat(Nx) }) \\ \hline
+   % {\tt switch\_dyn\_qpar} & integer: switch dynamic X-point heat flux (default: 0) (requires: {\tt dyn\_qpar.dat(ntime) })  \\ \hline
+   % {\tt switch\_dyn\_red\_frc} & integer: switch dynamic redistribution fraction (default: 0)  (requires: {\tt dyn\_red\_frc.dat(ntime) })  \\ \hline
     \hline
   \end{tabular}
 \end{center}
@@ -691,7 +719,7 @@ and
 %    f_{\rm mom} \equiv \int_{x=L}^0 S_{\rm mom} {\rm d}x \Big/ p_{\rm tot,X},
 %\end{equation}
 \begin{equation}\label{momentum_loss_fraction}
-f_{\rm mom} \equiv 1-\frac{p_{\rm tot,L}}{p_{\rm tot,X}}=\int_{x=L}^{0}\left(-n m v_{\|}^{2} \frac{\partial B}{\partial x}+S_{\rm mom}\right) d x / p_{\rm tot,X}
+f_{\rm mom} \equiv 1-\frac{p_{\rm tot,L}}{p_{\rm tot,X}}=\int_{x=L}^{0}\left(\frac{1}{B}n m v_{\|}^{2} \frac{\partial B}{\partial x}+S_{\rm mom}\right) d x / p_{\rm tot,X}
 \end{equation}
 
 respectively \cite{stangeby2018}. Also the equations for the extended 2 Point Model (\ref{extended_2PM_energy_balance}-\ref{extended_2PM_target_density}) are easily solved by iteration when the convective fraction, and the power and momentum loss fractions are known.
