@@ -49,7 +49,7 @@ module physics_parameters
    integer    :: radial_loss_gaussian   = 0           ! set to 0 (default) for a constant loss factor, to 1 for a gaussian distribution or to -1 for a locally dependent version 
    real( wp ) :: radial_loss_width      = 1.0d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
-
+  
 
 !  time dependent settings
  !  integer    :: switch_dyn_nu          = 0           ! switch now depends on initial_n value .leq. -1 !  time dependent plasma X point density requested from dyn_nu.dat (perturbation on initial_n)
@@ -265,5 +265,71 @@ contains
       
       return
    end subroutine read_physics_parameters
+
+   subroutine extern_read_physics_parameters(floatinphys, intinphys, strinphys, loginphys)
+        implicit none
+        real(wp), INTENT(IN) :: floatinphys(32)
+        integer, INTENT(IN) :: intinphys(14)
+        logical, INTENT(IN) :: loginphys(1)
+
+          ! floats
+          gamma                  = floatinphys(1)
+          L                      = floatinphys(2)
+          sintheta               = floatinphys(3)
+          mass                   = floatinphys(4)
+          Gamma_X                = floatinphys(5)  
+          q_parX                 = floatinphys(6)    
+          flux_expansion         = floatinphys(7)
+          initial_n              = floatinphys(8) 
+          initial_v              = floatinphys(9)
+          initial_T              = floatinphys(10)  
+          initial_a              = floatinphys(11)  
+          density_ramp_rate      = floatinphys(12)   
+          energy_loss_ion        = floatinphys(13)  
+          recycling              = floatinphys(14)  
+          redistributed_fraction = floatinphys(15)    
+          neutral_residence_time = floatinphys(16) 
+          minimum_density        = floatinphys(17) 
+          minimum_temperature    = floatinphys(18) 
+          impurity_concentration(1) = floatinphys(19)
+          impurity_concentration(2) = floatinphys(20)
+          impurity_concentration(3) = floatinphys(21)
+          impurity_concentration(4) = floatinphys(22)
+          impurity_concentration(5) = floatinphys(23)
+
+          gas_puff_source        = floatinphys(25)    
+          gas_puff_location      = floatinphys(26)     
+          gas_puff_width         = floatinphys(27)       
+          elm_expelled_heat      = floatinphys(28)   
+          elm_expelled_particles = floatinphys(29) 
+          radial_loss_factor     = floatinphys(30)        
+          radial_loss_width      = floatinphys(31)  
+          radial_loss_location   = floatinphys(32) 
+
+
+          ! integers
+          num_impurities         =intinphys(1) ! 5 ! number of impurities
+          impurity_Z(1)  = intinphys(2) 
+          impurity_Z(2)  = intinphys(3) 
+          impurity_Z(3)  = intinphys(4) 
+          impurity_Z(4)  = intinphys(5) 
+          impurity_Z(5)  = intinphys(6) 
+          elm_start_time         =  intinphys(7)   ! time step (outer step) at which the ELM starts
+          elm_ramp_time          =  intinphys(8)   ! time (outer step) over which the ELM ramps up
+          elm_time_between       =  intinphys(9)   ! time (outer step) between two ELMs
+          switch_elm_heat_flux   =  intinphys(10)            
+          switch_elm_density     =  intinphys(11)            
+          switch_elm_series      =  intinphys(12)            
+          gaussian_elm           =  intinphys(13)      
+          radial_loss_gaussian   =  intinphys(14)
+  
+          ! logical
+          case_AMJUEL            = loginphys(1)    ! use collision rates from AMJUEL data base
+
+         ! character (the convention for passing strings from C to fortran is not clear
+         !  character*10 :: charge_exchange_model= "AMJUEL"    
+         !  character*10 :: ionization_model     = "AMJUEL"    
+         !  character*10 :: recombination_model  = "AMJUEL"    
+   end subroutine extern_read_physics_parameters        
    
 end module physics_parameters

@@ -12,31 +12,34 @@ program div1d
    use physics_routines
    use dvode_f90_m
    use experiments
+   use div1d_solve
 
    implicit none
-   integer, parameter :: wp = KIND(1.0D0)
-   real(wp) :: start_time, end_time
-   integer :: input_error, input_error_numerics, input_error_physics
-   integer :: restart_error, time_step_error
-   integer :: istep, ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
+   !integer, parameter :: wp = KIND(1.0D0)
+   !real(wp) :: start_time, end_time
+   !integer :: input_error, input_error_numerics, input_error_physics
+   !integer :: restart_error, time_step_error
+   integer :: istep 
+   !ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
    ! external right_hand_side
    
    ! the following is needed for dvode_f90
-   integer :: itask, istate
-   integer :: attempt
-   integer,  allocatable :: iwork(:)
-   integer,  allocatable :: bounded_components(:)
-   real(wp), allocatable :: lower_bounds(:), upper_bounds(:)
-   real(wp), allocatable :: abstol_vector(:), rwork(:)
-   type (VODE_OPTS) :: options
+   !integer :: itask, istate
+   !integer :: attempt
+   !integer,  allocatable :: iwork(:)
+   !integer,  allocatable :: bounded_components(:)
+   !real(wp), allocatable :: lower_bounds(:), upper_bounds(:)
+   !real(wp), allocatable :: abstol_vector(:), rwork(:)
+   !type (VODE_OPTS) :: options
 
-   ! the following is used to format for Matlab integration
-   real(wp), allocatable :: float_div1d(20) = 0
-   integer,  allocatable :: int_div1d(20) = 0
-   logical               :: log_phys = .true.
-   integer, :: call_from_matlab = 0
 
-   ! time the program execution time exluding external system calls (ifortran, gfortran) incl external system calls (solaris f90)
+   ! the following are dummies to comply with Matlab integration
+   !real(wp), allocatable :: float_div1d(20) = 0
+   !integer,  allocatable :: int_div1d(20) = 0
+   !logical               :: log_phys = .true.
+   !integer, :: call_from_matlab = 0
+
+   ! time the program exe time excl extern sys calls (ifortran, gfortran) incl extern sys calls (solaris f90)
    real(wp) :: T1,T2
    call cpu_time(T1)
 
@@ -44,27 +47,25 @@ program div1d
    call initialize_div1d(call_from_matlab, float_div1d, int_div1d, log_phys)
 
    start_time = 0.0
-
    ! only fortran writes a text file
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
-  
- 
+   
    istep = 1
    do ibigstep = 1, nbigsteps
         istate =1
      
    ! run nout time step_t in a function that can also be called by matlab
-   call run_div1d(y, ydot, &
-                density, velocity, temperature, neutral,&
+   call run_div1d(density, velocity, temperature, neutral,&
                 Gamma_n, Gamma_mom, pressure, q_parallel,&
-                Source_n, Source_v, Source_Q, source_neutral,&
-                x, xcb, delta_x, delta_xcb, B_field, B_field_cb,&
-                e_charge,, c, K_B, amu, me, pi,&
-                options, bounded_components, lower_bounds,&
-                upper_bounds, abstol_vector,&
-                float_div1d, int_div1d, log_phys)
+                Source_n, Source_v, Source_Q, source_neutral) 
+        !       y, ydot, & 
+        !        x, xcb, delta_x, delta_xcb, B_field, B_field_cb,&
+        !        e_charge,, c, K_B, amu, me, pi,&
+         !       options, bounded_components, lower_bounds,&
+         !       upper_bounds, abstol_vector,&
+         !       float_div1d, int_div1d, log_phys)
    ! FORTRAN Writes the solution   
    call write_solution( end_time )
    end do

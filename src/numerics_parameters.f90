@@ -23,6 +23,7 @@ module numerics_parameters
    real( wp )  :: density_norm            = 0.0d+0   ! normalization of densities    (when = 0 initial_n is used) only used in normalization of solution vector y
    real( wp )  :: temperature_norm        = 0.0d+0   ! normalization of temperatures (when = 0 1 eV is used) only used to normalize solution vector y
    real( wp )  :: velocity_norm           = 0.0d+0   ! normalization of velocities   (when = 0 sound speed at 1 eV is used) only used in to normalize solution vector y
+   real( wp )  :: neutral_norm            = 0.0d+0   ! normalization of neutral densities ( when renormalize = .false. equal to density_norm
    real( wp )  :: momentum_norm           = 0.0d+0   ! normalization of momentum (2nd part of y) = mass density_norm velocity_norm
    real( wp )  :: energy_norm             = 0.0d+0   ! normalization of energies (3rd part of y) = density_norm e_charge temperature_norm
    real( wp )  :: switch_density_source   = 1.0d+0   ! multiplier of plasma particle source term
@@ -45,6 +46,7 @@ module numerics_parameters
    logical     :: filter_sources = .false.  ! switch for spike filtering of source profiles when .true.
    logical     :: simple_sol = .false.  ! switch for starting from the simple SOL solution when .true.
    logical     :: restart = .false.  ! switch for starting a continuation run when .true.
+   logical     :: renormalize = .false. ! redefine normalization every nout runs (might speed up ramps through multiple regimes) 
 
 contains
 
@@ -63,6 +65,64 @@ contains
       write(*,*) 'numerics read error =', error
       return
    end subroutine read_numerics_parameters
+
+   subroutine extern_read_numerics_paramaters(floatinnum, intinnum, loginnum)
+   implicit none
+   real(wp), INTENT(IN) :: floatinnum(24)
+   integer, INTENT(IN) :: intinnum(12)
+   logical, INTENT(IN) :: loginnum(4)
+   
+   ! integers
+   Nx      = intinnum(1)    ! number of grid points along the flux tube
+   ! ntime   = 1000     ! number of time steps is not part of matlab routine
+   nout    = intinnum(3)     
+   method  = intinnum(4)      
+   istate_mod = intinnum(5)   ! number of time steps before restart of dvode with istate = 1
+   max_step   = intinnum(6)   ! maximum number of internal steps in dvode
+   max_attempts = intinnum(7) ! maximum number of restarts of dvode after failed integration
+   nzswag  = intinnum(8)      ! estimated number of nonzero elements in Jacobian (dvode)
+   evolve_density  = intinnum(9)  
+   evolve_momentum = intinnum(10)   
+   evolve_energy   = intinnum(11)   
+   evolve_neutral  = intinnum(12)  
+   !NIAUSER = intinnum(13)          ! dimension of array IAUSER (must be set to Number of odes + 1)
+   !NJAUSER = intinnum(14)          ! dimension of array JAUSER (must be equal to Number of nonzeros in Jacobian)
+
+   ! real(wp) 
+   density_norm      = floatinnum(1)   ! normalization of densities    (when = 0 initial_n is used) only used in normalization of solution vector y
+   temperature_norm  = floatinnum(2)   ! normalization of temperatures (when = 0 1 eV is used) only used to normalize solution vector y
+   velocity_norm     = floatinnum(3)   ! normalization of velocities   (when = 0 sound speed at 1 eV is used) only used in to normalize solution vector y
+   neutral_norm      = floatinnum(4)   ! normalization of neutral densities ( when renormalize = .false. equal to density_norm
+   momentum_norm     = floatinnum(5)   ! normalization of momentum (2nd part of y) = mass density_norm velocity_norm
+   energy_norm       = floatinnum(6)   ! normalization of energies (3rd part of y) = density_norm e_charge temperature_norm
+   switch_density_source   = floatinnum(8)  ! multiplier of plasma particle source term
+   switch_momentum_source  = floatinnum(9)    ! multiplier of momentum source term
+   switch_energy_source    = floatinnum(10)   ! multiplier of energy particle source term
+   switch_neutral_source   = floatinnum(11)   ! multiplier of neutral particle source term
+   switch_charge_exchange  = floatinnum(12)   ! multiplier of charge exchange rate
+   switch_recombination    = floatinnum(13)  ! multiplier of recombination rate
+   switch_recombenergy     = floatinnum(14) ! multiplier of effective electron colling rate from recombination
+   switch_ionization       = floatinnum(15)    ! multiplier of ionization rate
+   switch_excitation       = floatinnum(16)   ! multiplier of excitation rate
+   switch_convective_heat   = floatinnum(17)   ! multiplier of convective heat transport
+   switch_impurity_radiation = floatinnum(18)   ! multiplier of impurity radiation rate
+   dxmin   =    floatinnum(19)  ! grid cell width at the target relative to average cell width: = 1.0 (or larger) for a uniform grid
+   delta_t =    floatinnum(20)  ! time step size [s]
+   abstol  =    floatinnum(21)  ! required absolute error in integration (used to multiply with initial condition to set abserr_vector)
+   reltol  =    floatinnum(22)  ! required relative error in integration
+   viscosity =  floatinnum(23)  ! numerical viscosity to damp oscillations in velocity
+   central_differencing = floatinnum(24)  !fraction of central differencing contribution in pressure gradient term
+
+   ! logical
+   filter_sources = loginnum(1)  ! switch for spike filtering of source profiles when .true.
+   simple_sol     = loginnum(2)  ! switch for starting from the simple SOL solution when .true.
+   restart        = loginnum(3)  ! switch for starting a continuation run when .true.
+   renormalize    = loginnum(4)  ! redefine normalization every nout runs (might speed up ramps through multiple regimes) 
+
+   return
+   end subroutine extern_read_numerics_parameters
+
+
    
    subroutine set_jacobian_sparsity_structure
       implicit none
