@@ -2,7 +2,7 @@ module reaction_rates
 ! module containing routines implementing the reaction rates
 
    use numerics_parameters, only : Nx, switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_recombenergy
-   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, dyn_imp_con, impurity_concentration, impurity_Z, num_impurities, &
+   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL, dyn_imp_con, impurity_Z, num_impurities, &
                                    minimum_temperature, minimum_density, mass
    use constants,           only : e_charge
    use radiative_cooling_functions_post1977

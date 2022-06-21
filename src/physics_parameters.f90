@@ -114,22 +114,17 @@ contains
       ! -------- impurity concentration -------!
       do z = 1,num_impurities
       if ( impurity_concentration(z) .eq. -1 ) then
-!      if (switch_dyn_imp_con .eq. 1) then
         open(1, file = 'dyn_imp_con.dat', status = 'old')
         do i = 1,ntime
-   !      do z = 1,num_impurities
-         read(1,*) dyn_imp_con(z,i) ! (row, column)
+          read(1,*) dyn_imp_con(z,i) ! (row, column)
          dyn_imp_con(z,i) = min(max(dyn_imp_con(z,i),0.0d+0),1.0d+0)
        !  write(*,*) 'read dyn_imp_con.dat =0'
          end do
-    !    end do
-        close(1)
+          close(1)
        else
         do i = 1,ntime
-      !  do z = 1,num_impurities
-        dyn_imp_con(z,i) = min(max(impurity_concentration(z),0.0d+0),1.0d+0)
-      !  end do
-        end do
+            dyn_imp_con(z,i) = min(max(impurity_concentration(z),0.0d+0),1.0d+0)
+            end do
        ! write(*,*) 'dimpdt=0'
       endif
       enddo
