@@ -278,7 +278,7 @@ subroutine write_solution( time )
    write( 10, * ) 'time        = ', time
    write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)
    write( 10, * ) 'dyn_nu      = ', dyn_nu(itime)
-   write( 10, * ) 'dyn_nb      = ', dyn_nu(itime)
+   write( 10, * ) 'dyn_nb      = ', dyn_nb(itime)
    write( 10, * ) 'dyn_rec     = ', dyn_rec(itime)
    write( 10, * ) 'dyn_rad_los = ', dyn_rad_los(itime)
    write( 10, * ) 'dyn_qparX   = ', dyn_qparX(itime)
