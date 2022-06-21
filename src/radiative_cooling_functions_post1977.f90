@@ -1,7 +1,7 @@
 module radiative_cooling_functions_post1977
         ! module containing radiative cooling rates for low density high temperature plasmas from post et al 1977
         
-        use physics_parameters, only : impurity_concentration 
+       ! use physics_parameters, only : impurity_concentration 
         use constants,          only : e_charge
 
 
