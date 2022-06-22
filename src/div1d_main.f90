@@ -15,11 +15,13 @@ program div1d
    use div1d_solve
 
    implicit none
-   !integer, parameter :: wp = KIND(1.0D0)
-   !real(wp) :: start_time, end_time
-   !integer :: input_error, input_error_numerics, input_error_physics
-   !integer :: restart_error, time_step_error
-   integer :: istep 
+   integer, parameter :: wp = KIND(1.0D0)
+   real(wp) :: start_time, end_time
+   integer :: input_error, input_error_numerics, input_error_physics
+   integer :: restart_error, time_step_error
+   integer :: istep, istate 
+   integer :: ibigstep
+   integer :: nbigstep 
    !ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
    ! external right_hand_side
    
@@ -34,17 +36,33 @@ program div1d
 
 
    ! the following are dummies to comply with Matlab integration
-   !real(wp), allocatable :: float_div1d(20) = 0
-   !integer,  allocatable :: int_div1d(20) = 0
-   !logical               :: log_phys = .true.
-   !integer, :: call_from_matlab = 0
-
+    ! define parameters for external call
+      real(wp) :: floatinphys(27)
+      real(wp) :: floatinnum(24)
+      integer   :: intinphys(6) 
+      integer :: intinnum(12) 
+      logical :: loginnum(4)
+     
+ integer :: call_from_extern
    ! time the program exe time excl extern sys calls (ifortran, gfortran) incl extern sys calls (solaris f90)
    real(wp) :: T1,T2
+
+! executable phase
+
    call cpu_time(T1)
+  
+   call_from_extern = 0
 
    ! Initialization from FORTRAN will look for .txt and .dat files
-   call initialize_div1d(call_from_matlab, float_div1d, int_div1d, log_phys)
+   call initialize_div1d(density, velocity, temperature, neutral, & ! plasma params (IN/OUT)
+                             Gamma_n, Gamma_mom, pressure, q_parallel, &        ! plasma params (OUT)
+                             Source_n, Source_v, Source_Q, source_neutral, &    ! plasma params (OUT)
+                             x, xcb, delta_x, delta_xcb, B_field, B_field_cb, & ! grid data     (IN/OUT)  
+                             e_charge, c, K_B, amu, me, pi,&                    ! constants     (OUT)
+                             floatinnum, intinnum, loginnum,&                   ! numerics params(INPUTS)
+                             floatinphys, intinphys, &    ! physics params (INPUTS)
+                             call_from_extern)
+
 
    start_time = 0.0
    ! only fortran writes a text file
@@ -52,8 +70,10 @@ program div1d
    call write_header
    call write_solution( start_time )
    
+   
+   nbigstep = nout
    istep = 1
-   do ibigstep = 1, nbigsteps
+   do ibigstep = 1, nbigstep
         istate =1
      
    ! run nout time step_t in a function that can also be called by matlab

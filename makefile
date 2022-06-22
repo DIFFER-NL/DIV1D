@@ -30,6 +30,7 @@ OBJECTS = obj/constants.o \
 	  obj/experiments.o\
 	  obj/radiative_cooling_functions_post1977.o
 
+	  
 
 obj/div1d.exe : src/div1d_main.f90 $(OBJECTS)
 	$(FC) src/div1d_main.f90 $(OBJECTS)  $(FOPT) -o obj/div1d.exe
@@ -38,6 +39,23 @@ obj/div1d.exe : src/div1d_main.f90 $(OBJECTS)
 obj/div1d_test.exe : src/div1d_test.f90 $(OBJECTS)
 	$(FC) src/div1d_test.f90 $(OBJECTS)  $(FOPT) -o obj/div1d_test.exe
 
+obj/div1d_solve.o : src/div1d_solve.f90\
+		  obj/constants.o\
+		  obj/physics_routines.o\
+		  obj/grid_data.o\
+		  obj/numerics_parameters.o\
+		  obj/physics_parameters.o\
+	          obj/plasma_data.o \
+        	  obj/reaction_rates.o \
+	          obj/interpolation.o \
+          	  obj/dvode_f90_m.o \
+	          obj/dlsode.o \
+        	  obj/opkda1.o \
+	          obj/opkda2.o \
+	          obj/rk4.o\
+		  obj/experiments.o\
+		  obj/radiative_cooling_functions_post1977.o      		    
+	$(FC) src/div1d_solve.f90 $(FOPT) -c -o obj/div1d_solve.o
 
 obj/constants.o : src/constants.f90
 	$(FC) src/constants.f90 $(FOPT) -c -o obj/constants.o

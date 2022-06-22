@@ -30,12 +30,12 @@ module div1d_solve
       integer :: max_step, itask, istate !dlsode and dvode
         
       ! define parameters for external call
-      real(wp), allocatable :: floatinphys(32)
-      real(wp), allocatable :: floatinnum(24)
-      integer, allocatable  :: intinphys(14) 
-      integer,  allocatable :: intinnum(12) 
-      logical, allocatable  :: loginnum(4)
-      logical, allocatable  :: loginphys(1) 
+      real(wp) floatinphys(27)
+      real(wp) floatinnum(24)
+      integer  intinphys(6) 
+      integer  intinnum(12) 
+      logical  loginnum(4)
+      !logical, allocatable  :: loginphys(1) 
       integer               :: call_from_extern = 0 ! default value
 
   contains
@@ -46,12 +46,19 @@ module div1d_solve
                              x, xcb, delta_x, delta_xcb, B_field, B_field_cb, & ! grid data     (IN/OUT)  
                              e_charge, c, K_B, amu, me, pi,&                    ! constants     (OUT)
                              floatinnum, intinnum, loginnum,&                   ! numerics params(INPUTS)
-                             floatinphys, intinphys, strinphys, loginphys, &    ! physics params (INPUTS)
+                             floatinphys, intinphys, &    ! physics params (INPUTS)
                              call_from_extern)                                  ! used as library or on its own
                   !bind(c,name="initialize_div1d_")
             ! Returns initial-plasma values, grid data, constants, and solver options
             implicit none
-            integer, INTENT(IN) :: call_from_matlab
+            real(wp), intent(in) :: floatinnum(24), floatinphys(27)
+            integer, intent(in) :: intinnum(12), intinphys(6)
+            logical, intent(in) :: loginnum(4)
+            integer, intent(in) :: call_from_extern
+            real(wp), intent(in) :: e_charge, c, K_B, amu, me, pi ! not allowed to change constants
+            !real(wp), intent(out) :: grid data
+            !real(wp), intent(out) :: plasma data
+
             integer :: restart_error, 
             if call_from_extern .eq. 0
             ! read non-default inputs from .txt and .dat files
@@ -60,7 +67,7 @@ module div1d_solve
             else if call_from_extern .eq. 1
             ! read non-default settings from floatindiv1d and intindiv1d etc.
             call extern_read_numerics_parameters(floatinnum, intinnum, loginnum)
-            call extern_read_physics_parameters(floatinphys, intinphys, strinphys, loginphys)              
+            call extern_read_physics_parameters(floatinphys, intinphys)              
             end if
             
             !if grid undefined (to be added!!)
@@ -91,9 +98,13 @@ module div1d_solve
                              imp_con, neu, dneu, ngb, gas, recycle, rad_los, qpar_x, red_frc ) ! external BCs and input
                              !bind(c,name="run_div1d_")
         implicit none
-        real(wp), INTENT(OUT) :: end_time 
-        
-        call normalize ! redefines normalization factors ! in  MODULE numerics_parameters
+        real(wp), intent(in) :: imp_con, neu, dneu, ngb, gas, recycle, rad_los, qpar_x, red_frc
+        real(wp), intent(in) :: end_time 
+        real(wp) :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
+        real(wp), intent(out) :: Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx)
+        real(wp), intent(out) :: Source_n, Source_v, Source_Q, source_neutral
+
+        call normalize ! redefines normalization factors ! in  MODULE physics_routines
         istate = 1
         do istep = 1, nout
         end_time = start_time + delta_t

@@ -66,7 +66,7 @@ contains
       return
    end subroutine read_numerics_parameters
 
-   subroutine extern_read_numerics_paramaters(floatinnum, intinnum, loginnum)
+   subroutine extern_read_numerics_parameters(floatinnum, intinnum, loginnum)
    implicit none
    real(wp), INTENT(IN) :: floatinnum(24)
    integer, INTENT(IN) :: intinnum(12)
@@ -76,7 +76,7 @@ contains
    Nx      = intinnum(1)    ! number of grid points along the flux tube
    ! ntime   = 1000     ! number of time steps is not part of matlab routine
    nout    = intinnum(3)     
-   method  = intinnum(4)      
+   method  = intinnum(4)    !default 226 or 227, look into dvode to see the routine  
    istate_mod = intinnum(5)   ! number of time steps before restart of dvode with istate = 1
    max_step   = intinnum(6)   ! maximum number of internal steps in dvode
    max_attempts = intinnum(7) ! maximum number of restarts of dvode after failed integration

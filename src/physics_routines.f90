@@ -9,9 +9,8 @@ module physics_routines
                                   dyn_nu, dyn_nb, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX!, &
                                  ! switch_X_vel_con
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
-                                   switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm,
-                           momentum_norm, energy_norm, neutral_norm, renormalize, filter_sources,&
-			   	   delta_t
+                                   switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm,&
+                                   momentum_norm, energy_norm, neutral_norm, renormalize, filter_sources, delta_t
                            use experiments, only: simulate_elm, calculate_radial_losses
 
    implicit none
@@ -69,16 +68,17 @@ contains
         implicit none
         logical, INTENT(IN) :: renormalize 
         real(wp), INTENT(IN) :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
-        real(wp), INTENT(OUT) :: density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm
-        if( renormalize .eq. .true. )
-                density_norm     = median(density)
-                temperature_norm = median(temperature)
-                neutral_norm     = median(neutral)
-                velocity_norm    = median(velocity) 
+        real(wp), INTENT(OUT) :: density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, neutral_norm
+
+        if( renormalize .eq. .true. ) then
+                density_norm     = 1.0d+19 !median(density)
+                temperature_norm = 1.0d+0 !median(temperature)
+                neutral_norm     = 1.0d+18 !median(neutral)
+                velocity_norm    = sqrt( 2.0d+0 * temperature_norm / mass ) !median(velocity) 
         else    
                 ! neutral_norm (missing) 
                 density_norm     = 1.0d+19
-                temperature_norm = temperature_norm = 1.0d+0
+                temperature_norm = 1.0d+0
                 velocity_norm    = sqrt( 2.0d+0 * temperature_norm / mass )              
                 neutral_norm     = density_norm
         endif

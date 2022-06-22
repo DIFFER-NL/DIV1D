@@ -266,11 +266,11 @@ contains
       return
    end subroutine read_physics_parameters
 
-   subroutine extern_read_physics_parameters(floatinphys, intinphys, strinphys, loginphys)
+   subroutine extern_read_physics_parameters(floatinphys, intinphys) !, strinphys, loginphys)
         implicit none
-        real(wp), INTENT(IN) :: floatinphys(32)
-        integer, INTENT(IN) :: intinphys(14)
-        logical, INTENT(IN) :: loginphys(1)
+        real(wp), INTENT(IN) :: floatinphys(26)
+        integer, INTENT(IN) :: intinphys(6)
+        !logical, INTENT(IN) :: loginphys(1)
 
           ! floats
           gamma                  = floatinphys(1)
@@ -299,12 +299,13 @@ contains
 
           gas_puff_source        = floatinphys(25)    
           gas_puff_location      = floatinphys(26)     
-          gas_puff_width         = floatinphys(27)       
-          elm_expelled_heat      = floatinphys(28)   
-          elm_expelled_particles = floatinphys(29) 
-          radial_loss_factor     = floatinphys(30)        
-          radial_loss_width      = floatinphys(31)  
-          radial_loss_location   = floatinphys(32) 
+          gas_puff_width         = floatinphys(27) 
+        ! elms and radial losses are not part of the matlab routine      
+          !elm_expelled_heat      = floatinphys(28)   
+          !elm_expelled_particles = floatinphys(29) 
+          !radial_loss_factor     = floatinphys(30)        
+          !radial_loss_width      = floatinphys(31)  
+          !radial_loss_location   = floatinphys(32) 
 
 
           ! integers
@@ -314,19 +315,20 @@ contains
           impurity_Z(3)  = intinphys(4) 
           impurity_Z(4)  = intinphys(5) 
           impurity_Z(5)  = intinphys(6) 
-          elm_start_time         =  intinphys(7)   ! time step (outer step) at which the ELM starts
-          elm_ramp_time          =  intinphys(8)   ! time (outer step) over which the ELM ramps up
-          elm_time_between       =  intinphys(9)   ! time (outer step) between two ELMs
-          switch_elm_heat_flux   =  intinphys(10)            
-          switch_elm_density     =  intinphys(11)            
-          switch_elm_series      =  intinphys(12)            
-          gaussian_elm           =  intinphys(13)      
-          radial_loss_gaussian   =  intinphys(14)
+          ! elms and radial losses are not part of the matlab routine
+          !elm_start_time         =  intinphys(7)   ! time step (outer step) at which the ELM starts
+          !elm_ramp_time          =  intinphys(8)   ! time (outer step) over which the ELM ramps up
+          !elm_time_between       =  intinphys(9)   ! time (outer step) between two ELMs
+          !switch_elm_heat_flux   =  intinphys(10)            
+          !switch_elm_density     =  intinphys(11)            
+          !switch_elm_series      =  intinphys(12)            
+          !gaussian_elm           =  intinphys(13)      
+          !radial_loss_gaussian   =  intinphys(14)
   
           ! logical
-          case_AMJUEL            = loginphys(1)    ! use collision rates from AMJUEL data base
-
-         ! character (the convention for passing strings from C to fortran is not clear
+         ! case_AMJUEL            = loginphys(1)    ! use collision rates from AMJUEL data base
+        ! matlab always uses the default AMJUEL settings
+         ! character (the convention for passing strings from C to fortran is not clear) 
          !  character*10 :: charge_exchange_model= "AMJUEL"    
          !  character*10 :: ionization_model     = "AMJUEL"    
          !  character*10 :: recombination_model  = "AMJUEL"    
