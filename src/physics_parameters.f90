@@ -165,7 +165,7 @@ contains
        ! derivatives for ODE solver
       else
         do i = 1,ntime
-               dyn_nu(i) = initial_a
+               dyn_nb(i) = initial_a
         end do
       !  write(*,*) "dndt=0"  
       endif
