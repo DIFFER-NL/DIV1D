@@ -28,7 +28,8 @@ OBJECTS = obj/constants.o \
           obj/opkda2.o \
           obj/rk4.o\
 	  obj/experiments.o\
-	  obj/radiative_cooling_functions_post1977.o
+	  obj/radiative_cooling_functions_post1977.o\
+	  obj/div1d_solve.o
 
 	  
 

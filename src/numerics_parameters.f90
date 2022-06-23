@@ -4,9 +4,9 @@ module numerics_parameters
    implicit none
 
    integer, parameter, private :: wp = KIND(1.0D0)
-   integer     :: Nx      = 1000     ! number of grid points along the flux tube
-   integer     :: ntime   = 1000     ! number of time steps
-   integer     :: nout    = 100      ! output is written to file every nout time steps
+   integer     :: Nx        = 1000     ! number of grid points along the flux tube
+   integer     :: nout_steps = 10      ! number of nout  steps
+   integer     :: nout      = 100      ! output is written to file every nout time steps
    integer     :: method  = 0        ! selection of integrator ( 0 = rk4,  >0 = dvode with method_flag = method)
    integer     :: istate_mod = 0     ! number of time steps before restart of dvode with istate = 1
    integer     :: max_step= 100000   ! maximum number of internal steps in dvode
@@ -48,18 +48,23 @@ module numerics_parameters
    logical     :: restart = .false.  ! switch for starting a continuation run when .true.
    logical     :: renormalize = .false. ! redefine normalization every nout runs (might speed up ramps through multiple regimes) 
 
+   integer :: ntime = 10 * 100
+
 contains
 
    subroutine read_numerics_parameters(error)
       implicit none
       integer :: error
-      namelist /div1d_numerics/ Nx, dxmin, ntime, nout, delta_t, abstol, reltol, method, evolve_density, evolve_momentum, evolve_energy, evolve_neutral, &
+      integer :: ntime
+      namelist /div1d_numerics/ Nx, dxmin, nout_steps, nout, delta_t, abstol, reltol, method, evolve_density, evolve_momentum, evolve_energy, evolve_neutral, &
       &                         density_norm, temperature_norm, velocity_norm, &
       &                         switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
       &                         switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_impurity_radiation, &
       &                         switch_convective_heat, viscosity, central_differencing, restart, simple_sol, filter_sources, &
       &                         max_step, max_attempts, nzswag, istate_mod
       error = 0
+
+      ntime = nout*nout_steps
       if( istate_mod .eq. 0 ) istate_mod = ntime
       read(*, div1d_numerics, IOSTAT = error)
       write(*,*) 'numerics read error =', error

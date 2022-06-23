@@ -5,13 +5,18 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
-                                  gas_puff_source, gas_puff_location, gas_puff_width, initial_a, &
-                                  dyn_nu, dyn_nb, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX!, &
+                                  gas_puff_source, gas_puff_location, gas_puff_width, initial_a, gas_puff, &
+                                  dyn_rad_los, E_imp_con, E_neu, E_dneu, E_ngb, E_qpar_x, E_gas, E_rec, E_qpar_x, E_red_frc
+! radial losses are not supported in matlab
+                                  !  dyn_nu, dyn_nb, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX!, &
                                  ! switch_X_vel_con
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm,&
                                    momentum_norm, energy_norm, neutral_norm, renormalize, filter_sources, delta_t
-                           use experiments, only: simulate_elm, calculate_radial_losses
+   use experiments, only: simulate_elm, calculate_radial_losses
+
+   !use div1d_solve, only: E_imp_con, E_neu, E_dneu, E_ngb, E_qpar, E_gas, E_rec, E_qpar_x, E_red_frc
+
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -147,7 +152,7 @@ contains
       real(wp)              :: csound_target, average_velocity
       integer               :: i
       ! the particle flux = density velocity / B 
-      itime = time / delta_t
+      itime = 10 !time / delta_t
       ! the particle flux = density velocity
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
          call advection(Nx, density/B_field, velocity, temperature, Gamma_n)
@@ -184,7 +189,7 @@ contains
          ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
         ! neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
         ! neutral_flux(Nx) = - Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - redistributed_fraction)
-         neutral_flux(Nx) = -B_field_cb(Nx)*Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
+         neutral_flux(Nx) = -B_field_cb(Nx)*Gamma_n(Nx) * E_rec * (1.0d-0 - E_red_frc)
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
       return
@@ -223,7 +228,7 @@ contains
       real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_ree(Nx), rate_imp(Nx)
       real(wp) :: radial_sink(Nx)
       integer  :: ix, iix
-      itime     = time / delta_t  
+      itime     = 10 ! time / delta_t  
       Source_n = 0.0d+0
       Source_v = 0.0d+0
       Source_Q = 0.0d+0
@@ -237,7 +242,7 @@ contains
          rate_imp(ix) = density(ix) * density(ix) * impurity_radiation(temperature(ix),itime)
       enddo
       ! the particle sources
-      neutral_source = rate_rec - rate_ion + gas_puff * dyn_gas(itime)
+      neutral_source = rate_rec - rate_ion + gas_puff * E_gas
       Source_n = rate_ion - rate_rec
       ! the momentum sources
       Source_v = - mass * velocity * ( rate_cx + rate_rec )
@@ -297,7 +302,7 @@ contains
       ! input variables for the elm simulation
       real(wp)              :: elm_heat_load, elm_density_change
       Nx        = neq/4
-      itime     = time / delta_t
+      itime     = 10 ! time / delta_t
       ! write(*,*) 'RHS called at itime =', itime
       ! write(*,*) 'RHS called at t =', time
       ! write(*,*) 'y =', y
@@ -333,7 +338,7 @@ contains
             ydot(ix) = ydot(ix) - B_field(ix) * (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)   ! ew 01-03-2021:
          enddo
          ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
-         ydot(1) = density_ramp_rate + elm_density_change + dyn_dnu(itime) ! [1/ (m^3 s)]
+         ydot(1) = density_ramp_rate + elm_density_change + E_dneu ! [1/ (m^3 s)]
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx) ! ---------------------------------------------------------------------
 
       ! --------------------------------------------- ydot for the momentum equation ------------------------------------------
@@ -371,7 +376,7 @@ contains
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))*energy_norm/1.5d+0/delta_x(1:Nx-1)
          ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load
          !ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-(q_parX+elm_heat_load))/delta_xcb(1)
-         ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-(dyn_qparX(itime)+elm_heat_load))/delta_xcb(1)
+         ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-(E_qpar_x+elm_heat_load))/delta_xcb(1)
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx) ! -------------------------------------------------------------------------
 
       ! ----------------------------------------------ydot for the neutral density equation --------------------------------------
@@ -389,8 +394,8 @@ contains
          ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! add neutral sources and losses from redistribution and finite residence time
          !ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
-         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + B_field_cb(Nx) * Gamma_n(Nx) * dyn_rec(itime) * dyn_red_frc(itime) / L &
-                                                                                       - (neutral-initial_a) / neutral_residence_time
+         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + B_field_cb(Nx) * Gamma_n(Nx) * E_rec * E_red_frc / L &
+                                                            - (neutral-E_ngb) / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx) !-------------------------------------------------------------------------
 
       ! apply evolution switches

@@ -60,6 +60,11 @@ module physics_parameters
  !  integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition from dyn_qpar.dat 
  !  integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction from dyn_red_frc.dat
 
+  ! parameters that are changed in time externally and need to be known by all modules
+      real(wp), dimension(5,1) :: E_imp_con
+      real(wp) :: E_neu, E_dneu, E_ngb, E_gas, E_rec, E_qpar_x, E_red_frc ! rad_los
+
+
 
   real( wp ), allocatable :: dyn_nu(:)  ! density of boundary condition 		
   real( wp ), allocatable :: dyn_dnu(:) ! derivative for ODE solver
@@ -108,7 +113,7 @@ contains
       allocate( dyn_qparX(ntime) )
       allocate( dyn_red_frc(ntime) )
 
-
+     !   ntime = nout*nout_steps
 
       ! %%%%%%%%%%  read time dependent parameters %%%%%%%%%% !
       ! -------- impurity concentration -------!
@@ -170,7 +175,7 @@ contains
        ! derivatives for ODE solver
       else
         do i = 1,ntime
-               dyn_nu(i) = initial_a
+               dyn_nb(i) = initial_a
         end do
       !  write(*,*) "dndt=0"  
       endif
