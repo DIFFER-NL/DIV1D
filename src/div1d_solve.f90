@@ -124,9 +124,9 @@ module div1d_solve
         end subroutine initialize_div1d
 
 
-        subroutine run_div1d(density, velocity, temperature, neutral, &         ! plasma params  ! State input & output
-                             Gamma_n, Gamma_mom, q_parallel, neutral_flux, &        ! plasma params  ! Output
-                             Source_n, Source_v, Source_Q, source_neutral, &    ! plasma params  ! Output
+        subroutine run_div1d(density, velocity, temperature, neutral, &     ! plasma params  ! input & output
+                             Gamma_n, Gamma_mom, q_parallel, neutral_flux, &! plasma params  ! Output
+                             Source_n, Source_v, Source_Q, source_neutral, &! plasma params  ! Output
                              start_time, end_time, nout, delta_t, &
                              E_imp_con, E_neu, E_dneu, E_ngb, E_gas, E_rec,  E_qpar_x, E_red_frc ) ! xternal BCs and input
                              !bind(c,name="run_div1d_")
@@ -139,22 +139,17 @@ module div1d_solve
         real(wp) :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) ! both input and output
         real(wp), intent(out) :: Gamma_n(Nx), Gamma_mom(Nx), q_parallel(Nx), neutral_flux(Nx)
         real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx)
-        integer :: itime = 10
+        !integer :: itime = 10
         integer :: i 
         write(*,*) 'imp_con', E_imp_con
         write(*,*) 'neu ', E_neu
         write(*,*) 'dneu ',E_dneu 
         write(*,*) 'ngb ', E_ngb
         write(*,*) 'gas ',E_gas 
-   write(*, * ) 'dyn_gas     = ', dyn_gas(itime)
-   write(*, * ) 'dyn_nu      = ', dyn_nu(itime)
-   write(*, * ) 'dyn_nb      = ', dyn_nb(itime)
-   write(* , * ) 'dyn_rec     = ', dyn_rec(itime)
-   write(* , * ) 'dyn_rad_los = ', dyn_rad_los(itime)
-   write(* , * ) 'dyn_qparX   = ', dyn_qparX(itime)
-   write(* , * ) 'dyn_red_frc = ', dyn_red_frc(itime)
-   write(* , * ) 'dyn_imp_con = ', ( dyn_imp_con(i,itime), i = 1,num_impurities )
-       
+        write(*,*) 'qpar', E_qpar_x
+        write(*,*) 'red frc', E_red_frc
+
+         
         call normalize(density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, neutral_norm, &
                         density, velocity, temperature, neutral, renormalize )
                 !redefines normalization factors ! in  MODULE physics_routines
@@ -180,10 +175,6 @@ module div1d_solve
            endif     
         endif
         call y2nvt( Nx, y, density, velocity, temperature, neutral )
-      !  call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n,&
-      !                           Gamma_mom, q_parallel, neutral_flux )
-      !  call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel,&
-      !                           Source_n, Source_v, Source_Q, source_neutral )
         start_time = end_time
         enddo
         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n,&

@@ -22,7 +22,7 @@ program div1d
    !integer :: istep, istate 
    integer :: istep_
    integer :: ibigstep
-   integer :: itime = 10
+   integer :: itime ! = 10
    !integer :: nbigstep 
    !ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
    ! external right_hand_side
@@ -76,7 +76,7 @@ program div1d
    !nbigstep = 1000
    
    write(*,*) 'starting simulation'   
-   istep_ = 1
+   itime = 1
    do ibigstep = 1, nout_steps
         istate =1  
    write(*,*) 'ibigstep=', ibigstep
@@ -85,10 +85,10 @@ program div1d
                 Gamma_n, Gamma_mom, pressure, q_parallel,&
                 Source_n, Source_v, Source_Q, source_neutral, &
                 start_time, end_time, nout, delta_t, &
-                dyn_imp_con((/1,2,3,4,5/),istep_), dyn_nu(istep_), dyn_dnu(istep_), dyn_nb(istep_), dyn_gas(istep_),&
-                dyn_rec(istep_), dyn_qparX(istep_), dyn_red_frc(istep_) )
+                dyn_imp_con((/1,2,3,4,5/),itime), dyn_nu(itime), dyn_dnu(itime), dyn_nb(itime), dyn_gas(itime),&
+                dyn_rec(itime), dyn_qparX(itime), dyn_red_frc(itime) )
               !  imp_con, neu, dneu, ngb, gas, recycle, rad_los, qpar_x, red_frc) 
-    istep_ = istep_ + 1
+    itime = itime + 1
    ! FORTRAN Writes the solution   
    call write_solution( end_time )
    end do
@@ -114,10 +114,10 @@ subroutine write_header
    integer :: i
    integer, parameter :: wp = KIND(1.0D0)
    ! NOTE that the tag is HARDCODED for backward compatibility in reading the outputs with Matlab! 
-   write( 10, * ) 'git tag: v3.0.2'
+   write( 10, * ) 'git tag: v3.0.3' ! v3.0.3 is a dummy version will update to v3.0.4 when finished 22-06-2022
    write( 10, * ) 'numerics parameters:'
    write( 10, * ) '   Nx         = ', Nx
-   write( 10, * ) '   ntime      = ', ntime
+   write( 10, * ) '   nout_steps = ', nout_steps  ! changed with respect to previous version
    write( 10, * ) '   nout       = ', nout
    write( 10, * ) '   dxmin      = ', dxmin
    write( 10, * ) '   delta_t    = ', delta_t  
@@ -160,17 +160,9 @@ subroutine write_header
    write( 10, * ) '   radial_loss_gaussian    = ', radial_loss_gaussian
    write( 10, * ) '   radial_loss_width       = ', radial_loss_width
    write( 10, * ) '   radial_loss_location    = ', radial_loss_location
-!   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
-!   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
-!   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
-!   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
-!   write( 10, * ) '   switch_dyn_imp_con      = ', switch_dyn_imp_con
-!   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
-!   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
 
    write( 10, '(A195)' ) ' X [m]   gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
    write( 10, '(13(1PE15.6))' ) ( x(i), gas_puff(i), B_field(i), i=1,Nx )
-  !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
    return
 end subroutine write_header
 
@@ -186,7 +178,7 @@ subroutine write_solution( time )
    integer :: i
    real(wp), intent(in) :: time
    integer :: itime 
-   itime = 10 ! time / delta_t  
+   !itime = 10 ! time / delta_t  
 
    write( 10, * ) 'time        = ', time
    write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)
@@ -198,9 +190,9 @@ subroutine write_solution( time )
    write( 10, * ) 'dyn_red_frc = ', dyn_red_frc(itime)
    write( 10, * ) 'dyn_imp_con = ', ( dyn_imp_con(i,itime), i = 1,num_impurities )
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
-   write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &                 !!!! the neutral flux should not be multiplied with the B_field !!!!    
-   &                                   Gamma_n(i)*B_field(i),Gamma_mom(i)*B_field(i),q_parallel(i)*B_field(i),neutral_flux(i), & ! multiplied by B_field because the code uses normalized values
-   &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
+   write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), & !!! the neutral flux should not be multiplied with the B_field !!!!    
+   &                     q_parallel(i)*B_field(i),Gamma_mom(i)*B_field(i),q_parallel(i)*B_field(i), neutral_flux(i), & !multiplied by B_field because the code uses normalized values
+   &                      Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return
 end subroutine write_solution
