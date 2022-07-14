@@ -38,7 +38,7 @@ contains
    !    y( 3*Nx+1, ..., 4*Nx )     = neutral density( 1, ..., Nx )
       implicit none
       ! first allocate all arrays
-      allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
+      allocate( y(4*Nx), ydot(4*Nx) ) !, density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
       allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
       temperature = initial_T
       density     = dyn_nu(1) ! initial_n
@@ -51,7 +51,7 @@ contains
 !         density  = Gamma_X / velocity
 !      endif
       ! transform (density, velocity, temperature) to (density, momentum, pressure) in solution vector y
-      call nvt2y( Nx, density, velocity, temperature, neutral, y )
+    !  call nvt2y( Nx, density, velocity, temperature, neutral, y )
       return
    end subroutine initial_values
 
@@ -60,7 +60,7 @@ contains
       implicit none
       real(wp) :: density_X, temperature_X, temperature_target, temperature_target_new, kappa_0, diff
       ! first allocate all arrays
-      allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
+      allocate( y(4*Nx), ydot(4*Nx) ) !, density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
       allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
 !     set the velocity and neutral density arrays as defined in input
       velocity    = initial_v

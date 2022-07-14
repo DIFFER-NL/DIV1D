@@ -15,88 +15,50 @@ program div1d
    use div1d_solve
 
    implicit none
-   !integer, parameter :: wp = KIND(1.0D0)
-   !real(wp) :: start_time, end_time
-   !integer :: input_error, input_error_numerics, input_error_physics
-   !integer :: restart_error, time_step_error
-   !integer :: istep, istate 
-   integer :: istep_
    integer :: ibigstep
-   integer :: itime ! = 10
-   !integer :: nbigstep 
-   !ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
-   ! external right_hand_side
-   
-   ! the following is needed for dvode_f90
-   !integer :: itask, istate
-   !integer :: attempt
-   !integer,  allocatable :: iwork(:)
-   !integer,  allocatable :: bounded_components(:)
-   !real(wp), allocatable :: lower_bounds(:), upper_bounds(:)
-   !real(wp), allocatable :: abstol_vector(:), rwork(:)
-   !type (VODE_OPTS) :: options
-
-
-   ! the following are dummies to comply with Matlab integration
-    ! define parameters for external call
-    !  real(wp) :: floatinphys(27)
-    !  real(wp) :: floatinnum(24)
-    !  integer   :: intinphys(6) 
-    !  integer :: intinnum(12) 
-    !  logical :: loginnum(4)
-     
-   !integer :: call_from_extern
-   ! time the program exe time excl extern sys calls (ifortran, gfortran) incl extern sys calls (solaris f90)
+   integer :: itime 
+   ! Time the program exe time excl extern sys calls (ifortran, gfortran) incl extern sys calls (solaris f90)
    real(wp) :: T1,T2
 
-! executable phase
-
+   ! Execution phase
    call cpu_time(T1)
-  
-   call_from_extern = 0
+   call initialize_div1d_settings( floatinnum, intinnum, loginnum,&                   ! numerics params(INPUTS)
+                                   floatinphys, intinphys, &    ! physics params (INPUTS)
+                                   call_from_extern)
+
 
    ! Initialization from FORTRAN will look for .txt and .dat files
-   call initialize_div1d(density, velocity, temperature, neutral, & ! plasma params (IN/OUT)
-                             x, xcb, delta_x, delta_xcb, B_field, B_field_cb, & ! grid data     (IN/OUT)  
-                             floatinnum, intinnum, loginnum,&                   ! numerics params(INPUTS)
-                             floatinphys, intinphys, &    ! physics params (INPUTS)
-                             call_from_extern)
-!                     Gamma_n, Gamma_mom, pressure, q_parallel, &        ! plasma params (OUT)
- !                            Source_n, Source_v, Source_Q, source_neutral, &    ! plasma params (OUT)
-!      e_charge, c, K_B, amu, me, pi,&                    ! constants     (OUT)
-
-
+   call initialize_div1d(density, velocity, temperature, neutral, & ! plasma params (IN)
+                             x, xcb, delta_x, delta_xcb, B_field, B_field_cb, & ! grid data     (IN)  
+                             density, velocity, temperature, neutral, & ! plasma params (IN/OUT)
+                             x, xcb, delta_x, delta_xcb, B_field, B_field_cb, & ! grid data (IN/OUT)
+                             call_from_extern, Nx)  ! INPUTS   
+   
    start_time = 0.0
-   ! only fortran writes a text file
+   ! Write the output text file
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
-   
-   !nout = 100
-   !nbigstep = 1000
-   
+     
    write(*,*) 'starting simulation'   
    itime = 1
    do ibigstep = 1, nout_steps
-        istate =1  
+        istate = 1  
+        itime = (ibigstep-1) * nout +1
    write(*,*) 'ibigstep=', ibigstep
-   ! run nout time step_t in a function that can also be called by matlab
    call run_div1d(density, velocity, temperature, neutral,&
                 Gamma_n, Gamma_mom, pressure, q_parallel,&
                 Source_n, Source_v, Source_Q, source_neutral, &
                 start_time, end_time, nout, delta_t, &
-                dyn_imp_con((/1,2,3,4,5/),itime), dyn_nu(itime), dyn_dnu(itime), dyn_nb(itime), dyn_gas(itime),&
-                dyn_rec(itime), dyn_qparX(itime), dyn_red_frc(itime) )
-              !  imp_con, neu, dneu, ngb, gas, recycle, rad_los, qpar_x, red_frc) 
-    itime = itime + 1
-   ! FORTRAN Writes the solution   
+                dyn_imp_con((/1,2,3,4,5/),itime:itime+nout), dyn_nu(itime:itime+nout),&
+                dyn_dnu(itime:itime+nout), dyn_nb(itime:itime+nout), dyn_gas(itime:itime+nout),&
+                dyn_rec(itime:itime+nout), dyn_qparX(itime:itime+nout), dyn_red_frc(itime:itime+nout) )
+   ! Write solution in the output file   
    call write_solution( end_time )
    end do
       
-   ! loop is over
+   ! Request and write cpu time
    call cpu_time(T2)
-
-
    write( 10, * ) '   cpu_time   = ', T2-T1
 
    call write_restart_file
@@ -105,11 +67,9 @@ end program div1d
 
 
 subroutine write_header
-
    use numerics_parameters
    use physics_parameters
    use grid_data, only : x, B_field
-
    implicit none
    integer :: i
    integer, parameter :: wp = KIND(1.0D0)
@@ -160,8 +120,7 @@ subroutine write_header
    write( 10, * ) '   radial_loss_gaussian    = ', radial_loss_gaussian
    write( 10, * ) '   radial_loss_width       = ', radial_loss_width
    write( 10, * ) '   radial_loss_location    = ', radial_loss_location
-
-   write( 10, '(A195)' ) ' X [m]   gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
+   write( 10, '(A195)' ) ' X [m]   gas_puff_prf []  B_field [fraction]' 
    write( 10, '(13(1PE15.6))' ) ( x(i), gas_puff(i), B_field(i), i=1,Nx )
    return
 end subroutine write_header
@@ -169,16 +128,15 @@ end subroutine write_header
 
 subroutine write_solution( time )
    use physics_parameters, only : dyn_gas, dyn_nu, dyn_nb, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc, dyn_imp_con, num_impurities
-   use numerics_parameters, only : Nx, delta_t
+   use numerics_parameters, only : Nx , delta_t
    use grid_data, only : x, B_field
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none
    integer, parameter :: wp = KIND(1.0D0)
-   integer :: i
+   integer :: i, itime
    real(wp), intent(in) :: time
-   integer :: itime 
-   !itime = 10 ! time / delta_t  
+   itime =  time / delta_t  
 
    write( 10, * ) 'time        = ', time
    write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)

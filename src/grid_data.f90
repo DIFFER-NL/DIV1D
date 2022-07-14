@@ -32,7 +32,7 @@ contains
       implicit none
       real( wp ) :: dx
       integer    :: i
-      allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx) )
+      !allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx) )
       ! set-up equidistant grid
       dx = L/Nx
       delta_x = dx
@@ -48,7 +48,8 @@ contains
    subroutine non_uniform_grid
       implicit none
       integer    :: i
-      allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx), xnorm(Nx+1) )
+      !allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx), xnorm(Nx+1) )
+      allocate( xnorm(Nx+1 ) )
       ! set-up non-equidistant grid as described in SD1D manual
       ! first define a normalized array running from 0 to 1 at the cell boundaries
       do i = 1, Nx+1
@@ -69,7 +70,7 @@ contains
    
    subroutine magnetic_field
       implicit none
-      allocate( B_field(Nx), B_field_cb(Nx+1) )
+      !allocate( B_field(Nx), B_field_cb(Nx+1) )
       ! set the magnetic field values along the grid
       B_field    = 1.0d0
       B_field_cb = 1.0d0

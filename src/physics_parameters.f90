@@ -2,7 +2,7 @@ module physics_parameters
 ! module defining the physics parameters and their default values
 ! when the div1d_physics namelist is read the normalizations are defined
 
-   use numerics_parameters, only : Nx, density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, ntime, delta_t
+   use numerics_parameters, only : Nx, density_norm, temperature_norm, velocity_norm, momentum_norm, energy_norm, ntime, delta_t,  nout
    use constants, only : e_charge
 
    implicit none
@@ -50,21 +50,9 @@ module physics_parameters
    real( wp ) :: radial_loss_width      = 1.0d+20       ! determine width of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
    real( wp ) :: radial_loss_location   = 0           ! determine peak location of radial loss distribution (only used for radial_loss_gaussian = 1) [m]
   
-
-!  time dependent settings
- !  integer    :: switch_dyn_nu          = 0           ! switch now depends on initial_n value .leq. -1 !  time dependent plasma X point density requested from dyn_nu.dat (perturbation on initial_n)
- !  integer    :: switch_dyn_gas         = 0           ! time dependent gas source quested from dyn_gas.dat [/m^2 s]
- !  integer    :: switch_dyn_rec         = 0           ! time dependent recycling fraction taken from dyn_rec.dat [-]
- !  integer    :: switch_dyn_rad_los     = 0           ! time dependent radial loss factor taken from dyn_rad_loss.dat
- !  integer    :: switch_dyn_imp_con     = 0           ! time dependent impurity concentration from dyn_imp_con.dat   
- !  integer    :: switch_dyn_qpar        = 0           ! time dependent qparallel boundary condition from dyn_qpar.dat 
- !  integer    :: switch_dyn_red_frc     = 0           ! time dependent redistribution fraction from dyn_red_frc.dat
-
   ! parameters that are changed in time externally and need to be known by all modules
-      real(wp), dimension(5,1) :: E_imp_con
-      real(wp) :: E_neu, E_dneu, E_ngb, E_gas, E_rec, E_qpar_x, E_red_frc ! rad_los
-
-
+  real(wp), allocatable, dimension(:,:) :: E_imp_con
+  real(wp), allocatable, dimension(:) :: E_neu, E_dneu, E_ngb, E_gas, E_rec, E_qpar_x, E_red_frc 
 
   real( wp ), allocatable :: dyn_nu(:)  ! density of boundary condition 		
   real( wp ), allocatable :: dyn_dnu(:) ! derivative for ODE solver
@@ -82,8 +70,7 @@ contains
 
    subroutine read_physics_parameters( error )
       implicit none
-      integer :: error, i, num_impurities, z
-
+      integer :: error
     !  integer, parameter, private :: wp = KIND(1.0D0)
     !  real( wp ) :: tmp_imp
       num_impurities = 0
@@ -97,11 +84,17 @@ contains
                                radial_loss_factor, radial_loss_gaussian, radial_loss_width, radial_loss_location            
                               !density_ramp_rate
       error = 0
-!      open(, file = 'input.txt', status = 'old')
+
       read(*,div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
-!      close(1) 
-        
+        call assign_physics_arrays
+        return
+    end subroutine read_physics_parameters
+ 
+    subroutine assign_physics_arrays
+      implicit none
+      integer :: i, z, num_impurities
+            ! assign physics arrays that are dynamic in time(for main fortran program)
       num_impurities = 5 ! size(impurity_concentration)
       allocate( dyn_imp_con(num_impurities,ntime) )
       allocate( dyn_nu(ntime) )
@@ -269,7 +262,7 @@ contains
       energy_norm = density_norm * e_charge * temperature_norm
       
       return
-   end subroutine read_physics_parameters
+   end subroutine assign_physics_arrays
 
    subroutine extern_read_physics_parameters(floatinphys, intinphys) !, strinphys, loginphys)
         implicit none
