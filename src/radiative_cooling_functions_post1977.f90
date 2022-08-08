@@ -10,6 +10,10 @@ module radiative_cooling_functions_post1977
         integer, parameter, private :: wp = KIND(1.0D0)
 
         real(wp), private, dimension(5) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
+  !   real(wp), private, dimension(5) :: tmax_N = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
+ !    real(wp), private, dimension(5) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
+
+
 
     !    real(wp), private, dimension(3,7) :: lithium3_coef = reshape( (/ &
     !            
@@ -54,9 +58,16 @@ module radiative_cooling_functions_post1977
        !         /),&
        !         shape(neon10_coef), order=(/1,2/) 
        !        ! tmax, A(0), A(1) ,... , A(6) 
-       ! real(wp), private, dimension(3,7) :: argon18_coef = reshape( (/ &
-       !         /),&
-       !         shape(argon18_coef), order=(/1,2/) 
+        real(wp), private, dimension(5,6) :: argon18_coef = reshape( (/ &
+                 -25  , -2.053043E+01,  -1.965204E+01,-1.974883E+01, -2.117935E+01,& !A(0)
+                 1E-10, -2.834287E+00,  -1.172763E-01, 2.964839E+00,  5.191481E+00,& !A(1)
+                 1E-10,  1.506902E+01,   7.833220E+00,-8.829391E+00, -7.439717E+00,& !A(2)
+                 1E-10,  3.517177E+01,  -6.351577E+00, 9.791004E+00,  4.969023E+00,& !A(3)
+                 1E-10,  2.400122E+01,  -3.058849E+01,-4.960018E+00, -1.553180E+00,& !A(4)
+                 1E-10,  5.072723E+00,  -1.528534E+01, 9.820032E-01,  1.877047E-01/),&!A(5)
+                shape(argon18_coef), order=(/1,2/) )
+        ! first row is -25 and zeros, to enforce zero radiation as the table does not exist
+
                ! tmax, A(0), A(1) ,... , A(6) 
        ! real(wp), private, dimension(3,7) :: krypton36_coef = reshape( (/ &
       !          
@@ -118,7 +129,8 @@ contains
         case( 5 )
                 ! boron
         case( 6 )
-                ! carbon     
+
+                ! carbon  
                 do  n = 6,2,-1       
                 post_radiation = carbon6_coef(m,n)*(log_T**(n-1)) + post_radiation
 
@@ -131,7 +143,7 @@ contains
                 ! post_radiation = post_radiation*imp_con   ! this multiplication is done in higher function           
         case( 7 )
                 ! nitrogen
-             do  n = 6,2,-1       
+                do  n = 6,2,-1       
                 post_radiation = nitrogen7_coef(m,n)*(log_T**(n-1)) + post_radiation
 
             !    write(*,*) 'm = ', m
@@ -149,6 +161,17 @@ contains
 
         case( 18 )
                 ! argon
+               
+                do  n = 6,2,-1       
+                post_radiation = argon18_coef(m,n)*(log_T**(n-1)) + post_radiation
+
+            !    write(*,*) 'm = ', m
+            !    write(*,*) 'n = ', n
+            !    write(*,*) 'coef  = ', nitrogen7_coef(m,n)  ! check if the correct coefficient it taken
+              
+                enddo
+                post_radiation = argon18_coef(m,1) + post_radiation  
+                ! post_radiation = post_radiation*imp_con   ! this multiplication is done in higher function   
 
         case( 36 )
                 ! krypton
