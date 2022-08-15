@@ -161,7 +161,7 @@ contains
 
         case( 18 )
                 ! argon
-                if( temperature .lt. 3.00E-02 ) then
+                if( temperature .lt. 3.00E+01 ) then
                 m = 1
                 endif
 

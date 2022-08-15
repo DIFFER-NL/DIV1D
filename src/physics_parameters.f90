@@ -253,7 +253,7 @@ contains
 
       ! correct the desired normalizations
       if( density_norm .eq. 0.0d+0 ) density_norm = initial_n ! was 10**19
-      if( temperature_norm .eq. 0.0d+0 ) temperature_norm = 1.0e+0
+      if( temperature_norm .eq. 0.0d+0 ) temperature_norm = 1.0d+0
       if( velocity_norm .eq. 0.0d+0 ) velocity_norm = sqrt( 2.0d+0 * temperature_norm / mass )
       momentum_norm = mass * density_norm * velocity_norm
       energy_norm = density_norm * e_charge * temperature_norm

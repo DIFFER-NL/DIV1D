@@ -151,6 +151,11 @@ program div1d
          ! if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
          ! if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
       enddo
+      ! re-normalize the solution every so often
+    !  if( modulo( istep, istate_mod ) .eq. 0 ) then
+    !  density_norm = density(1)
+    !  temperature_norm = temperature(Nx)
+    !  endif
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
       if( istate .ne. 2 .and. method .gt. 0 ) then
