@@ -165,6 +165,11 @@ program div1d
             attempt = attempt + 1
             write(*,*) 'trying to continue integration. attempt nr.', attempt
             istate = 1
+            if( attempt .eq. max_attempts - 5 ) then ! try to renormalize and run 5 more times
+                density_norm = density(1)
+                temperature_norm = temperature(Nx)
+                call nvt2y( Nx, density, velocity, temperature, neutral, y )
+            endif
             call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
          enddo
          if( istate .ne. 2 ) then 
