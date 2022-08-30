@@ -2,18 +2,20 @@ module grid_data
 ! module defining the grid along the flux tube
 
    use numerics_parameters, only : Nx, dxmin
-   use physics_parameters, only  : L, flux_expansion
+   use physics_parameters, only  : L, flux_expansion, L_core_SOL, alpha_core_profile, normalization_core_profile
 
    implicit none
 
    integer, parameter, private :: wp = KIND(1.0D0)
    real( wp ), allocatable :: x(:)         ! grid cell centre measured as distance from the X-point along the flux tube [m]
+   integer                 :: i_Xpoint = 0 ! index of the grid point just above or at the X-point (used in case the core-SOL boundary is included)
    real( wp ), allocatable :: xcb(:)       ! grid cell boundaries [m]: xcb(1) = 0 and xcb(Nx+1) = L
    real( wp ), allocatable :: delta_x(:)   ! step size between grid cell centres delta_x(i) = x(i+1) - x(i) [m]
    real( wp ), allocatable :: delta_xcb(:) ! grid cell size defined as delta_x(i) = xcb(i+1) - xcb(i) [m]
    real( wp ), allocatable :: B_field(:)   ! vector holding the ratio of B/B_target @ x(:)
    real( wp ), allocatable :: B_field_cb(:)! vector holding the ratio of B/B_target @ xcb(:)
    real( wp ), private, allocatable :: xnorm(:)     ! a normalized array running from 0 to 1 at the cell boundaries, used to calculate the non-uniform grid efficiently
+   integer, private        :: i            ! array index
 
 contains
 
@@ -25,6 +27,17 @@ contains
          call non_uniform_grid
       endif
       call magnetic_field
+      ! obtain the index of the grid point just above or at the X-point
+      ! and the factor normalizing the heat and particle loss profiles from the core (including the division by L_core_SOL)
+      if( L_core_SOL .gt. 0.0 ) then
+          normalization_core_profile = 0.0
+          do i = 1, Nx
+              if( x(i) .le. L_core_SOL ) then
+                  i_Xpoint = i
+                  normalization_core_profile = normalization_core_profile + (1 - (x(i)/L_core_SOL)**2)**alpha_core_profile * delta_x(i) 
+              endif
+          enddo
+      endif
       return
    end subroutine initialize_grid
 

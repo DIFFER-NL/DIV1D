@@ -1,17 +1,18 @@
 module physics_routines
 ! module containing general purpose routines implementing the equations
 
-   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb
+   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb, i_Xpoint
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
                                   gas_puff_source, gas_puff_location, gas_puff_width, initial_a, &
-                                  dyn_nu, dyn_nb, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX!, &
+                                  dyn_nu, dyn_nb, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX, &
+                                  L_core_SOL, alpha_core_profile, normalization_core_profile
                                  ! switch_X_vel_con
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources,&
-			   	   delta_t
-                           use experiments, only: simulate_elm, calculate_radial_losses
+			   	                   delta_t
+   use experiments, only: simulate_elm, calculate_radial_losses
 
    implicit none
    integer, parameter, private :: wp = KIND(1.0D0)
@@ -251,6 +252,11 @@ contains
           call spike_filter( Nx, Source_v )
           call spike_filter( Nx, Source_Q )
       endif
+      ! section adding sources along the core-SOL boundary (when present in the grid)
+      if( L_core_SOL .gt. 0.0d+0 ) then
+          Source_n(1:i_Xpoint) = Source_n(1:i_Xpoint) + Gamma_X * (1.0d+0 - (x(1:i_Xpoint)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
+          Source_Q(1:i_Xpoint) = Source_Q(1:i_Xpoint) + q_parX  * (1.0d+0 - (x(1:i_Xpoint)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
+      endif
       return
    end subroutine calculate_sources
 
@@ -308,8 +314,13 @@ contains
          do ix = 2, Nx
             ydot(ix) = ydot(ix) - B_field(ix) * (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)   ! ew 01-03-2021:
          enddo
-         ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
-         ydot(1) = density_ramp_rate + elm_density_change + dyn_dnu(itime) ! [1/ (m^3 s)]
+         if( L_core_SOL .gt. 0.0d+0 ) then
+             ! apply boundary condition at mid point (i.e. flux = 0)
+             ydot(1) = ydot(1) - B_field(1) * (Gamma_n(1)-0.0d+0)/delta_xcb(1)
+         else
+             ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
+             ydot(1) = density_ramp_rate + elm_density_change + dyn_dnu(itime) ! [1/ (m^3 s)]
+         endif
       ! write(*,*) 'ydot(density) =', ydot(0*Nx+1:1*Nx) ! ---------------------------------------------------------------------
 
       ! --------------------------------------------- ydot for the momentum equation ------------------------------------------
@@ -319,13 +330,18 @@ contains
          do ix = 2, Nx
             ydot(Nx+ix) = ydot(Nx+ix) - B_field(ix) * (Gamma_mom(ix)-Gamma_mom(ix-1))/delta_xcb(ix)   ! ew 01-03-2021:
          enddo
-         ! apply boundary condition at the X-point, as following from the constant density n(1)
-         ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
-         !v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1) ! GD: no ELM_density_change ?
-         v0 = velocity(2) - 2.0d+0 * (Source_n(1)+ydot(1)) * delta_xcb(1) / density(1) ! GD added result from density equation
-	 ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
-         Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0       ! [kg/(m   s^2)]
-         ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)    ! [kg/(m^2 s^2)]
+         if( L_core_SOL .gt. 0.0d+0 ) then
+             ! apply boundary condition at mid point (i.e. flux = 0)
+             ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-0.0d+0)/delta_xcb(1)    ! [kg/(m^2 s^2)]
+         else
+             ! apply boundary condition at the X-point, as following from the constant density n(1)
+             ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
+             !v0 = velocity(2) - 2.0d+0 * (Source_n(1)+density_ramp_rate) * delta_xcb(1) / density(1) ! GD: no ELM_density_change ?
+             v0 = velocity(2) - 2.0d+0 * (Source_n(1)+ydot(1)) * delta_xcb(1) / density(1) ! GD added result from density equation
+	         ! momentum flux at i = 0 : Gmom0 = m n (1/4)(v(0)+v(1))**2
+             Gmom0 = mass * density(1) * (v0 + velocity(1))**2/4.0d+0       ! [kg/(m   s^2)]
+             ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)    ! [kg/(m^2 s^2)]
+         endif
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
          ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
@@ -336,7 +352,7 @@ contains
          enddo
          ! apply boundary condition at the sheath entrance, i=Nx: (linearly extrapolate velocity beyond the sheath)
          ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)     ! extrapolate temperature and density
-	 ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target + velocity(Nx-1)-3.0d0*velocity(Nx))  ! add numerical viscocity
+    	 ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target + velocity(Nx-1)-3.0d0*velocity(Nx))  ! add numerical viscocity
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx) ! -----------------------------------------------------------------------
       
       ! ------------------------------------------------ ydot for the energy equation --------------------------------------------
@@ -345,9 +361,14 @@ contains
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - B_field(2:Nx) * (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)   ! ew 01-03-2021:
          ! add the compression term
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))*energy_norm/1.5d+0/delta_x(1:Nx-1)
-         ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load
-         !ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-(q_parX+elm_heat_load))/delta_xcb(1)
-         ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-(dyn_qparX(itime)+elm_heat_load))/delta_xcb(1)
+         if( L_core_SOL .gt. 0.0d+0 ) then
+             ! apply boundary condition at mid point (i.e. flux = 0)
+             ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-0.0d+0)/delta_xcb(1)
+         else
+             ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load
+             !ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-(q_parX+elm_heat_load))/delta_xcb(1)
+             ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-(dyn_qparX(itime)+elm_heat_load))/delta_xcb(1)
+         endif
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx) ! -------------------------------------------------------------------------
 
       ! ----------------------------------------------ydot for the neutral density equation --------------------------------------
@@ -359,9 +380,14 @@ contains
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
          ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
-         ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
-         ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)/delta_xcb(1)
-         ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)/delta_x(1)
+         if( L_core_SOL .gt. 0.0d+0 ) then
+             ! apply boundary condition at mid point (i.e. flux = 0)
+             ydot(3*Nx+1) = ydot(3*Nx+1) - (neutral_flux(1)-0.0d+0)/delta_xcb(1)
+         else
+             ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
+             ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)/delta_xcb(1)
+             ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)/delta_x(1)
+         endif
          ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
          ! add neutral sources and losses from redistribution and finite residence time
          !ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
