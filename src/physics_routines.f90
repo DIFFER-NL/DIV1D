@@ -189,7 +189,7 @@ contains
    end subroutine initialize_gas_puff
 
    subroutine calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel,&
-                                 Source_n, Source_v, Source_Q, neutral_source )
+                                 Source_n, Source_v, Source_Q, neutral_source, elm_heat_load, elm_density_change )
    ! this subroutine calculates the source terms of the discretized conservation equations
       implicit none
       integer,  intent(in)  :: Nx
@@ -200,6 +200,8 @@ contains
       real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_ree(Nx), rate_imp(Nx)
       real(wp) :: radial_sink(Nx)
       integer  :: ix, iix
+      ! input variables for the elm simulation
+      real(wp), intent(in)   :: elm_heat_load, elm_density_change
       itime     = time / delta_t  
       Source_n = 0.0d+0
       Source_v = 0.0d+0
@@ -255,7 +257,7 @@ contains
       ! section adding sources along the core-SOL boundary (when present in the grid)
       if( L_core_SOL .gt. 0.0d+0 ) then
           Source_n(1:i_Xpoint) = Source_n(1:i_Xpoint) + Gamma_X * (1.0d+0 - (x(1:i_Xpoint)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
-          Source_Q(1:i_Xpoint) = Source_Q(1:i_Xpoint) + q_parX  * (1.0d+0 - (x(1:i_Xpoint)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
+          Source_Q(1:i_Xpoint) = Source_Q(1:i_Xpoint) + (dyn_qparX(itime)+elm_heat_load)  * (1.0d+0 - (x(1:i_Xpoint)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
       endif
       return
    end subroutine calculate_sources
@@ -290,12 +292,12 @@ contains
       ! write(*,*) 'temperature =', temperature
       ! write(*,*) 'neutral density =', neutral
 
+      ! calculate the ELM heat flux and particle flux
+      call simulate_elm(elm_heat_load, elm_density_change, time)
       ! calculate the fluxes
       call calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
       ! calculate the sources
-      call calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source )
-      ! calculate the ELM heat flux and particle flux
-      call simulate_elm(elm_heat_load, elm_density_change, time)
+      call calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source, elm_heat_load, elm_density_change )
       ! write(*,*) 'Gamma_n =', Gamma_n
       ! write(*,*) 'Gamma_mom =', Gamma_mom
       ! write(*,*) 'q_parallel =', q_parallel

@@ -26,7 +26,6 @@ contains
       else
          call non_uniform_grid
       endif
-      call magnetic_field
       ! obtain the index of the grid point just above or at the X-point
       ! and the factor normalizing the heat and particle loss profiles from the core (including the division by L_core_SOL)
       if( L_core_SOL .gt. 0.0 ) then
@@ -38,6 +37,7 @@ contains
               endif
           enddo
       endif
+      call magnetic_field
       return
    end subroutine initialize_grid
 
@@ -87,8 +87,11 @@ contains
       B_field    = 1.0d0
       B_field_cb = 1.0d0
       if( flux_expansion .gt. 1.0d0 ) then
-          B_field    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * x   / L )
-          B_field_cb = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * xcb / L )
+          ! B_field    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * x   / L )
+          ! B_field_cb = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * xcb / L )
+          ! we apply the flux expansion only along the divertor-SOL
+          B_field( i_Xpoint+1 : Nx )    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (x( i_Xpoint+1 : Nx ) - L_core_SOL)   / (L - L_core_SOL) )
+          B_field_cb( i_Xpoint+1 : Nx ) = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (xcb( i_Xpoint+1 : Nx ) - L_core_SOL) / (L - L_core_SOL) )
       endif
    end subroutine magnetic_field
 
