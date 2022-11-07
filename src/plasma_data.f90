@@ -39,7 +39,7 @@ contains
       implicit none
       ! first allocate all arrays
       allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
-      allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
+      allocate( Gamma_n(0:Nx), Gamma_mom(0:Nx), pressure(Nx), q_parallel(0:Nx), neutral_flux(0:Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
       temperature = initial_T
       density     = dyn_nu(1) ! initial_n
       velocity    = initial_v

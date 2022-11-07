@@ -69,11 +69,11 @@ contains
    ! this subroutine calculates the advected flux of a variable with a given velocity field
    ! the temperature is needed to calculate the sound velocity
    ! the variable and velocity field are given on the (equidistant) grid centers
-   ! the flux is returned at the grid boundaries i + 1/2
+   ! the flux is returned at the grid boundaries i + 1/2 (internal only: i=1,...,Nx-1, BC's must be applied outside this routine)
       implicit none
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: variable(Nx), velocity(Nx), temperature(Nx)
-      real(wp), intent(out) :: flux(Nx)
+      real(wp), intent(out) :: flux(0:Nx)
       real(wp)              :: csound, average_velocity
       integer               :: i
       flux = 0.0
@@ -110,7 +110,7 @@ contains
    end subroutine advection
 
 
-   subroutine calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+   subroutine calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
    ! this subroutine calculates the 'fluxes' required for the calculation of ydot (the right hand side of the discretized conservation equations)
    ! the fluxes are defined at the halfway point between grid points: i.e. Flux(i) is midway between x(i) and x(i+1) on the cell boundaries xcb
    ! ew 01-03-2021: modified to take account of flux expansion
@@ -119,12 +119,14 @@ contains
       real(wp), intent(in)  :: time
       integer               :: itime
       real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
-      real(wp), intent(out) :: Gamma_n(Nx), Gamma_mom(Nx), q_parallel(Nx), neutral_flux(Nx)
+      real(wp), intent(out) :: Gamma_n(0:Nx), Gamma_mom(0:Nx), q_parallel(0:Nx), neutral_flux(0:Nx)
+      real(wp), intent(in)  :: elm_heat_load
       real(wp)              :: momentum(Nx), enthalpy(Nx)
       real(wp)              :: csound_target, average_velocity
       integer               :: i
       ! the particle flux = density velocity / B 
       itime = time / delta_t
+
       ! the particle flux = density velocity
       ! we follow here the discretization as put forward in B. Dudson et al. (2019) PPCF 61 065008
          call advection(Nx, density/B_field, velocity, temperature, Gamma_n)
@@ -133,8 +135,12 @@ contains
          ! write(*,*) 'flux', e_charge, mass, temperature(Nx)
          ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target) / B_field_cb(Nx+1)
          Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target) / B_field_cb(Nx+1)
+         ! boundary condition at i = 0 (not used when X-point density BC is used)
+         ! case for core-SOL + divertorleg (i=0 is stagnation point)
+         Gamma_n(0)  = 0.0d0
          ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound_target
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
+
       ! the momentum flux = momentum * velocity where momentum = density * mass * velocity / B_field
          momentum = density * mass * velocity / B_field
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
@@ -142,6 +148,10 @@ contains
          ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx+1)
          Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx+1)
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
+         ! boundary condition at i = 0
+         ! case for core-SOL + divertorleg (i=0 is stagnation point)
+         Gamma_mom(0)  = 0.0d0
+
       ! convective heat flux = 5 density k temperature velocity / B_field (i.e. 5/2 pressure)
          enthalpy = 5.0d+0 * density * e_charge * temperature / B_field
          call advection(Nx, enthalpy, velocity, temperature, q_parallel) 
@@ -153,6 +163,15 @@ contains
          ! boundary condition at the sheath: given by the sheath heat transmission
          q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / B_field_cb(Nx+1) ! we have extrapolated the density linear towards x = L, i.e. the sheath
          ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
+         ! boundary condition at i = 0
+         if( L_core_SOL .gt. 0.0 ) then
+            ! case for core-SOL + divertorleg (i=0 is stagnation point)
+            q_parallel(0)  = 0.0d0
+         else
+            ! case with prescribed heat flux at i = 0 (X-point)
+            q_parallel(0)  = dyn_qparX(itime)+elm_heat_load
+         endif
+         
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
          ! we do this in the right_hand_side routine itself
          do i = 1, Nx-1
@@ -164,6 +183,7 @@ contains
          neutral_flux(Nx) = -B_field_cb(Nx)*Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
+
       return
    end subroutine calculate_fluxes
 
@@ -274,7 +294,7 @@ contains
       real(wp), intent(out) :: ydot(neq)
       integer               :: Nx, ix
       real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)      ![1/m3] ,[m/s]    ,[eV]   ,[1/m3]
-      real(wp)              :: Gamma_n(neq/4), Gamma_mom(neq/4), q_parallel(neq/4), neutral_flux(neq/4) ![1/m2s],[kg/ms2] ,[J/m2s],[1/m2s]
+      real(wp)              :: Gamma_n(0:neq/4), Gamma_mom(0:neq/4), q_parallel(0:neq/4), neutral_flux(0:neq/4) ![1/m2s],[kg/ms2] ,[J/m2s],[1/m2s]
       real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4) ![1/m3s],[kg/m2s2],[J/m3s],[1/m3s] 
       real(wp)              :: Diff_neutral(neq/4)  ! [m2/s]
       real(wp)              :: csound_target, q_sheath, v0, Gmom0
@@ -295,7 +315,7 @@ contains
       ! calculate the ELM heat flux and particle flux
       call simulate_elm(elm_heat_load, elm_density_change, time)
       ! calculate the fluxes
-      call calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+      call calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
       ! calculate the sources
       call calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source, elm_heat_load, elm_density_change )
       ! write(*,*) 'Gamma_n =', Gamma_n
@@ -318,7 +338,7 @@ contains
          enddo
          if( L_core_SOL .gt. 0.0d+0 ) then
              ! apply boundary condition at mid point (i.e. flux = 0)
-             ydot(1) = ydot(1) - B_field(1) * (Gamma_n(1)-0.0d+0)/delta_xcb(1)
+             ydot(1) = ydot(1) - B_field(1) * (Gamma_n(1)-Gamma_n(0))/delta_xcb(1)
          else
              ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
              ydot(1) = density_ramp_rate + elm_density_change + dyn_dnu(itime) ! [1/ (m^3 s)]
@@ -334,7 +354,7 @@ contains
          enddo
          if( L_core_SOL .gt. 0.0d+0 ) then
              ! apply boundary condition at mid point (i.e. flux = 0)
-             ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-0.0d+0)/delta_xcb(1)    ! [kg/(m^2 s^2)]
+             ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gamma_mom(0))/delta_xcb(1)    ! [kg/(m^2 s^2)]
          else
              ! apply boundary condition at the X-point, as following from the constant density n(1)
              ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
@@ -359,18 +379,10 @@ contains
       
       ! ------------------------------------------------ ydot for the energy equation --------------------------------------------
          ydot(2*Nx+1:3*Nx) = switch_energy_source * Source_Q(1:Nx) ! [J/ (m^3 s)]
-         ! add the heat flux term in the internal region (including the sheath)
-         ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) - B_field(2:Nx) * (q_parallel(2:Nx)-q_parallel(1:Nx-1))/delta_xcb(2:Nx)   ! ew 01-03-2021:
+         ! add the heat flux term including all boundaries
+         ydot(2*Nx+1:3*Nx) = ydot(2*Nx+1:3*Nx) - B_field(1:Nx) * (q_parallel(1:Nx)-q_parallel(0:Nx-1))/delta_xcb(1:Nx)   ! ew 01-03-2021:
          ! add the compression term
          ydot(2*Nx+2:3*Nx) = ydot(2*Nx+2:3*Nx) + velocity(2:Nx) * (y(2*Nx+2:3*Nx)-y(2*Nx+1:3*Nx-1))*energy_norm/1.5d+0/delta_x(1:Nx-1)
-         if( L_core_SOL .gt. 0.0d+0 ) then
-             ! apply boundary condition at mid point (i.e. flux = 0)
-             ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-0.0d+0)/delta_xcb(1)
-         else
-             ! apply boundary condition at the X-point, i=1: energy flux given by q_parallel(0) = q_parX + elm_heat_load
-             !ydot(2*Nx+1) = ydot(2*Nx+1) - (q_parallel(1)-(q_parX+elm_heat_load))/delta_xcb(1)
-             ydot(2*Nx+1) = ydot(2*Nx+1) -  (q_parallel(1)-(dyn_qparX(itime)+elm_heat_load))/delta_xcb(1)
-         endif
       ! write(*,*) 'ydot(energy) =', ydot(2*Nx+1:3*Nx) ! -------------------------------------------------------------------------
 
       ! ----------------------------------------------ydot for the neutral density equation --------------------------------------

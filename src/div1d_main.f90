@@ -61,11 +61,11 @@ program div1d
    call initialize_gas_puff(Nx)
 
    ! write the inital solution to file
-   ! calculate the fluxes
-   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
-   ! calculate the sources
    elm_heat_load = 0.0d+0
    elm_density_change = 0.0d+0
+   ! calculate the fluxes
+   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
+   ! calculate the sources
    call calculate_sources( Nx, start_time,  density, velocity, temperature, neutral, q_parallel, &
                           Source_n, Source_v, Source_Q, source_neutral, elm_heat_load, elm_density_change )
    open( UNIT=10, FILE='div1d_output.txt' )
@@ -187,7 +187,7 @@ program div1d
          ! calculate the ELM heat flux and particle flux
          call simulate_elm(elm_heat_load, elm_density_change, end_time)
          ! calculate the fluxes
-         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
          ! calculate the sources
          call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral, elm_heat_load, elm_density_change )
          call write_solution( end_time )
