@@ -177,9 +177,15 @@ contains
          do i = 1, Nx-1
             neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
          enddo
-         ! boundary condition at the sheath (- flux of plasma density in case of full recycling)
-        ! neutral_flux(Nx) = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
-        ! neutral_flux(Nx) = - Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - redistributed_fraction)
+         ! boundar condition at i = 0
+         if( L_core_SOL .gt. 0.0d+0 ) then
+             ! apply boundary condition at mid point (i.e. flux = 0)
+             neutral_flux(0) = 0.0d+0
+         else
+             ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1, i.e. zero flux)
+             neutral_flux(0) = 0.0d+0
+         endif
+         ! boundary condition at the sheath (= flux of plasma density in case of full recycling)
          neutral_flux(Nx) = -B_field_cb(Nx)*Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
@@ -207,6 +213,7 @@ contains
       gas_puff = gas_puff / gas_puff_normalization
       return
    end subroutine initialize_gas_puff
+
 
    subroutine calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel,&
                                  Source_n, Source_v, Source_Q, neutral_source, elm_heat_load, elm_density_change )
@@ -393,18 +400,8 @@ contains
             Diff_neutral(ix) = D_neutral( temperature(ix), density(ix) )
          enddo
          ! write(*,*) 'Diff_neutral =', Diff_neutral
-         ydot(3*Nx+2:4*Nx) = ydot(3*Nx+2:4*Nx) - (neutral_flux(2:Nx)-neutral_flux(1:Nx-1))/delta_xcb(2:Nx)
-         if( L_core_SOL .gt. 0.0d+0 ) then
-             ! apply boundary condition at mid point (i.e. flux = 0)
-             ydot(3*Nx+1) = ydot(3*Nx+1) - (neutral_flux(1)-0.0d+0)/delta_xcb(1)
-         else
-             ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1)
-             ydot(3*Nx+1) = ydot(3*Nx+1) + Diff_neutral(1) * (neutral(2)-neutral(1))/delta_x(1)/delta_xcb(1)
-             ydot(3*Nx+1) = ydot(3*Nx+1) + (Diff_neutral(2)-Diff_neutral(1))*(neutral(2)-neutral(1))/4.0d0/delta_x(1)/delta_x(1)
-         endif
-         ! boundary condition at sheath: neutral flux = - Gamma_n(Nx) * recycling * (1.0d-0 - redistributed_fraction)
+         ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) - (neutral_flux(1:Nx)-neutral_flux(0:Nx-1))/delta_xcb(1:Nx)
          ! add neutral sources and losses from redistribution and finite residence time
-         !ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + Gamma_n(Nx) * recycling * redistributed_fraction / L - neutral / neutral_residence_time
          ydot(3*Nx+1:4*Nx) = ydot(3*Nx+1:4*Nx) + B_field_cb(Nx) * Gamma_n(Nx) * dyn_rec(itime) * dyn_red_frc(itime) / L &
                                                                                        - (neutral-dyn_nb(itime)) / neutral_residence_time
       ! write(*,*) 'ydot(neutrals) =', ydot(3*Nx+1:4*Nx) !-------------------------------------------------------------------------
