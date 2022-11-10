@@ -58,15 +58,20 @@ module radiative_cooling_functions_post1977
        !         /),&
        !         shape(neon10_coef), order=(/1,2/) 
        !        ! tmax, A(0), A(1) ,... , A(6) 
+
+       ! the Argon rates are from Post et al. but have been extended using ATOMIC data
+       ! The ATOMIC data was located via Garland et al. Phys. Plasmas 27 040702 (2020) in oktober 2022 by GL derks
+       ! On 01-10-2022 the first column was fitted on data from https://www-amdis.iaea.org/cgi-bin/EFFRATES/ss.pl
+       ! The data used was for an electron density of 1e14 [1/cm3] only requesting total radiated power.
         real(wp), private, dimension(5,6) :: argon18_coef = reshape( (/ &
-                -11.6E+00,-2.053043E+01, -1.965204E+01,-1.974883E+01, -2.117935E+01,& !A(0)
-                 4.2E+00, -2.834287E+00,  -1.172763E-01, 2.964839E+00,  5.191481E+00,& !A(1)
-                 1.0E-10,  1.506902E+01,   7.833220E+00,-8.829391E+00, -7.439717E+00,& !A(2)
-                 1.0E-10,  3.517177E+01,  -6.351577E+00, 9.791004E+00,  4.969023E+00,& !A(3)
+                -35.605350107279E+00,-2.053043E+01, -1.965204E+01,-1.974883E+01, -2.117935E+01,& !A(0)
+                -10.5025E+00, -2.834287E+00,  -1.172763E-01, 2.964839E+00,  5.191481E+00,& !A(1)
+                 16.1277,  1.506902E+01,   7.833220E+00,-8.829391E+00, -7.439717E+00,& !A(2)
+                 17.6479.0E-10,  3.517177E+01,  -6.351577E+00, 9.791004E+00,  4.969023E+00,& !A(3)
                  1.0E-10,  2.400122E+01,  -3.058849E+01,-4.960018E+00, -1.553180E+00,& !A(4)
                  1.0E-10,  5.072723E+00,  -1.528534E+01, 9.820032E-01,  1.877047E-01 /),&!A(5)
                 shape(argon18_coef), order=(/1,2/) )
-        ! first row is -25 and zeros, to enforce zero radiation as the table does not exist
+        ! first column was thus FITTED on ATOMIC data.
 
                ! tmax, A(0), A(1) ,... , A(6) 
        ! real(wp), private, dimension(3,7) :: krypton36_coef = reshape( (/ &
