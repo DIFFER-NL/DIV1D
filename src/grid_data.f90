@@ -74,7 +74,7 @@ contains
       ! calcuate the grid cell widths
       delta_xcb = xcb(2:Nx+1) - xcb(1:Nx)
       ! calculate the step size between grid cell centres
-      delta_x(1:Nx-1) = x(2:Nx) - x(1:Nx)
+      delta_x(1:Nx-1) = x(2:Nx) - x(1:Nx-1)
       ! extrapolate for step size into the target
       delta_x(Nx) = 2.0d+0*(L-x(Nx))
       return
