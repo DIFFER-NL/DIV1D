@@ -8,7 +8,7 @@ module grid_data
 
    integer, parameter, private :: wp = KIND(1.0D0)
    real( wp ), allocatable :: x(:)         ! grid cell centre measured as distance from the X-point along the flux tube [m]
-   integer                 :: i_Xpoint = 0 ! index of the grid point just above or at the X-point (used in case the core-SOL boundary is included)
+   integer                 :: i_Xpoint(2) = 0 ! index of the grid point just above or at the X-point (used in case the core-SOL boundary is included)
    real( wp ), allocatable :: xcb(:)       ! grid cell boundaries [m]: xcb(0) = 0 and xcb(Nx) = L (to be consistent with the flux arrays)
    real( wp ), allocatable :: delta_x(:)   ! step size between grid cell centres delta_x(i) = x(i+1) - x(i) [m]
    real( wp ), allocatable :: delta_xcb(:) ! grid cell size defined as delta_x(i) = xcb(i) - xcb(i-1) [m] i = 1:Nx
@@ -16,6 +16,7 @@ module grid_data
    real( wp ), allocatable :: B_field_cb(:)! vector holding the ratio of B/B_target @ xcb(:) (changed to (0:Nx) to bne constsistent with flux arrays
    real( wp ), private, allocatable :: xnorm(:)     ! a normalized array running from 0 to 1 at the cell boundaries, used to calculate the non-uniform grid efficiently
    integer, private        :: i            ! array index
+   real( wp ), private     :: mid_point    ! the mid point of the core_SOL (=0 when X_core_SOL=0; otherwise = X_core_SOL + 0.5*L_core_SOL)
 
 contains
 
@@ -34,10 +35,20 @@ contains
       ! and the factor normalizing the heat and particle loss profiles from the core (including the division by L_core_SOL)
       if( L_core_SOL .gt. 0.0 ) then
           normalization_core_profile = 0.0
+          i_Xpoint(1) = Nx
+          mid_point = 0.0d+0
+          if( X_core_SOL .gt. 0.0d+0 ) mid_point = X_core_SOL + 0.5d+0*L_core_SOL
           do i = 1, Nx
-              if( x(i) .le. L_core_SOL ) then
-                  i_Xpoint = i
-                  normalization_core_profile = normalization_core_profile + (1 - (x(i)/L_core_SOL)**2)**alpha_core_profile * delta_x(i) 
+              if( x(i) .le. X_core_SOL+L_core_SOL ) then
+                  if( x(i) .ge. X_core_SOL ) then
+                      i_Xpoint(1) = min( i_Xpoint(1), i )
+                      i_Xpoint(2) = i
+                      if( X_core_SOL .eq. 0.0d+0 ) then
+                          normalization_core_profile = normalization_core_profile + (1 - (x(i)/L_core_SOL)**2)**alpha_core_profile * delta_xcb(i)
+                      else
+                          normalization_core_profile = normalization_core_profile + (1 - 4.0d+0*((x(i)-mid_point)/L_core_SOL)**2)**alpha_core_profile * delta_xcb(i)
+                      endif
+                  endif
               endif
           enddo
       endif
@@ -121,8 +132,12 @@ contains
           ! B_field    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * x   / L )
           ! B_field_cb = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * xcb / L )
           ! we apply the flux expansion only along the divertor-SOL only
-          B_field( i_Xpoint+1 : Nx )    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (x( i_Xpoint+1 : Nx ) - L_core_SOL)   / (L - L_core_SOL) )
-          B_field_cb( i_Xpoint+1 : Nx ) = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (xcb( i_Xpoint+1 : Nx ) - L_core_SOL) / (L - L_core_SOL) )
+          B_field( i_Xpoint(2)+1 : Nx )      = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (x  ( i_Xpoint(2)+1 : Nx ) - X_core_SOL - L_core_SOL) / (L - X_core_SOL - L_core_SOL) )
+          B_field_cb( i_Xpoint(2)+1 : Nx )   = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (xcb( i_Xpoint(2)+1 : Nx ) - X_core_SOL - L_core_SOL) / (L - X_core_SOL - L_core_SOL) )
+          if( L_core_SOL .gt. 0.0d+0 .and. X_core_SOL .gt. 0.0d+0 ) then
+              B_field( 1: i_Xpoint(1)-1 )    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (X_core_SOL - x  ( 1: i_Xpoint(1)-1 ) ) / X_core_SOL )
+              B_field_cb( 0: i_Xpoint(1)-1 ) = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (X_core_SOL - xcb( 0: i_Xpoint(1)-1 ) ) / X_core_SOL )
+          endif
       endif
    end subroutine magnetic_field
 
