@@ -25,6 +25,7 @@ A place to add ideas for development
 ### Plasma
 - [x] Evaluation of plasma particle, momentum and energy balance including atomic modeling using the AMJUEL database.
 - [x] Flux expansion for magnetics and transport.
+- [x] Core Scrape-off layer up to flow stagnation point.
 - []  Core particle inventory (e.g. Blanken 2018).
 ### Neutrals
 - [x] Evaluation of neutral particle balance including charge-exchange and ionisation from AMJUEL database.

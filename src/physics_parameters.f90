@@ -104,14 +104,14 @@ contains
         
       num_impurities = 5 ! size(impurity_concentration)
       allocate( dyn_imp_con(num_impurities,ntime) )
-      allocate( dyn_nu(ntime) )
-      allocate( dyn_nb(ntime) )
-      allocate( dyn_dnu(ntime) )
-      allocate( dyn_gas(ntime) )
-      allocate( dyn_rec(ntime) ) 
-      allocate( dyn_rad_los(ntime) )
-      allocate( dyn_qparX(ntime) )
-      allocate( dyn_red_frc(ntime) )
+      allocate( dyn_nu(0:ntime) )
+      allocate( dyn_nb(0:ntime) )
+      allocate( dyn_dnu(0:ntime) )
+      allocate( dyn_gas(0:ntime) )
+      allocate( dyn_rec(0:ntime) ) 
+      allocate( dyn_rad_los(0:ntime) )
+      allocate( dyn_qparX(0:ntime) )
+      allocate( dyn_red_frc(0:ntime) )
 
 
 
