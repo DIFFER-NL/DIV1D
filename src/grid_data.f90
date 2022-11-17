@@ -2,7 +2,7 @@ module grid_data
 ! module defining the grid along the flux tube
 
    use numerics_parameters, only : Nx, dxmin
-   use physics_parameters, only  : L, flux_expansion, L_core_SOL, alpha_core_profile, normalization_core_profile
+   use physics_parameters, only  : L, flux_expansion, L_core_SOL, X_core_SOL, alpha_core_profile, normalization_core_profile
 
    implicit none
 
@@ -24,7 +24,11 @@ contains
       if( dxmin .ge. 1.0d+0 ) then
          call uniform_grid
       else
-         call non_uniform_grid
+         if( X_core_SOL .eq. 0.0 ) then
+            call non_uniform_grid
+         else
+            call non_uniform_grid2
+         endif
       endif
       ! obtain the index of the grid point just above or at the X-point
       ! and the factor normalizing the heat and particle loss profiles from the core (including the division by L_core_SOL)
@@ -64,6 +68,7 @@ contains
       allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx), xnorm(Nx+1) )
       ! set-up non-equidistant grid as described in SD1D manual
       ! first define a normalized array running from 0 to 1 at the cell boundaries
+      write(*,*) 'setting-up nonuniform grip option 2'
       do i = 1, Nx+1
          xnorm(i) = dfloat(i-1)/dfloat(Nx)
       end do
@@ -80,6 +85,32 @@ contains
       return
    end subroutine non_uniform_grid
    
+   subroutine non_uniform_grid2
+      implicit none
+      integer    :: i
+      allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx), xnorm(Nx+1) )
+      ! set-up non-equidistant grid with two targets: grid is symmetric
+      ! first define a normalized array running from 0 to 1 at the cell boundaries
+      ! note that Nx must be even for this to work correctly!
+      write(*,*) 'setting-up nonuniform grip option 2'
+      do i = 1, Nx/2+1
+         xnorm(i) = dfloat(i-1)/dfloat(Nx/2)
+      end do
+      ! calculate the cell boundaries on the right part of the grid grid
+      xcb(Nx/2+1:Nx+1) = (L/2.0d+0) + (L/2.0d+0) * ( (2.0d+0-dxmin)*xnorm(1:Nx/2+1) - (1.0d+0-dxmin)*xnorm(1:Nx/2+1)*xnorm(1:Nx/2+1) )
+      ! calculate the cell boundaries on the left part of the grid grid
+      xcb(1:Nx/2+1)    = (L/2.0d+0) - (L/2.0d+0) * ( (2.0d+0-dxmin)*xnorm(Nx/2+1:1:-1) - (1.0d+0-dxmin)*xnorm(Nx/2+1:1:-1)*xnorm(Nx/2+1:1:-1) )
+      ! calculate the grid cell centres
+      x = (xcb(1:Nx) + xcb(2:Nx+1)) / 2.0d+0
+      ! calcuate the grid cell widths
+      delta_xcb = xcb(2:Nx+1) - xcb(1:Nx)
+      ! calculate the step size between grid cell centres
+      delta_x(1:Nx-1) = x(2:Nx) - x(1:Nx)
+      ! extrapolate for step size into the target
+      delta_x(Nx) = 2.0d+0*(L-x(Nx))
+      return
+   end subroutine non_uniform_grid2
+
    subroutine magnetic_field
       implicit none
       allocate( B_field(Nx), B_field_cb(Nx+1) )
@@ -89,7 +120,7 @@ contains
       if( flux_expansion .gt. 1.0d0 ) then
           ! B_field    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * x   / L )
           ! B_field_cb = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * xcb / L )
-          ! we apply the flux expansion only along the divertor-SOL
+          ! we apply the flux expansion only along the divertor-SOL only
           B_field( i_Xpoint+1 : Nx )    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (x( i_Xpoint+1 : Nx ) - L_core_SOL)   / (L - L_core_SOL) )
           B_field_cb( i_Xpoint+1 : Nx ) = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * (xcb( i_Xpoint+1 : Nx ) - L_core_SOL) / (L - L_core_SOL) )
       endif

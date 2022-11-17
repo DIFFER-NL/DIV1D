@@ -11,6 +11,7 @@ module physics_parameters
    real( wp ) :: gamma                  = 6.5d+0      ! sheath heat transmission factor [-]
    real( wp ) :: L                      = 5.0d+1      ! total lenght along flux tube (from midpoint to X- and) from X-point to target/sheath [m] (value from Stangeby problem 5.1)
    real( wp ) :: L_core_SOL             = 0.0d+0      ! lenght of core-SOL boundary: i.e. lenght along flux tube from midpoint to X-point [m] (default 0.0 => no core-SOL)
+   real( wp ) :: X_core_SOL             = 0.0d+0      ! position of first core-SOL boundary: (default 0.0 => symmetric core SOL, divertor case)
    real( wp ) :: sintheta               = 0.1d+0      ! sinus of angle theta between B-field and divertor target plate [-]
    real( wp ) :: mass                   = 3.3436d-27  ! mass of the dominant ion species (default value representing Deuterium) [kg]
    real( wp ) :: Gamma_X                = 1.0d+23     ! particle flux entering the flux tube at the X-point [/m^2s]
@@ -87,7 +88,7 @@ contains
       num_impurities = 0
 
       namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, flux_expansion, initial_n, initial_v, initial_T, initial_a, density_ramp_rate, &
-                               L_core_SOL, alpha_core_profile, &
+                               L_core_SOL, X_core_SOL, alpha_core_profile, &
                                energy_loss_ion, neutral_residence_time, redistributed_fraction, recycling, num_impurities, impurity_concentration, impurity_Z, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
