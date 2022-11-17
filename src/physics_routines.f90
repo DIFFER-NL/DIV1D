@@ -133,8 +133,8 @@ contains
          ! boundary condition at the sheath (note that velocity is allowed to be supersonic)
          csound_target = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
          ! write(*,*) 'flux', e_charge, mass, temperature(Nx)
-         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target) / B_field_cb(Nx+1)
-         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target) / B_field_cb(Nx+1)
+         ! Gamma_n(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * max(velocity(Nx),csound_target) / B_field_cb(Nx)
+         Gamma_n(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * max(velocity(Nx),csound_target) / B_field_cb(Nx)
          ! boundary condition at i = 0 (not used when X-point density BC is used)
          ! case for core-SOL + divertorleg (i=0 is stagnation point)
          Gamma_n(0)  = 0.0d0
@@ -145,8 +145,8 @@ contains
          momentum = density * mass * velocity / B_field
          call advection(Nx, momentum, velocity, temperature, Gamma_mom)
          ! boundary condition at the sheath
-         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx+1)
-         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx+1)
+         ! Gamma_mom(Nx) = (1.5*density(Nx)-0.5*density(Nx-1)) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx)
+         Gamma_mom(Nx) = min(density(Nx),(1.5*density(Nx)-0.5*density(Nx-1))) * mass * max(velocity(Nx),csound_target)**2 / B_field_cb(Nx)
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_mom(Nx) = 0.0d+0
          ! boundary condition at i = 0
          ! case for core-SOL + divertorleg (i=0 is stagnation point)
@@ -158,10 +158,10 @@ contains
          ! write(*,*) 'advection', q_parallel
       ! add the conductive heat flux in the internal region
          do i = 1, Nx-1
-            q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i) / B_field_cb(i+1)
+            q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i) / B_field_cb(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / B_field_cb(Nx+1) ! we have extrapolated the density linear towards x = L, i.e. the sheath
+         q_parallel(Nx) = gamma * csound_target * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / B_field_cb(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
          ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
          ! boundary condition at i = 0
          if( L_core_SOL .gt. 0.0 ) then

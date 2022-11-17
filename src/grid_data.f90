@@ -9,11 +9,11 @@ module grid_data
    integer, parameter, private :: wp = KIND(1.0D0)
    real( wp ), allocatable :: x(:)         ! grid cell centre measured as distance from the X-point along the flux tube [m]
    integer                 :: i_Xpoint = 0 ! index of the grid point just above or at the X-point (used in case the core-SOL boundary is included)
-   real( wp ), allocatable :: xcb(:)       ! grid cell boundaries [m]: xcb(1) = 0 and xcb(Nx+1) = L
+   real( wp ), allocatable :: xcb(:)       ! grid cell boundaries [m]: xcb(0) = 0 and xcb(Nx) = L (to be consistent with the flux arrays)
    real( wp ), allocatable :: delta_x(:)   ! step size between grid cell centres delta_x(i) = x(i+1) - x(i) [m]
-   real( wp ), allocatable :: delta_xcb(:) ! grid cell size defined as delta_x(i) = xcb(i+1) - xcb(i) [m]
+   real( wp ), allocatable :: delta_xcb(:) ! grid cell size defined as delta_x(i) = xcb(i) - xcb(i-1) [m] i = 1:Nx
    real( wp ), allocatable :: B_field(:)   ! vector holding the ratio of B/B_target @ x(:)
-   real( wp ), allocatable :: B_field_cb(:)! vector holding the ratio of B/B_target @ xcb(:)
+   real( wp ), allocatable :: B_field_cb(:)! vector holding the ratio of B/B_target @ xcb(:) (changed to (0:Nx) to bne constsistent with flux arrays
    real( wp ), private, allocatable :: xnorm(:)     ! a normalized array running from 0 to 1 at the cell boundaries, used to calculate the non-uniform grid efficiently
    integer, private        :: i            ! array index
 
@@ -49,35 +49,35 @@ contains
       implicit none
       real( wp ) :: dx
       integer    :: i
-      allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx) )
+      allocate( x(Nx), xcb(0:Nx), delta_x(Nx), delta_xcb(Nx) )
       ! set-up equidistant grid
       dx = L/Nx
       delta_x = dx
       delta_xcb = dx
       do i = 1, Nx
-         x(i) = dx/2.0d+0 + (i-1)*dx
-         xcb(i) = (i-1)*dx
+         x(i) = dx/2.0d+0 + dfloat(i-1)*dx
+         xcb(i) = dfloat(i)*dx
       end do
-      xcb(Nx+1) = L
+      xcb(0) = 0
       return
    end subroutine uniform_grid
 
    subroutine non_uniform_grid
       implicit none
       integer    :: i
-      allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx), xnorm(Nx+1) )
+      allocate( x(Nx), xcb(0:Nx), delta_x(Nx), delta_xcb(Nx), xnorm(0:Nx) )
       ! set-up non-equidistant grid as described in SD1D manual
       ! first define a normalized array running from 0 to 1 at the cell boundaries
       write(*,*) 'setting-up nonuniform grip option 2'
-      do i = 1, Nx+1
-         xnorm(i) = dfloat(i-1)/dfloat(Nx)
+      do i = 0, Nx
+         xnorm(i) = dfloat(i)/dfloat(Nx)
       end do
       ! calculate the cell boundaries in the grid
       xcb = L * ( (2.0d+0-dxmin)*xnorm - (1.0d+0-dxmin)*xnorm*xnorm)
       ! calculate the grid cell centres
-      x = (xcb(1:Nx) + xcb(2:Nx+1)) / 2.0d+0
+      x = (xcb(0:Nx-1) + xcb(1:Nx)) / 2.0d+0
       ! calcuate the grid cell widths
-      delta_xcb = xcb(2:Nx+1) - xcb(1:Nx)
+      delta_xcb = xcb(1:Nx) - xcb(0:Nx-1)
       ! calculate the step size between grid cell centres
       delta_x(1:Nx-1) = x(2:Nx) - x(1:Nx)
       ! extrapolate for step size into the target
@@ -88,22 +88,22 @@ contains
    subroutine non_uniform_grid2
       implicit none
       integer    :: i
-      allocate( x(Nx), xcb(Nx+1), delta_x(Nx), delta_xcb(Nx), xnorm(Nx+1) )
+      allocate( x(Nx), xcb(0:Nx), delta_x(Nx), delta_xcb(Nx), xnorm(0:Nx) )
       ! set-up non-equidistant grid with two targets: grid is symmetric
       ! first define a normalized array running from 0 to 1 at the cell boundaries
       ! note that Nx must be even for this to work correctly!
       write(*,*) 'setting-up nonuniform grip option 2'
-      do i = 1, Nx/2+1
-         xnorm(i) = dfloat(i-1)/dfloat(Nx/2)
+      do i = 0, Nx/2
+         xnorm(i) = dfloat(i)/dfloat(Nx/2)
       end do
       ! calculate the cell boundaries on the right part of the grid grid
-      xcb(Nx/2+1:Nx+1) = (L/2.0d+0) + (L/2.0d+0) * ( (2.0d+0-dxmin)*xnorm(1:Nx/2+1) - (1.0d+0-dxmin)*xnorm(1:Nx/2+1)*xnorm(1:Nx/2+1) )
+      xcb(Nx/2:Nx) = (L/2.0d+0) + (L/2.0d+0) * ( (2.0d+0-dxmin)*xnorm(0:Nx/2) - (1.0d+0-dxmin)*xnorm(0:Nx/2)*xnorm(0:Nx/2) )
       ! calculate the cell boundaries on the left part of the grid grid
-      xcb(1:Nx/2+1)    = (L/2.0d+0) - (L/2.0d+0) * ( (2.0d+0-dxmin)*xnorm(Nx/2+1:1:-1) - (1.0d+0-dxmin)*xnorm(Nx/2+1:1:-1)*xnorm(Nx/2+1:1:-1) )
+      xcb(0:Nx/2)  = (L/2.0d+0) - (L/2.0d+0) * ( (2.0d+0-dxmin)*xnorm(Nx/2:0:-1) - (1.0d+0-dxmin)*xnorm(Nx/2:0:-1)*xnorm(Nx/2:0:-1) )
       ! calculate the grid cell centres
-      x = (xcb(1:Nx) + xcb(2:Nx+1)) / 2.0d+0
+      x = (xcb(0:Nx-1) + xcb(1:Nx)) / 2.0d+0
       ! calcuate the grid cell widths
-      delta_xcb = xcb(2:Nx+1) - xcb(1:Nx)
+      delta_xcb = xcb(1:Nx) - xcb(0:Nx-1)
       ! calculate the step size between grid cell centres
       delta_x(1:Nx-1) = x(2:Nx) - x(1:Nx)
       ! extrapolate for step size into the target
@@ -113,11 +113,11 @@ contains
 
    subroutine magnetic_field
       implicit none
-      allocate( B_field(Nx), B_field_cb(Nx+1) )
+      allocate( B_field(Nx), B_field_cb(0:Nx) )
       ! set the magnetic field values along the grid
       B_field    = 1.0d0
       B_field_cb = 1.0d0
-      if( flux_expansion .gt. 1.0d0 ) then
+      if( flux_expansion .ne. 1.0d0 ) then ! NB. we staan ook flux contractie toe, i.e. flux_expansion < 1 
           ! B_field    = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * x   / L )
           ! B_field_cb = 1.0d0 / ( 1.0d0 + (flux_expansion - 1.0d0) * xcb / L )
           ! we apply the flux expansion only along the divertor-SOL only
