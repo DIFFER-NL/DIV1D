@@ -46,7 +46,7 @@ contains
                       if( X_core_SOL .eq. 0.0d+0 ) then
                           normalization_core_profile = normalization_core_profile + (1 - (x(i)/L_core_SOL)**2)**alpha_core_profile * delta_xcb(i)
                       else
-                          normalization_core_profile = normalization_core_profile + (1 - 4.0d+0*((x(i)-mid_point)/L_core_SOL)**2)**alpha_core_profile * delta_xcb(i)
+                          normalization_core_profile = normalization_core_profile + 0.5*(1 - 4.0d+0*((x(i)-mid_point)/L_core_SOL)**2)**alpha_core_profile * delta_xcb(i) ! factor 0.5 because we need 2 times q_parX, Gamma_X
                       endif
                   endif
               endif

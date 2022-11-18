@@ -173,18 +173,18 @@ contains
             q_parallel(i) = q_parallel(i) * switch_convective_heat - kappa_parallel(0.5d+0*(temperature(i)+temperature(i+1))) * (temperature(i+1)-temperature(i))/delta_x(i) / B_field_cb(i)
          enddo
          ! boundary condition at the sheath: given by the sheath heat transmission
-         q_parallel(Nx) = gamma * csound_target(2) * (1.5d+0*density(Nx)-0.5d+0*density(Nx-1)) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / B_field_cb(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
+         q_parallel(Nx) = gamma * csound_target(2) * min(density(Nx),(1.5d+0*density(Nx)-0.5d+0*density(Nx-1))) * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / B_field_cb(Nx) ! we have extrapolated the density linear towards x = L, i.e. the sheath
          ! if(temperature(Nx) .le. minimum_temperature .or. q_parallel(Nx) .lt. 0.0d+0) q_parallel(Nx) = 0.0d+0
          ! boundary condition at i = 0
-         if( L_core_SOL .gt. 0.0 ) then
-             ! case for core-SOL + divertorleg (i=0 is stagnation point)
-             q_parallel(0)  = 0.0d0
-         elseif( X_core_SOL .eq. 0.0 ) then
+         if( L_core_SOL .eq. 0.0 ) then
              ! case with prescribed heat flux at i = 0 (X-point)
              q_parallel(0)  = dyn_qparX(itime)+elm_heat_load
+         elseif( X_core_SOL .eq. 0.0 ) then
+             ! case for core-SOL + divertorleg (i=0 is stagnation point)
+             q_parallel(0)  = 0.0d0
          else
              ! case with two targets so sheath boundary conditions at i=0 as well
-             q_parallel(0) = - gamma * csound_target(1) * (1.5d+0*density(1)-0.5d+0*density(2)) * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(21),minimum_temperature) / B_field_cb(0) ! we have extrapolated the density linear towards x = 0, i.e. the sheath
+             q_parallel(0) = - gamma * csound_target(1) * min(density(1),(1.5d+0*density(1)-0.5d+0*density(2))) * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / B_field_cb(0) ! we have extrapolated the density linear towards x = 0, i.e. the sheath
          endif
          
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
@@ -193,7 +193,7 @@ contains
             neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
          enddo
          ! boundar condition at i = 0
-         if( L_core_SOL .gt. 0.0d+0 ) then
+         if( L_core_SOL .eq. 0.0d+0 ) then
              ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1, i.e. zero flux)
              neutral_flux(0) = 0.0d+0
          elseif( X_core_SOL .eq. 0.0d+0 ) then
@@ -245,6 +245,7 @@ contains
       real(wp), intent(out) :: Source_n(Nx), Source_v(Nx), Source_Q(Nx), neutral_source(Nx)
       real(wp) :: rate_cx(Nx), rate_ion(Nx), rate_exc(Nx), rate_rec(Nx), rate_ree(Nx), rate_imp(Nx)
       real(wp) :: radial_sink(Nx)
+      real(wp) :: mid_point
       integer  :: ix, iix
       ! input variables for the elm simulation
       real(wp), intent(in)   :: elm_heat_load, elm_density_change
@@ -305,6 +306,9 @@ contains
           Source_n(i_Xpoint(1):i_Xpoint(2)) = Source_n(i_Xpoint(1):i_Xpoint(2)) + Gamma_X * (1.0d+0 - (x(i_Xpoint(1):i_Xpoint(2))/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
           Source_Q(i_Xpoint(1):i_Xpoint(2)) = Source_Q(i_Xpoint(1):i_Xpoint(2)) + (dyn_qparX(itime)+elm_heat_load)  * (1.0d+0 - (x(i_Xpoint(1):i_Xpoint(2))/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
       elseif( L_core_SOL .gt. 0.0d+0 .and. X_core_SOL .gt. 0.0d+0 ) then
+          mid_point = X_core_SOL + 0.5d+0*L_core_SOL
+          Source_n(i_Xpoint(1):i_Xpoint(2)) = Source_n(i_Xpoint(1):i_Xpoint(2)) + Gamma_X * (1.0d+0 - 4.0d+0*((x(i_Xpoint(1):i_Xpoint(2))-mid_point)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
+          Source_Q(i_Xpoint(1):i_Xpoint(2)) = Source_Q(i_Xpoint(1):i_Xpoint(2)) + (dyn_qparX(itime)+elm_heat_load)  * (1.0d+0 - 4.0d+0*((x(i_Xpoint(1):i_Xpoint(2))-mid_point)/L_core_SOL)**2)**alpha_core_profile / normalization_core_profile
       endif
       return
    end subroutine calculate_sources
@@ -365,7 +369,7 @@ contains
             ydot(ix) = ydot(ix) - B_field(ix) * (Gamma_n(ix)-Gamma_n(ix-1))/delta_xcb(ix)   ! ew 01-03-2021:
          enddo
          if( L_core_SOL .gt. 0.0d+0 ) then
-             ! apply boundary condition at mid point (i.e. flux = 0)
+             ! apply boundary condition at x = 0 as calculated in calculate_fluxes
              ydot(1) = ydot(1) - B_field(1) * (Gamma_n(1)-Gamma_n(0))/delta_xcb(1)
          else
              ! apply boundary condition at the X-point, i=1: fixed density with specified ramp rate, elm or perturbation in time	 
@@ -393,19 +397,19 @@ contains
              ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gmom0)/delta_xcb(1)    ! [kg/(m^2 s^2)]
          endif
          ! add the pressure term in the internal region using downwind differencing: NB pressure =2/3 * y(2*Nx+1:3*Nx)
-         ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
          do ix = 2, Nx-1
             ydot(Nx+ix) = ydot(Nx+ix) - (1.0d+0-central_differencing)*(y(2*Nx+ix+1)-y(2*Nx+ix))*energy_norm/1.5d+0/delta_x(ix)&
                                       - central_differencing*(y(2*Nx+ix+1)-y(2*Nx+ix-1))*energy_norm/1.5d+0/(x(ix+1)-x(ix-1))
             ! add effect of numerical viscosity
             ydot(Nx+ix) = ydot(Nx+ix) + viscosity*(velocity(ix+1) + velocity(ix-1)-2.0d0*velocity(ix))
          enddo
+         !add pressure term at the boundaries
+         ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+2)-y(2*Nx+1))*energy_norm/1.5d+0/delta_x(1)
+         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)  -y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)
          ! apply boundary condition at the sheath entrance, i=Nx: (linearly extrapolate velocity beyond the sheath)
-         ydot(2*Nx) = ydot(2*Nx) - (y(3*Nx)-y(3*Nx-1))*energy_norm/1.5d+0/delta_x(Nx-1)     ! extrapolate temperature and density
          ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target(2) + velocity(Nx-1)-3.0d0*velocity(Nx))  ! add numerical viscocity
          if( L_core_SOL .gt. 0.0d+0 .and. X_core_SOL .gt. 0.0d+0 ) then
              ! apply boundary contion at the x=0 sheath for the pressure and viscosity terms
-             ydot(Nx+1) = ydot(Nx+1) - (y(2*Nx+1)-y(2*Nx+2))*energy_norm/1.5d+0/delta_x(1)     ! extrapolate temperature and density
              ydot(Nx+1) = ydot(Nx+1) - viscosity*(2.0d0*csound_target(1) + velocity(2)-3.0d0*velocity(1))  ! add numerical viscocity
          endif
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx) ! -----------------------------------------------------------------------
