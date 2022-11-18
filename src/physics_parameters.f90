@@ -120,14 +120,14 @@ contains
       do z = 1,num_impurities
       if ( impurity_concentration(z) .eq. -1 ) then
         open(1, file = 'dyn_imp_con.dat', status = 'old')
-        do i = 1,ntime
+        do i = 0,ntime
           read(1,*) dyn_imp_con(z,i) ! (row, column)
          dyn_imp_con(z,i) = min(max(dyn_imp_con(z,i),0.0d+0),1.0d+0)
        !  write(*,*) 'read dyn_imp_con.dat =0'
          end do
           close(1)
        else
-        do i = 1,ntime
+        do i = 0,ntime
             dyn_imp_con(z,i) = min(max(impurity_concentration(z),0.0d+0),1.0d+0)
             end do
        ! write(*,*) 'dimpdt=0'
@@ -136,7 +136,7 @@ contains
       ! ------- upstream density ------- !
       if (initial_n .lt. 0.0d+0) then
       open(1, file = 'dyn_nu.dat', status = 'old')
-       do i =  1,ntime
+       do i =  0,ntime
         read(1,*) dyn_nu(i)
        end do
        close(1)
@@ -152,7 +152,7 @@ contains
        !write(*,*) "nu.dat read test.", nu_t(1010), nu_t(1011)
        !write(*,*) "dnu.dat read test", dnu_t(1010)
       else
-        do i = 1,ntime
+        do i = 0,ntime
                dyn_nu(i) = initial_n
                dyn_dnu(i) = 0.0d+0
         end do
@@ -162,14 +162,14 @@ contains
     ! ------- neutral background ------- !
       if (initial_a .lt. 0.0d+0) then
       open(1, file = 'dyn_nb.dat', status = 'old')
-       do i =  1,ntime
+       do i =  0,ntime
         read(1,*) dyn_nb(i)
        end do
        close(1)
        !initial_a = dyn_nb(1) ! overwrite initial_a -> this turns it to  absolute input
        ! derivatives for ODE solver
       else
-        do i = 1,ntime
+        do i = 0,ntime
                dyn_nb(i) = initial_a
         end do
       !  write(*,*) "dndt=0"  
@@ -179,13 +179,13 @@ contains
      ! -------- upstream heat flux -----------!
       if (q_parX .lt. 0.0d+0) then
       open(1, file = 'dyn_qpar.dat', status = 'old')
-       do i =  1,ntime
+       do i =  0,ntime
         read(1,*) dyn_qparX(i)
        end do
        close(1)
        !q_parX = dyn_qparX(1) ! overwrite q_parX -> turns it to  absolute input
       else
-       do i= 1,ntime
+       do i= 0,ntime
         dyn_qparX(i) = q_parX
        end do 
       ! write(*,*) 'dqdt=0'
@@ -194,13 +194,13 @@ contains
       ! ------- Recycling ------!
       if (recycling .lt. 0.0d+0) then
         open(2, file = 'dyn_rec.dat', status = 'old')
-        do i = 1,ntime
+        do i = 0,ntime
          read(2,*) dyn_rec(i)
          dyn_rec(i) = min(max(dyn_rec(i),0.0d+0),1.0d+0)
         end do
         close(2)
        else
-        do i = 1,ntime
+        do i = 0,ntime
          dyn_rec(i) = min(max(recycling,0.0d+0),1.0d+0)
         end do
        ! write(*,*)  "dRdt=0"
@@ -209,14 +209,14 @@ contains
       ! -------- Gas puff -------!
       if (gas_puff_source .lt. 0.0d+0) then
         open(3, file = 'dyn_gas.dat', status = 'old')
-        do i = 1,ntime
+        do i = 0,ntime
         read(3,*) dyn_gas(i) 
         dyn_gas(i) = max(dyn_gas(i),0.0d+0)
         end do
         close(3)
         write(*,*) "dgdt=1"
       else      
-        do i = 1,ntime
+        do i = 0,ntime
         dyn_gas(i) = max(gas_puff_source,0.0d+0) 
         end do
        ! write(*,*) "dgdt=0"  
@@ -225,14 +225,14 @@ contains
       ! -------- Radial Loss fraction ----- !
       if (radial_loss_factor .lt. 0.0d+0) then
         open(4, file = 'dyn_rad_los.dat', status= 'old')
-        do i = 1,ntime
+        do i = 0,ntime
         read(4,*) dyn_rad_los(i) 
         dyn_rad_los(i) = min(max(dyn_rad_los(i),0.0d+0),1.0d+0)
         end do
         close(4)
         write(*,*) "dRLdt=1"
       else
-        do i = 1,ntime
+        do i = 0,ntime
         dyn_rad_los(i) = min(max(radial_loss_factor,0.0d+0),1.0d+0)
         end do
        ! write(*,*) "dRLdt=0"
@@ -242,14 +242,14 @@ contains
       ! ------------- redistribution fraction --------------! 
       if (redistributed_fraction .lt. 0.0d+0) then
         open(4, file = 'dyn_red_frc.dat', status= 'old')
-        do i = 1,ntime
+        do i = 0,ntime
         read(4,*) dyn_red_frc(i) 
         dyn_red_frc(i) = min(max(dyn_red_frc(i),0.0d+0),1.0d+0)
         end do
         close(4)
         write(*,*) "dfRLdt=1"
       else
-        do i = 1,ntime
+        do i = 0,ntime
         dyn_red_frc(i) = min(max(redistributed_fraction,0.0d+0),1.0d+0)
         end do
        ! write(*,*) "dfRLdt=0"

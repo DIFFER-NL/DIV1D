@@ -281,7 +281,7 @@ end subroutine write_header
 subroutine write_solution( time )
    use physics_parameters, only : dyn_gas, dyn_nu, dyn_nb, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc, dyn_imp_con, num_impurities
    use numerics_parameters, only : Nx, delta_t
-   use grid_data, only : x, B_field
+   use grid_data, only : x, B_field_cb
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none
@@ -302,7 +302,7 @@ subroutine write_solution( time )
    write( 10, * ) 'dyn_imp_con = ', ( dyn_imp_con(i,itime), i = 1,num_impurities )
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &                 !!!! the neutral flux should not be multiplied with the B_field !!!!    
-   &                                   Gamma_n(i)*B_field(i),Gamma_mom(i)*B_field(i),q_parallel(i)*B_field(i),neutral_flux(i), & ! multiplied by B_field because the code uses normalized values
+   &                                   Gamma_n(i)*B_field_cb(i),Gamma_mom(i)*B_field_cb(i),q_parallel(i)*B_field_cb(i),neutral_flux(i), & ! multiplied by B_field because the code uses normalized values
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return

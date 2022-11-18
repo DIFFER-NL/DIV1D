@@ -141,9 +141,9 @@ contains
              Gamma_n(0)  = 0.0d0
          else
              ! case with two targets so sheath boundary conditions at i=0 as well
-             csound_target(1) = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / mass )
+             csound_target(1) = - sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / mass ) ! note the sign
              ! Gamma_n(0) = (1.5*density(1)-0.5*density(2)) * max(abs(velocity(Nx)),csound_target(1)) / B_field_cb(0)
-             Gamma_n(0) = - min(density(1),(1.5*density(1)-0.5*density(2))) * max(abs(velocity(1)),csound_target(1)) / B_field_cb(0)
+             Gamma_n(0) = min(density(1),(1.5*density(1)-0.5*density(2))) * min(velocity(1),csound_target(1)) / B_field_cb(0)
          endif
          ! write(*,*) 'flux', density(Nx), density(Nx-1), velocity(Nx), csound_target
          ! if(temperature(Nx) .le. minimum_temperature) Gamma_n(Nx) = 0.0d+0
@@ -161,7 +161,7 @@ contains
              Gamma_mom(0)  = 0.0d0
          else
              ! case with two targets so sheath boundary conditions at i=0 as well
-             Gamma_mom(0) = min(density(1),(1.5*density(1)-0.5*density(2))) * mass * max(abs(velocity(Nx)),csound_target(1))**2 / B_field_cb(0)
+             Gamma_mom(0) = min(density(1),(1.5*density(1)-0.5*density(2))) * mass * min(velocity(1),csound_target(1))**2 / B_field_cb(0)
          endif
 
       ! convective heat flux = 5 density k temperature velocity / B_field (i.e. 5/2 pressure)
@@ -184,7 +184,7 @@ contains
              q_parallel(0)  = 0.0d0
          else
              ! case with two targets so sheath boundary conditions at i=0 as well
-             q_parallel(0) = - gamma * csound_target(1) * min(density(1),(1.5d+0*density(1)-0.5d+0*density(2))) * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / B_field_cb(0) ! we have extrapolated the density linear towards x = 0, i.e. the sheath
+             q_parallel(0) = gamma * csound_target(1) * min(density(1),(1.5d+0*density(1)-0.5d+0*density(2))) * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / B_field_cb(0) ! we have extrapolated the density linear towards x = 0, i.e. the sheath
          endif
          
       ! the neutral particle diffusion !!!! switch-on in case you want this diagnostic
@@ -192,7 +192,7 @@ contains
          do i = 1, Nx-1
             neutral_flux(i) = - 0.5d+0*(D_neutral(temperature(i),density(i))+D_neutral(temperature(i+1),density(i+1))) * (neutral(i+1)-neutral(i))/delta_x(i)
          enddo
-         ! boundar condition at i = 0
+         ! boundary condition at i = 0
          if( L_core_SOL .eq. 0.0d+0 ) then
              ! boundary condition at X-point (zero gradient i.e. at i=0 every equals i=1, i.e. zero flux)
              neutral_flux(0) = 0.0d+0
@@ -201,7 +201,7 @@ contains
              neutral_flux(0) = 0.0d+0
          else
              ! sheath boundary condition (= flux of plasma density in case of full recycling)
-             neutral_flux(0) = B_field_cb(0)*Gamma_n(0) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
+             neutral_flux(0) = -B_field_cb(0)*Gamma_n(0) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
          endif
          ! boundary condition at the sheath (= flux of plasma density in case of full recycling)
          neutral_flux(Nx) = -B_field_cb(Nx)*Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
@@ -359,7 +359,7 @@ contains
 
       ! sound velocity at the target(s)
       csound_target(2) = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(Nx)-0.5d+0*temperature(Nx-1),minimum_temperature) / mass )
-      if(X_core_SOL .gt. 0.0d+0) csound_target(1) = sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / mass )
+      if(X_core_SOL .gt. 0.0d+0) csound_target(1) = - sqrt( 2.0d+0 * e_charge * max(1.5d+0*temperature(1)-0.5d+0*temperature(2),minimum_temperature) / mass ) ! note the sign
 
       ! -------------------------------------------- ydot for the density equation ----------------------------------------------
          ydot(1:Nx) = switch_density_source * Source_n(1:Nx) ! [1/ (m^3 s) ]
@@ -386,7 +386,7 @@ contains
          enddo
          if( L_core_SOL .gt. 0.0d+0 ) then
              ! apply boundary condition at mid point (i.e. flux = 0) or as calculated for the target at x=0
-             ydot(Nx+1) = ydot(Nx+1) - (Gamma_mom(1)-Gamma_mom(0))/delta_xcb(1)    ! [kg/(m^2 s^2)]
+             ydot(Nx+1) = ydot(Nx+1) - B_field(1) * (Gamma_mom(1)-Gamma_mom(0))/delta_xcb(1)    ! [kg/(m^2 s^2)]
          else
              ! apply boundary condition at the X-point, as following from the constant density n(1)
              ! velocity at i = 0:  v(0) = v(2) - 2 (S_n(1)+density_ramp_rate) delta_xcb(1) / n(1)
@@ -410,7 +410,7 @@ contains
          ydot(2*Nx) = ydot(2*Nx) + viscosity*(2.0d0*csound_target(2) + velocity(Nx-1)-3.0d0*velocity(Nx))  ! add numerical viscocity
          if( L_core_SOL .gt. 0.0d+0 .and. X_core_SOL .gt. 0.0d+0 ) then
              ! apply boundary contion at the x=0 sheath for the pressure and viscosity terms
-             ydot(Nx+1) = ydot(Nx+1) - viscosity*(2.0d0*csound_target(1) + velocity(2)-3.0d0*velocity(1))  ! add numerical viscocity
+             ydot(Nx+1) = ydot(Nx+1) + viscosity*(2.0d0*csound_target(1) + velocity(2)-3.0d0*velocity(1))  ! add numerical viscocity
          endif
       ! write(*,*) 'ydot(momentum) =', ydot(1*Nx+1:2*Nx) ! -----------------------------------------------------------------------
       
