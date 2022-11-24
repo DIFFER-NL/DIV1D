@@ -20,6 +20,8 @@ program div1d
    integer :: restart_error, time_step_error
    integer :: istep, ix, itol, iopt, ml, mu, lrw, liw, nzswag_input
    ! external right_hand_side
+   ! input variables for the elm simulation
+   real(wp) :: elm_heat_load, elm_density_change
    
    ! the following is needed for dvode_f90
    integer :: itask, istate
@@ -59,11 +61,13 @@ program div1d
    call initialize_gas_puff(Nx)
 
    ! write the inital solution to file
+   elm_heat_load = 0.0d+0
+   elm_density_change = 0.0d+0
    ! calculate the fluxes
-   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
    ! calculate the sources
    call calculate_sources( Nx, start_time,  density, velocity, temperature, neutral, q_parallel, &
-                          Source_n, Source_v, Source_Q, source_neutral )
+                          Source_n, Source_v, Source_Q, source_neutral, elm_heat_load, elm_density_change )
    open( UNIT=10, FILE='div1d_output.txt' )
    call write_header
    call write_solution( start_time )
@@ -151,6 +155,11 @@ program div1d
          ! if( density(ix)     .lt. minimum_density)     density(ix) =     minimum_density
          ! if( neutral(ix)     .lt. minimum_density)     neutral(ix) =     minimum_density
       enddo
+      ! re-normalize the solution every so often
+    !  if( modulo( istep, istate_mod ) .eq. 0 ) then
+    !  density_norm = density(1)
+    !  temperature_norm = temperature(Nx)
+    !  endif
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       time_step_error = istate
       if( istate .ne. 2 .and. method .gt. 0 ) then
@@ -160,6 +169,11 @@ program div1d
             attempt = attempt + 1
             write(*,*) 'trying to continue integration. attempt nr.', attempt
             istate = 1
+            if( attempt .eq. max_attempts - 5 ) then ! try to renormalize and run 5 more times
+                density_norm = density(1)
+                temperature_norm = temperature(Nx)
+                call nvt2y( Nx, density, velocity, temperature, neutral, y )
+            endif
             call dvode_f90( right_hand_side, 4*Nx, y, start_time, end_time, itask, istate, options )
          enddo
          if( istate .ne. 2 ) then 
@@ -170,10 +184,12 @@ program div1d
       endif
       if( mod( istep, nout ) .eq. 0 ) then
          ! call y2nvt( Nx, y, density, velocity, temperature, neutral )
+         ! calculate the ELM heat flux and particle flux
+         call simulate_elm(elm_heat_load, elm_density_change, end_time)
          ! calculate the fluxes
-         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux )
+         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
          ! calculate the sources
-         call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral )
+         call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral, elm_heat_load, elm_density_change )
          call write_solution( end_time )
       endif
       start_time = end_time
@@ -200,8 +216,8 @@ subroutine write_header
    implicit none
    integer :: i
    integer, parameter :: wp = KIND(1.0D0)
-
-   ! note these lists should still be completed (GD, complete now?)
+   ! NOTE that the tag is HARDCODED for backward compatibility in reading the outputs with Matlab! 
+   write( 10, * ) 'git tag: v3.0.2'
    write( 10, * ) 'numerics parameters:'
    write( 10, * ) '   Nx         = ', Nx
    write( 10, * ) '   ntime      = ', ntime
@@ -230,7 +246,9 @@ subroutine write_header
    write( 10, * ) '   neutral_residence_time  = ', neutral_residence_time
    write( 10, * ) '   redistributed_fraction  = ', redistributed_fraction
    write( 10, * ) '   recycling               = ', recycling
-   write( 10, * ) '   carbon_concentration    = ', carbon_concentration
+   write( 10, * ) '   num_impurities          = ', num_impurities
+   write( 10, * ) '   impurity_concentration  = ', ( impurity_concentration(i), i = 1,num_impurities )
+   write( 10, * ) '   impurity_Z              = ', ( impurity_Z(i), i = 1,num_impurities )
    write( 10, * ) '   gas_puff_source         = ', gas_puff_source
    write( 10, * ) '   gas_puff_location       = ', gas_puff_location
    write( 10, * ) '   gas_puff_width          = ', gas_puff_width
@@ -245,25 +263,25 @@ subroutine write_header
    write( 10, * ) '   radial_loss_gaussian    = ', radial_loss_gaussian
    write( 10, * ) '   radial_loss_width       = ', radial_loss_width
    write( 10, * ) '   radial_loss_location    = ', radial_loss_location
-   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
-   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
-   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
-   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
-   write( 10, * ) '   switch_car_con_prf      = ', switch_car_con_prf
-   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
-   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
+!   write( 10, * ) '   switch_dyn_nu           = ', switch_dyn_nu 
+!   write( 10, * ) '   switch_dyn_gas          = ', switch_dyn_gas 
+!   write( 10, * ) '   switch_dyn_rec          = ', switch_dyn_rec
+!   write( 10, * ) '   switch_dyn_rad_los      = ', switch_dyn_rad_los
+!   write( 10, * ) '   switch_dyn_imp_con      = ', switch_dyn_imp_con
+!   write( 10, * ) '   switch_dyn_qpar         = ', switch_dyn_qpar
+!   write( 10, * ) '   switch_dyn_red_frc      = ', switch_dyn_red_frc
 
-   write( 10, '(A195)' ) ' X [m]   car_con_prf [%]    gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
-   write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i), B_field(i), i=1,Nx )
+   write( 10, '(A195)' ) ' X [m]   gas_puff_prf []  B_field [fraction]'  !       rad_los_prf  '
+   write( 10, '(13(1PE15.6))' ) ( x(i), gas_puff(i), B_field(i), i=1,Nx )
   !write( 10, '(13(1PE15.6))' ) ( x(i),car_con_prf(i), gas_puff(i),rad_los_prf, i=1,Nx )
    return
 end subroutine write_header
 
 
 subroutine write_solution( time )
-   use physics_parameters, only : dyn_gas, dyn_nu, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc
+   use physics_parameters, only : dyn_gas, dyn_nu, dyn_nb, dyn_rec, dyn_rad_los, dyn_qparX, dyn_red_frc, dyn_imp_con, num_impurities
    use numerics_parameters, only : Nx, delta_t
-   use grid_data, only : x, B_field
+   use grid_data, only : x, B_field_cb
    use plasma_data, only : density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, Source_n, Source_v, Source_Q, source_neutral
 
    implicit none
@@ -276,13 +294,15 @@ subroutine write_solution( time )
    write( 10, * ) 'time        = ', time
    write( 10, * ) 'dyn_gas     = ', dyn_gas(itime)
    write( 10, * ) 'dyn_nu      = ', dyn_nu(itime)
+   write( 10, * ) 'dyn_nb      = ', dyn_nb(itime)
    write( 10, * ) 'dyn_rec     = ', dyn_rec(itime)
    write( 10, * ) 'dyn_rad_los = ', dyn_rad_los(itime)
    write( 10, * ) 'dyn_qparX   = ', dyn_qparX(itime)
    write( 10, * ) 'dyn_red_frc = ', dyn_red_frc(itime)
+   write( 10, * ) 'dyn_imp_con = ', ( dyn_imp_con(i,itime), i = 1,num_impurities )
    write( 10, '(A195)' ) '    X [m]        N [/m^3]       V [m/s]         T [eV]        Nn [/m^3]      Gamma_n    Gamma_mom [Pa]      q_parallel    neutral_flux     Source_n       Source_v       Source_Q     source_neut  '
    write( 10, '(13(1PE15.6))' ) ( x(i), density(i), velocity(i), temperature(i), neutral(i), &                 !!!! the neutral flux should not be multiplied with the B_field !!!!    
-   &                                   Gamma_n(i)*B_field(i),Gamma_mom(i)*B_field(i),q_parallel(i)*B_field(i),neutral_flux(i), & ! multiplied by B_field because the code uses normalized values
+   &                                   Gamma_n(i)*B_field_cb(i),Gamma_mom(i)*B_field_cb(i),q_parallel(i)*B_field_cb(i),neutral_flux(i), & ! multiplied by B_field because the code uses normalized values
    &                                   Source_n(i), Source_v(i), Source_Q(i), source_neutral(i), i=1,Nx )
    
    return

@@ -27,7 +27,8 @@ OBJECTS = obj/constants.o \
           obj/opkda1.o \
           obj/opkda2.o \
           obj/rk4.o\
-		  obj/experiments.o
+	  obj/experiments.o\
+	  obj/radiative_cooling_functions_post1977.o
 
 
 obj/div1d.exe : src/div1d_main.f90 $(OBJECTS)
@@ -73,8 +74,13 @@ obj/plasma_data.o : src/plasma_data.f90\
 	$(FC) src/plasma_data.f90 $(FOPT) -c -o obj/plasma_data.o
 
 
-obj/reaction_rates.o : src/reaction_rates.f90
+obj/reaction_rates.o : src/reaction_rates.f90\
+		   obj/radiative_cooling_functions_post1977.o
 	$(FC) src/reaction_rates.f90 $(FOPT) -c -o obj/reaction_rates.o
+
+
+obj/radiative_cooling_functions_post1977.o : src/radiative_cooling_functions_post1977.f90
+	$(FC) src/radiative_cooling_functions_post1977.f90 $(FOPT) -c -o obj/radiative_cooling_functions_post1977.o
 
 
 obj/interpolation.o : src/interpolation.f90
