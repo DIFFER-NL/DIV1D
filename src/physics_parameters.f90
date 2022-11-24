@@ -100,6 +100,8 @@ contains
 !      open(, file = 'input.txt', status = 'old')
       read(*,div1d_physics, IOSTAT = error)
       write(*,*) 'physics read error =', error
+      ! write the entirenamelist to the output file
+      write(10,div1d_physics)
 !      close(1) 
         
       num_impurities = 5 ! size(impurity_concentration)
