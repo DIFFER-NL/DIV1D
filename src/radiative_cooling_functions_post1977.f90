@@ -176,16 +176,17 @@ contains
 
         case( 18 )
                 ! argon
-                if( temperature .lt. 3.00E+01 ) then
-                m = 1
-                endif
+                !if( temperature .lt. 3.00E+01 ) then
+                !m = 1
+                !endif 
+                ! the rates from T. Putterich et al 2019 Nucl. Fusion 59 056013 were fitted on the same TLim as post uses for Carbon
 
                 do  n = 6,2,-1       
                 post_radiation = argon18_coef(m,n)*(log_T**(n-1)) + post_radiation
 
             !    write(*,*) 'm = ', m
             !    write(*,*) 'n = ', n
-            !    write(*,*) 'coef  = ', nitrogen7_coef(m,n)  ! check if the correct coefficient it taken
+            !    write(*,*) 'coef  = ', argon_18_coef(m,n)  ! check if the correct coefficient it taken
               
                 enddo
                 post_radiation = argon18_coef(m,1) + post_radiation  
