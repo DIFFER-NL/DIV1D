@@ -1,20 +1,15 @@
 module radiative_cooling_functions_post1977
         ! module containing radiative cooling rates for low density high temperature plasmas from post et al 1977
+        ! 25-11-2022 updated with similar format fits on rates from T. Putterich et al 2019 Nucl. Fusion 59 056013 for Argon, Xenon, Neon, Krypton
         
        ! use physics_parameters, only : impurity_concentration 
         use constants,          only : e_charge
-
-
 
         implicit none
         integer, parameter, private :: wp = KIND(1.0D0)
 
         real(wp), private, dimension(5) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
-  !   real(wp), private, dimension(5) :: tmax_N = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
- !    real(wp), private, dimension(5) :: tmax = (/2.00E-02, 2.00E-01, 2.00E+00, 2.00E+01, 1.00E+02/)*1.0d+03 ! from keV to eV
-
-
-
+ 
     !    real(wp), private, dimension(3,7) :: lithium3_coef = reshape( (/ &
     !            
     !            shape(lithium3_coef), order=(/1,2/) 
@@ -24,7 +19,6 @@ module radiative_cooling_functions_post1977
        !         shape(berylium4_coef), order=(/1,2/) 
                ! tmax, A(0), A(1) ,... , A(6) 
  
-
       !  real(wp), private, dimension(3,7) :: boron5_coef = reshape( (/ &
       !          /)
       !          shape(boron5_coef), order=(/1,2/) 
@@ -58,6 +52,15 @@ module radiative_cooling_functions_post1977
        !         /),&
        !         shape(neon10_coef), order=(/1,2/) 
        !        ! tmax, A(0), A(1) ,... , A(6) 
+        ! The following data was fitted on data from T. Putterich et al 2019 Nucl. Fusion 59 056013
+        real(wp), private, dimension(5,6) :: neon10_coef = reshape( (/ & 
+                -1.846764E+01	, -2.620810E+01	, -1.938579E+01	, -1.981922E+01	, -1.934001E+01	, & 
+                1.828627E+00	, -2.346441E+01	, -1.251650E-01	, 4.053980E+00	, -1.190620E-01	, & 
+                1.323623E+00	, -1.130072E+01	, 3.085526E+00	, -1.047640E+01	, -1.198263E+00	, & 
+                -1.129022E+00	, 2.096207E+01	, -4.705794E+00	, 1.015768E+01	, 1.305294E+00	, & 
+                -8.444497E-01	, 2.192461E+01	, -5.342030E+00	, -4.390731E+00	, -4.883286E-01	, & 
+                -9.890098E-02	, 5.564161E+00	, 4.331828E+00	, 7.202625E-01	, 6.544618E-02	, /),& 
+                shape(neon10_coef), order=(/1,2/) ) 
 
        ! the Argon rates are from Post et al. but have been extended using ATOMIC data
        ! The ATOMIC data was located via Garland et al. Phys. Plasmas 27 040702 (2020) in oktober 2022 by GL derks
@@ -74,20 +77,24 @@ module radiative_cooling_functions_post1977
         ! first column was thus FITTED on ATOMIC data.
         ! The following data was fitted on data from T. Putterich et al 2019 Nucl. Fusion 59 056013
         real(wp), private, dimension(5,6) :: argon18_coef = reshape( (/ & 
-                -2.616506E+01	, -2.652516E+01	, -1.938513E+01	, -1.981970E+01	, -1.934001E+01	, & 
-                -3.258623E+00	, -2.415287E+01	, -1.345261E-01	, 4.056714E+00	, -1.190620E-01	, & 
-                6.408977E+00	, -1.154607E+01	, 3.089174E+00	, -1.048105E+01	, -1.198263E+00	, & 
-                4.315348E+00	, 2.135026E+01	, -4.418009E+00	, 1.016060E+01	, 1.305294E+00	, & 
-                6.702576E-01	, 2.226370E+01	, -5.767269E+00	, -4.391148E+00	, -4.883286E-01	, & 
-                1.005626E-02	, 5.639260E+00	, 3.307389E+00	, 7.201419E-01	, 6.544618E-02	, /),& 
+                -1.846764E+01	, -2.620810E+01	, -1.938579E+01	, -1.981922E+01	, -1.934001E+01	, & 
+                1.828627E+00	, -2.346441E+01	, -1.251650E-01	, 4.053980E+00	, -1.190620E-01	, & 
+                1.323623E+00	, -1.130072E+01	, 3.085526E+00	, -1.047640E+01	, -1.198263E+00	, & 
+                -1.129022E+00	, 2.096207E+01	, -4.705794E+00	, 1.015768E+01	, 1.305294E+00	, & 
+                -8.444497E-01	, 2.192461E+01	, -5.342030E+00	, -4.390731E+00	, -4.883286E-01	, & 
+                -9.890098E-02	, 5.564161E+00	, 4.331828E+00	, 7.202625E-01	, 6.544618E-02	, /),& 
                 shape(argon18_coef), order=(/1,2/) ) 
 
+        ! The following data was fitted on data from T. Putterich et al 2019 Nucl. Fusion 59 056013
+        real(wp), private, dimension(5,6) :: krypton36_coef = reshape( (/ & 
+                -1.846764E+01	, -2.620810E+01	, -1.938579E+01	, -1.981922E+01	, -1.934001E+01	, & 
+                1.828627E+00	, -2.346441E+01	, -1.251650E-01	, 4.053980E+00	, -1.190620E-01	, & 
+                1.323623E+00	, -1.130072E+01	, 3.085526E+00	, -1.047640E+01	, -1.198263E+00	, & 
+                -1.129022E+00	, 2.096207E+01	, -4.705794E+00	, 1.015768E+01	, 1.305294E+00	, & 
+                -8.444497E-01	, 2.192461E+01	, -5.342030E+00	, -4.390731E+00	, -4.883286E-01	, & 
+                -9.890098E-02	, 5.564161E+00	, 4.331828E+00	, 7.202625E-01	, 6.544618E-02	, /),& 
+                shape(krypton36_coef), order=(/1,2/) ) 
 
-               ! tmax, A(0), A(1) ,... , A(6) 
-       ! real(wp), private, dimension(3,7) :: krypton36_coef = reshape( (/ &
-      !          
-       !         shape(krypton36_coef), order=(/1,2/) 
-               ! tmax, A(0), A(1) ,... , A(6) 
       !  real(wp), private, dimension(3,7) :: molybdenum42_coef = reshape( (/ &
                 
      !           shape(molybdenum42_coef), order=(/1,2/) 
@@ -96,10 +103,17 @@ module radiative_cooling_functions_post1977
                 
      !           shape(tin50_coef), order=(/1,2/) 
      !          ! tmax, A(0), A(1) ,... , A(6) 
-     !   real(wp), private, dimension(3,7) :: xenon54_coef = reshape( (/ &
-     !           
-     !           shape(xenon54_coef), order=(/1,2/) 
-               ! tmax, A(0), A(1) ,... , A(6) 
+
+        ! The following data was fitted on data from T. Putterich et al 2019 Nucl. Fusion 59 056013
+        real(wp), private, dimension(5,6) :: xenon54_coef = reshape( (/ & 
+                -1.846764E+01	, -2.620810E+01	, -1.938579E+01	, -1.981922E+01	, -1.934001E+01	, & 
+                1.828627E+00	, -2.346441E+01	, -1.251650E-01	, 4.053980E+00	, -1.190620E-01	, & 
+                1.323623E+00	, -1.130072E+01	, 3.085526E+00	, -1.047640E+01	, -1.198263E+00	, & 
+                -1.129022E+00	, 2.096207E+01	, -4.705794E+00	, 1.015768E+01	, 1.305294E+00	, & 
+                -8.444497E-01	, 2.192461E+01	, -5.342030E+00	, -4.390731E+00	, -4.883286E-01	, & 
+                -9.890098E-02	, 5.564161E+00	, 4.331828E+00	, 7.202625E-01	, 6.544618E-02	, /),& 
+                shape(xenon54_coef), order=(/1,2/) ) 
+
      !   real(wp), private, dimension(3,7) :: tungsten74_coef = reshape( (/ &
      !           
      !         shape(tungsten74_coef), order=(/1,2/) 
