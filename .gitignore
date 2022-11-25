@@ -1,2 +1,13 @@
 obj/
 runs/
+*.swp
+
+./unit-tests/*/div1d_output.txt
+./unit-tests/*/nohup.out
+./unit-tests/*/div1d_restart_new*
+
+*.exe
+*.out
+*.asv
+
+
