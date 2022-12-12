@@ -1,8 +1,9 @@
 module grid_data
 ! module defining the grid along the flux tube
-
+   use constants, only : pi
    use numerics_parameters, only : Nx, dxmin
-   use physics_parameters, only  : L, flux_expansion, L_core_SOL, X_core_SOL, alpha_core_profile, normalization_core_profile
+   use physics_parameters, only  : L, flux_expansion, L_core_SOL, X_core_SOL, alpha_core_profile, normalization_core_profile, &
+   core_source_location, major_radius, core_sol_width, sintheta
 
    implicit none
 
@@ -14,6 +15,11 @@ module grid_data
    real( wp ), allocatable :: delta_xcb(:) ! grid cell size defined as delta_x(i) = xcb(i) - xcb(i-1) [m] i = 1:Nx
    real( wp ), allocatable :: B_field(:)   ! vector holding the ratio of B/B_target @ x(:)
    real( wp ), allocatable :: B_field_cb(:)! vector holding the ratio of B/B_target @ xcb(:) (changed to (0:Nx) to bne constsistent with flux arrays
+   real( wp ), allocatable :: Rcb(:)       ! vector holding the radial position of the cell boundaries (0:Nx)
+   real( wp ), allocatable :: Rcc(:)       ! vector holding the radial position of the cell centres (1:Nx)
+   real( wp ), allocatable :: Aextern(:)   ! vector holding the surface area between cell and external neutral region (1:Nx)
+   real( wp ), allocatable :: Aintern(:)   ! vector holding the surface area of cell boundaries in the SOL (0:Nx)
+   real( wp ), allocatable :: volumes(:)    ! vector holding the volume of cells in the SOL (1:Nx)
    real( wp ), private, allocatable :: xnorm(:)     ! a normalized array running from 0 to 1 at the cell boundaries, used to calculate the non-uniform grid efficiently
    integer, private        :: i            ! array index
    real( wp ), private     :: mid_point    ! the mid point of the core_SOL (=0 when X_core_SOL=0; otherwise = X_core_SOL + 0.5*L_core_SOL)
@@ -36,8 +42,9 @@ contains
       if( L_core_SOL .gt. 0.0 ) then
           normalization_core_profile = 0.0
           i_Xpoint(1) = Nx
-          mid_point = 0.0d+0
-          if( X_core_SOL .gt. 0.0d+0 ) mid_point = X_core_SOL + 0.5d+0*L_core_SOL
+          !mid_point = 0.0d+0
+          !if( X_core_SOL .gt. 0.0d+0 ) mid_point = X_core_SOL + 0.5d+0*L_core_SOL
+          mid_point = X_core_SOL + min(1.0d+0,max(core_source_location,0.0d+0))*L_core_SOL
           do i = 1, Nx
               if( x(i) .le. X_core_SOL+L_core_SOL ) then
                   if( x(i) .ge. X_core_SOL ) then
@@ -53,6 +60,7 @@ contains
           enddo
       endif
       call magnetic_field
+      call volumes_surfaces
       return
    end subroutine initialize_grid
 
@@ -140,5 +148,20 @@ contains
           endif
       endif
    end subroutine magnetic_field
+
+
+   subroutine volumes_surfaces
+           implicit none
+           allocate( Rcc(Nx), Rcb(0:Nx), Aextern(Nx), Aintern(0:Nx), volumes(Nx) )
+           Rcc = major_radius
+           Rcb = major_radius
+           
+           Aextern = delta_xcb*sintheta*Rcc*2*pi
+           Aintern = core_sol_width*Rcb*2*pi / B_field_cb
+
+           volumes = Aextern * core_sol_width / B_field
+
+
+   end subroutine volumes_surfaces
 
 end module grid_data

@@ -64,7 +64,8 @@ program div1d
    elm_heat_load = 0.0d+0
    elm_density_change = 0.0d+0
    ! calculate the fluxes
-   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
+   call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, extern_neutral_density, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load, extern_neutral_flux, sol2extern_flux, extern2sol_flux )
+ 
    ! calculate the sources
    call calculate_sources( Nx, start_time,  density, velocity, temperature, neutral, q_parallel, &
                           Source_n, Source_v, Source_Q, source_neutral, elm_heat_load, elm_density_change )
@@ -187,8 +188,11 @@ program div1d
          ! calculate the ELM heat flux and particle flux
          call simulate_elm(elm_heat_load, elm_density_change, end_time)
          ! calculate the fluxes
-         call calculate_fluxes( Nx, start_time, density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
+         call calculate_fluxes( Nx, start_time,  density, velocity, temperature, neutral, extern_neutral_density, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load, extern_neutral_flux, sol2extern_flux, extern2sol_flux )
+ 
+
          ! calculate the sources
+
          call calculate_sources( Nx, start_time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, source_neutral, elm_heat_load, elm_density_change )
          call write_solution( end_time )
       endif

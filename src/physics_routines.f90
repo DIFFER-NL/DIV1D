@@ -1,13 +1,14 @@
 module physics_routines
 ! module containing general purpose routines implementing the equations
 
-   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb, i_Xpoint
+   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb, i_Xpoint, Aextern, Aintern, volumes
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
                                   gas_puff_source, gas_puff_location, gas_puff_width, initial_a, &
                                   dyn_nu, dyn_nb, dyn_dnu, dyn_gas, dyn_rec, dyn_rad_los, dyn_imp_con, gas_puff, dyn_red_frc, dyn_qparX, &
-                                  L_core_SOL, X_core_SOL, alpha_core_profile, normalization_core_profile
+                                  L_core_SOL, X_core_SOL, alpha_core_profile, normalization_core_profile, &
+                                  extern_neutral_extimes, extern_neutral_density, extern_neutral_volumes
                                  ! switch_X_vel_con
    use numerics_parameters, only : evolve_density, evolve_momentum, evolve_energy, evolve_neutral, switch_density_source, switch_momentum_source, switch_energy_source, switch_neutral_source, &
                                    switch_convective_heat, switch_impurity_radiation, viscosity, central_differencing, density_norm, momentum_norm, energy_norm, filter_sources,&
@@ -110,7 +111,8 @@ contains
    end subroutine advection
 
 
-   subroutine calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
+   subroutine calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, extern_neutral_density, Gamma_n, Gamma_mom, q_parallel, neutral_flux,elm_heat_load, & 
+                                extern_neutral_flux,sol2extern_flux, extern2sol_flux )
    ! this subroutine calculates the 'fluxes' required for the calculation of ydot (the right hand side of the discretized conservation equations)
    ! the fluxes are defined at the halfway point between grid points: i.e. Flux(i) is midway between x(i) and x(i+1) on the cell boundaries xcb
    ! ew 01-03-2021: modified to take account of flux expansion
@@ -118,11 +120,13 @@ contains
       integer,  intent(in)  :: Nx
       real(wp), intent(in)  :: time
       integer               :: itime
-      real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx)
+      real(wp), intent(in)  :: density(Nx), velocity(Nx), temperature(Nx), neutral(Nx), extern_neutral_density(5)
       real(wp), intent(out) :: Gamma_n(0:Nx), Gamma_mom(0:Nx), q_parallel(0:Nx), neutral_flux(0:Nx)
+      real(wp), intent(out) :: extern_neutral_flux(3), sol2extern_flux(5), extern2sol_flux(Nx) ! fluxes related external neutral volumes
       real(wp), intent(in)  :: elm_heat_load
       real(wp)              :: momentum(Nx), enthalpy(Nx)
       real(wp)              :: csound_target(2), average_velocity
+      real(wp)              :: tmp_flux1,tmp_flux2,tmp_flux4,tmp_flux5 ! dummy param to avoid duplicate calculations
       integer               :: i
       ! the particle flux = density velocity / B 
       itime = time / delta_t
@@ -207,6 +211,37 @@ contains
          neutral_flux(Nx) = -B_field_cb(Nx)*Gamma_n(Nx) * dyn_rec(itime) * (1.0d-0 - dyn_red_frc(itime))
          ! write(*,*) 'temperature =', temperature
          ! write(*,*) 'q_parallel =', q_parallel
+
+
+         ! neutral fluxes between volumes of the external background
+         
+         extern_neutral_flux = (/ (extern_neutral_density(3)-extern_neutral_density(2))/extern_neutral_extimes(1), &
+                                    (extern_neutral_density(4)-extern_neutral_density(3))/extern_neutral_extimes(1), &
+                                    (extern_neutral_density(5)-extern_neutral_density(1))/extern_neutral_extimes(1) /)
+        
+         ! neutral fluxes between the SOL and external background volumes
+         tmp_flux1 = 0.0d+0
+         tmp_flux2 = 0.0d+0
+         tmp_flux4 = 0.0d+0
+         tmp_flux5 = 0.0d+0
+         sol2extern_flux = (/0.0d+0,0.0d+0,0.0d+0,0.0d+0,0.0d+0/)
+         do i = 1, Nx             
+         if(x(Nx) .lt. X_core_SOL)  then ! first divertor leg bound to PFR and D/CFR
+         tmp_flux1 = Aextern(i) * ( -neutral(i) + extern_neutral_density(1) ) / neutral_residence_time
+         tmp_flux2 = Aextern(i) * ( -neutral(i) + extern_neutral_density(2) ) / neutral_residence_time
+         extern2sol_flux(i) = tmp_flux1 + tmp_flux2                  ! flux into sol
+         sol2extern_flux(1) = sol2extern_flux(1) + tmp_flux1         ! flux out of external volume                        
+         sol2extern_flux(2) = sol2extern_flux(2) + tmp_flux2
+         elseif(x(Nx) .lt. X_core_SOL + L_core_SOL) then ! core sol bound by CFR only
+         extern2sol_flux(i) = Aextern(i) * (-neutral(i) +extern_neutral_density(3) ) / neutral_residence_time
+         else ! second divertor leg bound by PFR and D/CFR 
+         tmp_flux4 = Aextern(i) * (-neutral(i) + extern_neutral_density(4) ) / neutral_residence_time
+         tmp_flux5 = Aextern(i) * (- neutral(i) + extern_neutral_density(5) ) / neutral_residence_time
+         extern2sol_flux(i) = tmp_flux4 + tmp_flux5              ! flux into the SOL       
+         sol2extern_flux(4) = sol2extern_flux(4) + tmp_flux4     ! flux out of external volume                             
+         sol2extern_flux(5) = sol2extern_flux(5) + tmp_flux5 
+         endif
+         enddo
 
       return
    end subroutine calculate_fluxes
@@ -327,6 +362,7 @@ contains
       real(wp)              :: density(neq/4), velocity(neq/4), temperature(neq/4), neutral(neq/4)      ![1/m3] ,[m/s]    ,[eV]   ,[1/m3]
       real(wp)              :: Gamma_n(0:neq/4), Gamma_mom(0:neq/4), q_parallel(0:neq/4), neutral_flux(0:neq/4) ![1/m2s],[kg/ms2] ,[J/m2s],[1/m2s]
       real(wp)              :: Source_n(neq/4), Source_v(neq/4), Source_Q(neq/4), neutral_source(neq/4) ![1/m3s],[kg/m2s2],[J/m3s],[1/m3s] 
+      real(wp)              :: extern_neutral_flux(3), sol2extern_flux(5), extern2sol_flux(neq/4) ! [1/s]
       real(wp)              :: Diff_neutral(neq/4)  ! [m2/s]
       real(wp)              :: csound_target(2), q_sheath, v0, Gmom0
       ! input variables for the elm simulation
@@ -346,7 +382,7 @@ contains
       ! calculate the ELM heat flux and particle flux
       call simulate_elm(elm_heat_load, elm_density_change, time)
       ! calculate the fluxes
-      call calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load )
+      call calculate_fluxes( Nx, time,  density, velocity, temperature, neutral, extern_neutral_density, Gamma_n, Gamma_mom, q_parallel, neutral_flux, elm_heat_load, extern_neutral_flux, sol2extern_flux, extern2sol_flux )
       ! calculate the sources
       call calculate_sources( Nx, time, density, velocity, temperature, neutral, q_parallel, Source_n, Source_v, Source_Q, neutral_source, elm_heat_load, elm_density_change )
       ! write(*,*) 'Gamma_n =', Gamma_n

@@ -17,6 +17,7 @@ module physics_parameters
    real( wp ) :: Gamma_X                = 1.0d+23     ! particle flux entering the flux tube at the X-point [/m^2s]
    real( wp ) :: q_parX                 = 1.0d+8      ! parallel heat flux entering the flux tube at the X-point [W/m^2] (value from Stangeby problem 5.1)
    real( wp ) :: alpha_core_profile     = 1.0d+0      ! parameter describing the ballooning of the the core losses ~ (1 - (x/L_core_SOL)^2)^alpha
+   real( wp ) :: core_source_location   = 0.5d+0      ! parameter positioning the core source between the two boundaries of core_SOL [0,1]
    real( wp ) :: normalization_core_profile = 0.0d+0  ! normalization factor of the loss profile of heat and particles across the core-SOL boundary
    real( wp ) :: flux_expansion         = 1.0d+0      ! the flux expansion factor between X-point and target = B_X / B_target = R_target / R_X
    real( wp ) :: initial_n              = 1.0d+20     ! initial plasma particle density (homogeneous) and density at X-point [/m^3]
@@ -33,6 +34,11 @@ module physics_parameters
    integer    :: num_impurities         = 5           ! number of impurities in the list (this is not yet dynamic in size)
    real( wp ) :: impurity_concentration(5) =(/0.0d+1,0.0d+1,0.0d+1,0.0d+1,0.0d+1/)  ! the concentration of impurity ions (default = 1%)
    integer    :: impurity_Z(5)             =(/6,0,0,0,0/)          ! the Z value of the impurity used (default = carbon)
+   real( wp ) :: extern_neutral_density(5) = (/1.0d+18,1.0d+18,1.0d+18,1.0d+18,1.0d+18/)! [m^-3] external neutral background densities 
+   real( wp ) :: extern_neutral_volumes(5) = (/0.6d+0,0.1d+0,5.0d+0,1.2d+0,0.6d+0/) ![m^3] (1) inner PFR, (2) inner divertor CFR, (3) CFR, (4) outer divertor CFR, (5) outer PFR
+   real( wp ) :: extern_neutral_extimes(3) = (/1.0d-6,1.0d-6,1.0d-6 /) ! [s] exchange between neutral volume(1<->5),volume(2<->3),volume(3<->4 ) note that these default times are extremely fast
+   real( wp ) :: core_sol_width         = 3.0d-2      ! width of the core SOL [m]
+   real( wp ) :: major_radius           = 0.9d+0      ! major radius of the core SOL [m] (for now this is constant)
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]
    real( wp ) :: gas_puff_width         = 1.0d+20     ! Gaussian width of effective gas puff source [m?]

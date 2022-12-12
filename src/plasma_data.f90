@@ -17,16 +17,19 @@ module plasma_data
    real( wp ), allocatable :: velocity(:)     ! vector holding the solution for the plasma velocity [m/s]
    real( wp ), allocatable :: temperature(:)  ! vector holding the solution for the plasma temperature [eV]
    real( wp ), allocatable :: neutral(:)      ! vector holding the solution for the neutral density [/m^3]
+!   real( wp ), allocatable :: extern_neutral_density(:) ! vector holding the neutral density of external volumes [m^-3]
    real( wp ), allocatable :: Gamma_n(:)      ! vector holding the solution for the plasma particle flux [/m^2s]
    real( wp ), allocatable :: Gamma_mom(:)    ! vector holding the solution for the plasma momentum flux [Pa]
    real( wp ), allocatable :: pressure(:)     ! vector holding the solution for the plasma pressure [Pa]
    real( wp ), allocatable :: q_parallel(:)   ! vector holding the solution for the plasma heat flux [W/m^2]
    real( wp ), allocatable :: neutral_flux(:) ! vector holding the solution for the plasma particle flux [/m^2s]
+   real( wp ), allocatable :: extern2sol_flux(:) ! vector holding the fluxes from external neutral volumes into the SOL [1/s]
    real( wp ), allocatable :: Source_n(:)     ! vector holding the solution for the plasma particle source [/m^3s]
    real( wp ), allocatable :: Source_v(:)     ! vector holding the solution for the plasma momentume source [?]
    real( wp ), allocatable :: Source_Q(:)     ! vector holding the solution for the plasma heat source [W/m^3]
    real( wp ), allocatable :: source_neutral(:)     ! vector holding the solution for the plasma heat source [/m^3s]
-
+   real( wp )  :: extern_neutral_flux(3) = (/0.0d+0,0.0d+0,0.0d+0/) ! vector with neutral fluxes between external volumes [1/s]
+   real( wp )  :: sol2extern_flux(5) = (/0.0d+0,0.0d+0,0.0d+0,0.0d+0,0.0d+0/) ! vector with neutral fluxes from SOL into external volumes [1/s]
 contains
 
    subroutine initial_values
