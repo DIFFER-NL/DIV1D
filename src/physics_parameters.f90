@@ -37,7 +37,8 @@ module physics_parameters
    real( wp ) :: extern_neutral_density(5) = (/1.0d+18,1.0d+18,1.0d+18,1.0d+18,1.0d+18/)! [m^-3] external neutral background densities 
    real( wp ) :: extern_neutral_volumes(5) = (/0.6d+0,0.1d+0,5.0d+0,1.2d+0,0.6d+0/) ![m^3] (1) inner PFR, (2) inner divertor CFR, (3) CFR, (4) outer divertor CFR, (5) outer PFR
    real( wp ) :: extern_neutral_extimes(3) = (/1.0d-6,1.0d-6,1.0d-6 /) ! [s] exchange between neutral volume(1<->5),volume(2<->3),volume(3<->4 ) note that these default times are extremely fast
-   real( wp ) :: core_sol_width         = 3.0d-2      ! width of the core SOL [m]
+   real( wp ) :: sol_width_omp          = 3.0d-2      ! width of the core SOL [m]
+   real( wp ) :: i_omp 			= 1	      ! index of cell boundary at the outer midplane
    real( wp ) :: major_radius           = 0.9d+0      ! major radius of the core SOL [m] (for now this is constant)
    real( wp ) :: gas_puff_source        = 0.0d+0      ! total particle source from gas puff per flux tube width [/m^2 s]
    real( wp ) :: gas_puff_location      = 0.0d+0      ! location of gas puff along divertor leg [m]

@@ -1,7 +1,7 @@
 module physics_routines
 ! module containing general purpose routines implementing the equations
 
-   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb, i_Xpoint, Aextern, Aintern, volumes
+   use grid_data, only : delta_x, delta_xcb, x, B_field, B_field_cb, i_Xpoint, A, volumes, w_pol_cb
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, energy_loss_ion, recycling, redistributed_fraction, L, neutral_residence_time, sintheta, minimum_density, minimum_temperature, density_ramp_rate, &
@@ -216,8 +216,8 @@ contains
          ! neutral fluxes between volumes of the external background
          
          extern_neutral_flux = (/ (extern_neutral_density(3)-extern_neutral_density(2))/extern_neutral_extimes(1), &
-                                    (extern_neutral_density(4)-extern_neutral_density(3))/extern_neutral_extimes(1), &
-                                    (extern_neutral_density(5)-extern_neutral_density(1))/extern_neutral_extimes(1) /)
+                                    (extern_neutral_density(4)-extern_neutral_density(3))/extern_neutral_extimes(2), &
+                                    (extern_neutral_density(5)-extern_neutral_density(1))/extern_neutral_extimes(3) /)
         
          ! neutral fluxes between the SOL and external background volumes
          tmp_flux1 = 0.0d+0
@@ -227,16 +227,16 @@ contains
          sol2extern_flux = (/0.0d+0,0.0d+0,0.0d+0,0.0d+0,0.0d+0/)
          do i = 1, Nx             
          if(x(Nx) .lt. X_core_SOL)  then ! first divertor leg bound to PFR and D/CFR
-         tmp_flux1 = Aextern(i) * ( -neutral(i) + extern_neutral_density(1) ) / neutral_residence_time
-         tmp_flux2 = Aextern(i) * ( -neutral(i) + extern_neutral_density(2) ) / neutral_residence_time
+         tmp_flux1 = A(i) * ( -neutral(i) + extern_neutral_density(1) ) / neutral_residence_time
+         tmp_flux2 = A(i) * ( -neutral(i) + extern_neutral_density(2) ) / neutral_residence_time
          extern2sol_flux(i) = tmp_flux1 + tmp_flux2                  ! flux into sol
          sol2extern_flux(1) = sol2extern_flux(1) + tmp_flux1         ! flux out of external volume                        
          sol2extern_flux(2) = sol2extern_flux(2) + tmp_flux2
          elseif(x(Nx) .lt. X_core_SOL + L_core_SOL) then ! core sol bound by CFR only
-         extern2sol_flux(i) = Aextern(i) * (-neutral(i) +extern_neutral_density(3) ) / neutral_residence_time
+         extern2sol_flux(i) = A(i) * (-neutral(i) +extern_neutral_density(3) ) / neutral_residence_time
          else ! second divertor leg bound by PFR and D/CFR 
-         tmp_flux4 = Aextern(i) * (-neutral(i) + extern_neutral_density(4) ) / neutral_residence_time
-         tmp_flux5 = Aextern(i) * (- neutral(i) + extern_neutral_density(5) ) / neutral_residence_time
+         tmp_flux4 = A(i) * (-neutral(i) + extern_neutral_density(4) ) / neutral_residence_time
+         tmp_flux5 = A(i) * (- neutral(i) + extern_neutral_density(5) ) / neutral_residence_time
          extern2sol_flux(i) = tmp_flux4 + tmp_flux5              ! flux into the SOL       
          sol2extern_flux(4) = sol2extern_flux(4) + tmp_flux4     ! flux out of external volume                             
          sol2extern_flux(5) = sol2extern_flux(5) + tmp_flux5 
