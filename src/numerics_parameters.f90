@@ -61,6 +61,8 @@ contains
       if( istate_mod .eq. 0 ) istate_mod = ntime
       read(*, div1d_numerics, IOSTAT = error)
       write(*,*) 'numerics read error =', error
+      ! write the entire namlist to the output file
+      write(10, div1d_numerics)
       return
    end subroutine read_numerics_parameters
    
