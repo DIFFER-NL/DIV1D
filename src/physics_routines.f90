@@ -128,6 +128,7 @@ contains
       real(wp)              :: csound_target(2), average_velocity
       real(wp)              :: tmp_flux1,tmp_flux2,tmp_flux4,tmp_flux5 ! dummy param to avoid duplicate calculations
       integer               :: i
+
       ! the particle flux = density velocity / B 
       itime = time / delta_t
 

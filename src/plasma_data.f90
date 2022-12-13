@@ -23,7 +23,7 @@ module plasma_data
    real( wp ), allocatable :: pressure(:)     ! vector holding the solution for the plasma pressure [Pa]
    real( wp ), allocatable :: q_parallel(:)   ! vector holding the solution for the plasma heat flux [W/m^2]
    real( wp ), allocatable :: neutral_flux(:) ! vector holding the solution for the plasma particle flux [/m^2s]
-   real( wp ), allocatable :: extern2sol_flux(:) ! vector holding the fluxes from external neutral volumes into the SOL [1/s]
+   real( wp ), allocatable :: extern2sol_flux(:) ! vector holding the fluxes from external neutral volumes into the SOL [1/s] (Nx)
    real( wp ), allocatable :: Source_n(:)     ! vector holding the solution for the plasma particle source [/m^3s]
    real( wp ), allocatable :: Source_v(:)     ! vector holding the solution for the plasma momentume source [?]
    real( wp ), allocatable :: Source_Q(:)     ! vector holding the solution for the plasma heat source [W/m^3]
@@ -42,12 +42,13 @@ contains
       implicit none
       ! first allocate all arrays
       allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
-      allocate( Gamma_n(0:Nx), Gamma_mom(0:Nx), pressure(Nx), q_parallel(0:Nx), neutral_flux(0:Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
+      allocate( Gamma_n(0:Nx), Gamma_mom(0:Nx), pressure(Nx), q_parallel(0:Nx), neutral_flux(0:Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx), extern2sol_flux(Nx) )
       temperature = initial_T
       density     = dyn_nu(1) ! initial_n
       velocity    = initial_v
       neutral     = dyn_nb(1) ! initial_a
       pressure    = 2.0d+0 * density * temperature
+      extern2sol_flux = 0.0d-20
 !      if( Gamma_X .ne. 0.0 ) then
 !         ! initialize velocity at the sound speed and density in accordance with Gamma_X
 !         velocity = sqrt( 2.0d+0 * e_charge * temperature / mass )
@@ -64,7 +65,7 @@ contains
       real(wp) :: density_X, temperature_X, temperature_target, temperature_target_new, kappa_0, diff
       ! first allocate all arrays
       allocate( y(4*Nx), ydot(4*Nx), density(Nx), velocity(Nx), temperature(Nx), neutral(Nx) )
-      allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx) )
+      allocate( Gamma_n(Nx), Gamma_mom(Nx), pressure(Nx), q_parallel(Nx), neutral_flux(Nx), Source_n(Nx), Source_v(Nx), Source_Q(Nx), source_neutral(Nx), extern2sol_flux(Nx) )
 !     set the velocity and neutral density arrays as defined in input
       velocity    = initial_v
       neutral     = dyn_nb(1) !initial_a
@@ -95,6 +96,7 @@ contains
 !     set the density solution according to constant pressure (acceleration to sound speed must occur in sheath)
       density = dyn_nu(1) * temperature_X / temperature
       pressure    = 2.0d+0 * density * temperature
+      extern2sol_flux = 0.0d-20
       ! transform (density, velocity, temperature) to (density, momentum, pressure) in solution vector y
       call nvt2y( Nx, density, velocity, temperature, neutral, y )
       return

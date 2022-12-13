@@ -51,7 +51,7 @@ program div1d
    else
       call initial_values
    endif
-
+   write(*,*) "finished initialization"
    start_time = 0.0
    restart_error = 0
    if( restart ) call read_restart_file( restart_error )
@@ -221,7 +221,7 @@ subroutine write_header
    integer :: i
    integer, parameter :: wp = KIND(1.0D0)
    ! NOTE that the tag is HARDCODED for backward compatibility in reading the outputs with Matlab! 
-   write( 10, * ) 'git tag: v3.0.2'
+   write( 10, * ) 'git tag: v4.0.0a'
    write( 10, * ) 'numerics parameters:'
    write( 10, * ) '   Nx         = ', Nx
    write( 10, * ) '   ntime      = ', ntime
