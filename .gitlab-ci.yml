@@ -1,0 +1,61 @@
+#Image used to load the necessary dependencies into the docker container
+image: coendonk/ubuntu-ifort:latest
+
+#This pipeline will only run when there's a merge request on the main branch
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_COMMIT_TAG'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+
+stages:
+  - build
+  - test
+
+#Builds latest version of DIV1D
+build-job:
+  stage: build
+  script:
+    - echo "Compiling DIV1D"
+    - mkdir obj
+    - make FC=ifx
+  artifacts:
+    untracked: true
+    when: on_success
+    access: all
+    expire_in: 1 days
+    paths:
+      - "obj/"
+
+#Builds latest version of the unit tests
+unit-test-job:
+  stage: test
+  script:
+    - echo "Compiling tests"
+    - make test TEST_TYPE=unit FC=ifx
+  artifacts:
+    when: always
+    access: all
+    expire_in: 1 days
+    paths:
+      - "test/build/test_results/*.xml"
+    reports:
+      junit: "test/build/test_results/*.xml"
+
+#Builds latest version of the integration tests
+integration-test-job:
+  stage: test
+  script:
+    - echo "Compiling tests"
+    - make test TEST_TYPE=integration FC=ifx
+  artifacts:
+    when: always
+    access: all
+    expire_in: 1 days
+    paths:
+      - "test/build/test_results/*.xml"
+    reports:
+      junit: "test/build/test_results/*.xml"

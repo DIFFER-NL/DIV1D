@@ -1,0 +1,214 @@
+\documentclass{article}
+\usepackage{graphicx} 
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black]{hyperref}
+\usepackage{fontspec}
+\setmainfont[Ligatures=TeX]{XITS}
+
+\lstdefinelanguage{bash}{
+  morekeywords={sudo, docker, cd, ls, echo},
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]",
+}
+
+\lstdefinestyle{console}{
+  language=bash,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{gray!10},
+  frame=single,
+  columns=fullflexible
+}
+
+\lstdefinestyle{yaml}{
+     basicstyle=\color{blue}\footnotesize,
+     rulecolor=\color{black},
+     string=[s]{'}{'},
+     stringstyle=\color{blue},
+     comment=[l]{:},
+     commentstyle=\color{black},
+     morecomment=[l]{-}
+ }
+ 
+\title{Gebruiker handleiding testing}
+\author{Coen Donk}
+\date{Mei 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{workflows}
+\subsection{Starting a test run}
+
+Om de tests van PROJECTNAME te draaien, moet het volgende uitgevoerd worden in de PROJECTNAME folder via een terminal: 
+
+\begin{lstlisting}[style=console]
+    make test <TEST_TYPE=> <TEST_ARGS=> 
+\end{lstlisting}
+
+Cmake en make moeten geïnstalleerd zijn op het systeem. (make is in theorie optioneel, maar er zijn stappen geautomatiseerd via make en deze stappen worden niet uitgelegd in dit document).
+\\
+Hierbij zijn TEST\_TYPE en TEST\_ARGS optioneel. TYPE maakt het mogelijk om specifieke testtypes te draaien. Op dit moment worden unit en integration testtypes ondersteund. 
+\\
+Via TEST\_ARGS is het mogelijk om speciale "flags" door te sturen naar alle tests die gedraaid worden. Hierbij zijn de belangrijkste de --v (verbose) en --vv (very verbose) flags. De verbose flag geeft standaard resultaten. Dit betekent dat als een test faalt, dit genoemd wordt. Zo niet, dan staat er alleen [PASSED]. 
+\\
+Hierbij is altijd te zien wat de verwachte [EXPECTED] en echte [ACTUAL] waarde is die vergeleken worden. Er wordt ook een bericht mee gegeven, wat het verwachte probleem is. 
+\\
+De very verbose flag geeft alle output, zonder te kijken of de test een fout heeft of niet. Bij tests zonder fouten, gaat het bericht standaard terug naar [no error]
+\\
+Als er bij het aanroepen van TEST\_ARGS geen verbose mee wordt gegeven, dan komt er ook geen output en is er alleen te zien [FAILED], [PASSED].
+Als TEST\_ARGS niet wordt meegegeven, wordt de standaard -v flag gebruikt. 
+\newpage
+\subsection{Flags}
+
+Het draaien van alle tests vindt plaats in de ./PROJECTNAME/tests/build folder. Hier zijn ook documenten te vinden die aangemaakt zijn en gebruikt tijdens het draaien van de tests. 
+\\
+De concrete tests zijn nog een folder dieper, namelijk in de unit tests en integratie tests folders. Hierbij is de meest relevante de unit tests folder. Alleen bij unit tests kunnen meerdere suites tegelijk worden gedraaid. Dit heeft te maken met hoe scoping behandeld wordt binnen Fortran. 
+\\
+Om de unit test tester te benaderen, wordt het volgende uitgevoerd in een terminal: 
+\\
+./PROJECTNAME/test/build/unit\_tests/<programma naam>
+\\
+Ook hier is het mogelijk om flags mee te nemen. Met --help wordt informatie getoond over de mogelijke opties, maar hieronder zijn ze alvast weergegeven
+
+\begin{lstlisting} [style=console]
+    --v. Verbose mode. Standaard weergave van de tests. 
+    Geeft de verwachte en echte waarde weer als een test faalt. 
+    
+    --vv. Very verbose mode. Geeft altijd de verwachte en echte waarde 
+    van de tests, ook al zijn alle tests geslaagd.
+    
+    --s. Wordt gebruikt om een specifieke suite te draaien 
+    binnen de unit tests. Het is niet mogelijk om meer 
+    dan 5 suites tegelijk te draaien.
+\end{lstlisting}
+
+\subsection{Een nieuwe test maken}
+
+Nu er wat meer bekend is over het gebruiken van de aanwezige tests, gaan we naar de volgende stap: zelf een test toevoegen. Hier gaan we ervan uit dat je al een test case hebt bedacht. 
+Ik gebruik hier als voorbeeld een integratie test, aangezien dit het meeste werk is. 
+\\
+Het eerste wat gemaakt moet worden is een tester. Dit is het programma wat de test zelf zal aanroepen. Een voorbeeld hiervan is te zien in de \\ ./PROJECTNAME/test/sample\_tester. \\Het is aan te raden om de naam van de tester te beginnen met tester\_<de rest> 
+\\
+Voordat we de tester kunnen afronden, moet de test suite zelf ook aanwezig zijn. Kijk voor dit voorbeeld naar ./PROJECTNAME/test/sample\_suite. Hoewel de sample\_suite is geschreven met een unit test, is de structuur eromheen exact hetzelfde als een integratie test. Het is aan te raden om de naam van deze suites altijd te laten eindigen met \_suite.  
+\\
+Zodra deze tester en suite gereed zijn, kunnen ze in de unit\_tests folder gezet worden, of in de integration\_test folder. (dus in de ./PROJECTNAME/test/<folder>) 
+\\
+Nu zijn we bijna klaar. Voordat we de tests kunnen draaien, moet het cmake programma nog   weten dat deze nieuwe test bestaat. Hiervoor gaan  we de test toevoegen in de cmakelists.txt. Hiervoor wordt de geteste module van PROJECTNAME toegevoegd aan de "MAIN\_SOURCES", en de testbestanden binnen een set(<naam>\_SOURCES). Hier komen de tester en \_suite bestand(en) die we eerder hebben gemaakt. 
+\newpage
+Daarna wordt de "finalize\_test\_properties" toegevoegd. 
+\\
+\begin{lstlisting} [style=console]
+    finalize_test_properties(
+    <naam> "${CMAKE_BINARY_DIR}/<test_type>_tests"
+    <naam>_SOURCES ${GLOBAL_SOURCES} ${MAIN_SOURCES
+    }
+\end{lstlisting}
+
+Het is hier van groot belang dat de <test\_type>\_tests de correcte testtype krijgt. Als dit niet gebeurt valt de test onder de verkeerde categorie tijdens het draaien van het programma. 
+\\
+Hierna ben je klaar! Nu kan "make test" gedraaid worden in de PROJECTNAME folder en kun je zien dat al je tests draaien. 
+
+\section{Pipelines}
+\subsection{Omgeving van een Pipeline}
+
+Een pipeline is een groep van stappen die uitgevoerd worden door een programma genaamd de runner. De runner draait in een minimale Docker-container. Deze bevat enkel de software die nodig is om de runner zelf uit te voeren. Daarom moet tijdens het opzetten van een pipeline een Docker-image worden opgegeven.  
+\\
+\\
+Het bouwen en publiceren van zo’n image gebeurt als volgt:
+\begin{lstlisting}[style=console]
+docker build <pad-naar-dockerfile> -t <gebruikersnaam/package-naam>:latest 
+docker push <gebruikersnaam/package-naam>:latest
+\end{lstlisting}
+Hiermee wordt de Docker-image geüpload naar een image registry: een online platform waar Docker-images beheerd worden. Zodra de image beschikbaar is in de registry, kan deze gebruikt worden in de pipeline door deze te refereren als:
+\begin{lstlisting}[style=console]
+    image: <gebruikersnaam>/<package-naam>:<versie>
+\end{lstlisting}
+Dit definieert de omgeving waarin de runner de pipeline zal uitvoeren.
+
+\newpage
+\subsection{Opbouw van een Pipeline}
+
+Daarna wordt gespecificeerd welke stappen binnen de pipeline uitgevoerd worden. Een GitLab pipeline bestaat uit:
+\\
+- **Stages**: opeenvolgende logische fasen.
+\\
+- **Jobs**: afzonderlijke taken binnen een stage, die parallel kunnen draaien.
+\\
+Elke job bevat een `script`-sectie waarin shell-commando’s gedefinieerd worden.
+
+%### Voorbeeld
+\begin{lstlisting}[style=yaml]
+    stages:
+    - build
+    - test
+    
+    build-job:
+    stage: build
+    script:
+    - echo "Hello!"
+    
+    test-job-1:
+    stage: test
+    script:
+    - echo "testing..."
+    
+    test-job-2:
+    stage: test
+    script:
+    - echo "also testing..."
+\end{lstlisting}
+De jobs binnen de stage `test` (test-job-1 en test-job-2) starten pas nadat de stage `build` is afgerond. Als er meerdere runners beschikbaar zijn, worden jobs binnen dezelfde stage parallel uitgevoerd.  
+Indien een job binnen dezelfde stage afhankelijk is van een andere job, kan dit gespecificeerd worden met de `dependencies`-tag. Dit is nuttig wanneer een job bestanden nodig heeft die in een andere job gegenereerd zijn.
+
+\newpage
+
+\subsection{Extra pipeline information}
+
+\textbf{Error handling}
+\\
+Als de syntax correct is, maar de pipeline faalt, is dit te zien in \\  
+https://git.differ.nl/<groep>/<project>/-/pipelines. \\
+Als een job faalt, gaan de andere jobs en stages door. Als een job faalt, dan wordt de hele stage en pipeline gezien als "gefaald".
+\\
+\\
+\textbf{Logging}
+\\
+Een pipeline wordt uitgevoerd door de runner in een shell of command prompt. Ligt aan de docker image die is meegegeven. Alle stappen die in deze omgeving worden uitgevoerd zijn zichtbaar in de pipeline zelf. 
+\\
+\\
+\textbf{Artifacts}
+\\
+Binnen een pipeline bestaan "artifacts". Dit zijn objecten die bruikbaar zijn tussen jobs/stages, en te downloaden zijn na het draaien van de pipeline. Om dit te doen moet "artifacts:" toegevoegd worden na de script: sectie. 
+
+\begin{lstlisting}[style=yaml]
+    artifacts:
+    untracked: true
+    when: on_success
+    access: all
+    expire_in: 1 days
+    paths:
+      - "obj/"
+\end{lstlisting}
+
+Dit voorbeeld doet het volgende:
+\begin{itemize}
+    \item {\textbf{untracked:}} Alle bestanden, naast de gespecificeerde, worden geüpload als artifacts.
+    \item  {\textbf{when:}} Wanneer worden de artifacts geüpload? Op dit moment alleen als de job successvol is.
+    \item {\textbf{access:}} Wie toegang heeft tot de artifacts.
+    \item {\textbf{expire\_in:}} Hoe lang de artifacts blijven bestaan.
+    \item {\textbf{paths:}} Welke objecten geüpload worden. 
+\end{itemize}
+
+\subsection{Referenties}
+
+Om meer te weten en lezen over CI/CD, kijk naar de volgende links. 
+
+\begin{itemize}
+  \item \href{https://docs.gitlab.com/topics/build_your_application/}{Main CI/CD Reference}
+  \item \href{https://docs.gitlab.com/runner/install/docker/}{Docker Runner Setup}
+  \item \href{https://docs.gitlab.com/ci/components/}{GitLab CI Components}
+\end{itemize}
+\end{document}
