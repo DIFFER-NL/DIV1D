@@ -1,11 +1,3 @@
-!module reaction_rates
-! module containing routines implementing the reaction rates
-
-!   use numerics_parameters, only : Nx, switch_charge_exchange, switch_recombination, switch_ionization, switch_excitation, switch_recombenergy
-!<<<<<<< HEAD
-!   use physics_parameters,  only : charge_exchange_model, ionization_model, recombination_model, case_AMJUEL,  impurity_concentration,&
-!           impurity_Z, num_impurities, minimum_temperature, minimum_density, mass, D_imp_con, prf_imp_con, E_imp_con
-
 module reaction_rates
 ! module containing routines implementing the reaction rates
 ! License Notice
@@ -112,7 +104,7 @@ module reaction_rates
    real(wp), private, dimension(7)   :: ifj_coef = (/ &
                 -0.3173850d+2, 0.1143818d+2, -0.3833998d+1, 0.7046692d+0, -0.7431486d-1, 0.4153749d-2, -0.9486967d-4 /)
 
-	! the coefficients for elastic momentum transfer between ions and atoms (according to AMJUEL H.3 Reaction 0.1D)
+	! the coefficients for elastic momentum transfer between ions and atoms (according to AMJUEL H.3 Reaction 0.1T)
    real(wp), private, dimension(9,9) :: el_mom_a_coef = reshape( (/ & 
 		-1.934778779385D+01,  2.193162842747D-02, -5.787610534513D-04, -9.555854995025D-03, -3.071069026823D-03,  5.668304238739D-04,  1.023499873278D-04, -4.375997865613D-05,  3.554762032992D-06, &
  		 8.400121290584D-04, -5.025758478606D-02,  9.405606314808D-03,  1.213464571187D-02, -3.615417883123D-03, -8.289738887452D-04,  4.794896057762D-04, -7.011568552117D-05,  3.413857855011D-06, &
@@ -125,6 +117,7 @@ module reaction_rates
 		 5.468789447600D-07,  3.989227802803D-06, -1.457895095025D-06, -2.077060263537D-06,  8.298532548793D-07,  1.504259503231D-07, -1.154459633382D-07,  1.906633038081D-08, -1.021379321893D-09 /), &
 		shape(el_mom_a_coef), order=(/2,1/) )
 
+        ! the coefficients for ionization of molecules (according to AMJUEL H.4 Reaction 2.2.9)
    real(wp), private, dimension(9,9)  :: iona_coef_m = reshape( (/  &
 		-3.574773783577D+01,  3.470247049909D-01, -9.683166540937D-02,  1.959576276250D-03,  2.479361119190D-03, -1.196632952666D-04, -1.862956119592D-05,  1.669867158509D-06, -3.673736278200D-08, &
  		1.769208985507D+01, -1.311169841222D+00,  4.700486215943D-01, -5.521175478827D-02, -2.689651616933D-03,  7.308915874002D-04, -2.920560755694D-05, -3.148831240316D-07,  2.514856386324D-08, &
@@ -137,7 +130,7 @@ module reaction_rates
 		-5.607182991432D-06, -5.779550092391D-06,  6.495742927455D-06, -3.040011333889D-07, -2.361542565281D-07,  3.655056080262D-08, -1.771478792301D-09,  1.334615260635D-11,  6.831564719957D-13 /), &
              shape(iona_coef_m), order=(/2,1/) )
 			
-
+        ! the coefficients for electron-impact dissociation of molecules (according to AMJUEL H.4 Reaction 2.2.5)
 	real(wp), private, dimension(9,9)  :: diss_coef_m = reshape( (/  &
 		-2.748251723699D+01,  5.245554722385D-04, -2.978103958861D-04, -2.360275829176D-07,  2.352410977770D-05, -4.997866180134D-06,  4.276219304407D-07, -1.656742885479D-08,  2.414039859152D-10, &
 		 1.032713102402D+01, -4.288853521030D-04, -4.899568733097D-04,  4.986004995584D-04, -1.488915435909D-04,  2.064670043755D-05, -1.483657661440D-06,  	5.231689914639D-08, -7.056262049968D-10, &
@@ -150,11 +143,11 @@ module reaction_rates
 	-3.842014088368D-05,  1.171737695451D-06, -9.017007769431D-07,  2.476534052706D-07, -3.367686347533D-08,  2.869160964443D-09, -1.931319268617D-10,  9.102276313210D-12, -1.872646131609D-13 /), &
              shape(diss_coef_m), order=(/2,1/) )
 
-
+        ! the coefficients for molecular charge exchange (according to AMJUEL H.2 Reaction 3.2.3)
 	real(wp), private, dimension(9)   :: cxa_coef_m = (/ &
    		-2.163099643422D+01, 3.206843053514D+00, -3.369939911269D+00, 1.290238400703D+00, -3.988189754178D-01, 1.462287796966D-01, -3.524154596754D-02, 4.146324082808D-03, -1.846022446828D-04 /)
 
-
+       ! the coefficients for electron impact dissociation of ionized molecules (according to AMJUEL H.4 Reaction 2.2.12) 
 	real(wp), private, dimension(9,9)  :: diss_coef_H2plus = reshape( (/  &
 -1.793443274600D+01, -4.932783688604D-02,  1.039088280849D-01, -4.375935166008D-02,  9.196691651936D-03, -1.043378648769D-03,  6.600342421838D-05, -2.198466460165D-06,  3.004145701249D-08, &
  2.236108757681D+00, -2.545406018621D-02, -1.160421006835D-01,  4.407846563362D-02, -8.192521304984D-03,  8.200277386433D-04, -4.508284363534D-05,  1.282824614809D-06, -1.474719350236D-08, &
@@ -166,7 +159,7 @@ module reaction_rates
  2.406276368070D-03,  9.971361856278D-05, -1.760978402353D-04,  4.877659148871D-05, -6.477358351729D-06,  3.541106430252D-07,  1.309772899670D-09, -8.072907334230D-10,  2.074669430611D-11, &
 -1.219469579955D-04, -4.785505675232D-06,  9.858840337511D-06, -2.779210878533D-06,  3.720379996058D-07, -2.110289928486D-08,  3.753875073646D-11,  4.024906665497D-11, -1.075990572574D-12 /), &
              shape(diss_coef_H2plus), order=(/2,1/) )
-
+        ! the coefficients of dissociative recombination of ionized molecules (according to AMJUEL H.4 Reaction 2.2.14)
 	real(wp), private, dimension(9,9)  :: diss_rec_coef_H2plus = reshape( (/  &
 -1.664335253647D+01,  8.953780953631D-02, -1.056411030518D-01,  4.477000808690D-02, -9.729945434357D-03,  1.174456882002D-03, -7.987743820637D-05,  2.842957892768D-06, -4.104508608435D-08, &
 -6.005444031657D-01,  4.063933992726D-02, -4.753947846841D-02,  2.188304031377D-02, -5.201085606791D-03,  6.866340394051D-04, -5.059940013116D-05,  1.930213882205D-06, -2.963966822809D-08, &
@@ -178,7 +171,7 @@ module reaction_rates
 -1.843926162250D-06, -1.663674537499D-06,  1.308069926896D-05, -7.324021449032D-06,  1.431739868187D-06, -1.085644779665D-07,  1.143164983367D-09,  2.151595003971D-10, -7.052562220005D-12, &
  9.864173150662D-08, -2.212261708468D-07, -4.431749501051D-07,  3.270530731011D-07, -7.282085521177D-08,  6.578253567957D-09, -1.925258267827D-10, -4.217474167519D-12,  2.364754029318D-13 /), &
              shape(diss_rec_coef_H2plus), order=(/2,1/) )
-
+        !the coefficients of dissociative ionization of ionized molecules (according to AMJUEL H.4 Reaction 2.2.11)
 	real(wp), private, dimension(9,9)  :: diss_ion_coef_H2plus = reshape( (/  &
 -3.708803769397D+01,  9.784233987341D-02, -7.200361272130D-03,  6.496843022778D-03, -1.420590818760D-03,  1.703620321164D-04, -1.160738946400D-05,  4.148222302162D-07, -6.007853385325D-09, &
  1.561780529774D+01, -1.673256230592D-02,  2.743322772895D-02, -1.026956102747D-02,  1.999561527383D-03, -2.043607814503D-04,  1.084177127603D-05, -2.671800995803D-07,  2.093182411476D-09, &
@@ -191,6 +184,7 @@ module reaction_rates
  1.827109843671D-05, -3.179895716088D-06,  1.432429412413D-06, -5.141065080107D-07,  7.734387173369D-08, -6.163336831045D-09,  3.128313515842D-10, -1.061842444216D-11,  1.771099769640D-13 /), &
              shape(diss_ion_coef_H2plus), order=(/2,1/) )
 
+        ! the coefficients of elastic ion-molecule collisions momentum transfer (according to AMJUEL H.3 Reaction 0.3D)
 	real(wp), private, dimension(9,9)  :: el_mom_m_coef = reshape( (/  &
 -1.919275366997D+01, -1.865238346305D-02,  4.682617815803D-02, -8.932266130300D-03, -2.903882752834D-02,  3.477806471368D-03,  2.790218940150D-03, -6.908438427090D-04,  4.338681573230D-05, &
 -5.947780482087D-02, -5.971382726967D-02,  5.854568958623D-03,  1.637194804434D-02, -3.291459604645D-04, -1.492225099738D-03,  1.443370523034D-04,  2.409850106077D-05, -2.849926680503D-06, &
@@ -202,7 +196,7 @@ module reaction_rates
  2.020583687196D-04,  6.849923024482D-06, -2.550615695507D-05, -1.420945572125D-05,  6.290869308799D-06,  1.207885423899D-06, -8.361574596535D-07,  1.290522448864D-07, -6.505820743915D-09, &
 -9.277851726161D-06, -4.082429350941D-07,  1.441579661485D-06,  8.431661832790D-07, -4.002257378192D-07, -7.135379893415D-08,  5.318078186713D-08, -8.385721089159D-09,  4.277930018700D-10 /), &
              shape(el_mom_m_coef), order=(/2,1/) )
-
+        ! the coefficients of molecule energy electron cooling rate due to ionization and dissociation (according to AMJUEL H.10 reaction 2.2.h2c)
 real(wp), private, dimension(9,9)  :: mol_energy_coef = reshape( (/  &
 -2.511426358838D+01, -1.502968736502D-03,  2.270301997818D-03, -1.160949145671D-03,  2.711890444924D-04, -3.316751545455D-05,  2.179799509766D-06, -7.292508854487D-08,  9.764136720820D-10, &
  1.039650366780D+01,  1.940526565095D-03, -2.039057105217D-03,  8.471089743180D-04, -1.668780150866D-04,  1.846170371568D-05, -1.200391601516D-06,  4.255709533045D-08, -6.263044644580D-10, &
@@ -214,7 +208,7 @@ real(wp), private, dimension(9,9)  :: mol_energy_coef = reshape( (/  &
  5.117651399462D-04, -6.744466929271D-06,  3.834955698487D-06, -7.117247208887D-07,  7.283932745297D-08, -3.875678618801D-09,  6.547129244936D-11,  1.340983691609D-12, -3.151269189538D-14, &
 -1.768573967186D-05,  2.610531177384D-07, -1.508866204608D-07,  3.137300758374D-08, -3.990100914364D-09,  3.015422105813D-10, -1.176278308629D-11,  2.089055860523D-13, -1.505656589693D-15 /), &
              shape(mol_energy_coef), order=(/2,1/) )
-
+        ! the coefficients of charge exchange with H- (according to AMJUEL H.4 Reaction 7.2.3a)
 real(wp), private, dimension(9,9)  :: cx_Hmin_coef = reshape( (/  &
 -1.690146932812D+01,  7.569370314490D-02, -1.118661556236D-01,  5.784649204408D-02, -1.430206446825D-02,  1.883300059210D-03, -1.346209157175D-04,  4.900081433053D-06, -7.105742130265D-08, &
 -2.301580195362D-01,  2.981364856606D-03, -1.296888142995D-02,  9.188878355062D-03, -2.795985155376D-03,  4.355473614802D-04, -3.579321024690D-05,  1.457520878645D-06, -2.319369078632D-08, &
@@ -227,9 +221,11 @@ real(wp), private, dimension(9,9)  :: cx_Hmin_coef = reshape( (/  &
 -1.248597948333D-05,  1.903633250451D-05, -1.590752591530D-05,  4.992428048704D-06, -7.522431288906D-07,  5.827438308119D-08, -2.220813567852D-09,  3.174650814148D-11,  6.296020826533D-14 /), &
              shape(cx_Hmin_coef), order=(/2,1/) )
 
+     ! the coefficients for dissociative attachment (according to AMJUEL H.2 Reaction 2.2.17)
  real(wp), private,  dimension(9)   :: da_coef = (/ &
                 -2.278396332892D+01, 8.634828071751D-01, -1.686619409809D+00, 4.392288378207D-01, -4.393128035945D-01, 2.640299048385D-01, -6.748601049114D-02, 7.753368735736D-03, -3.328288267126D-04 /)
 
+     ! the coefficients ionization of Hmin (according to AMJUEL H.4 Reaction 7.2.3b)
 real(wp), private, dimension(9,9)  :: ion_Hmin_coef = reshape( (/  &
 -3.274642366537D+01,  1.055347808907D+00, -8.644168315786D-02,  5.770739917980D-02, -1.651543971724D-02,  2.426926977738D-03, -1.852128922021D-04,  6.948553416066D-06, -1.014917161032D-07, &
  1.594755262357D+00, -1.134505488332D-01,  1.193838572515D-01, -4.779741494751D-02,  9.036602994533D-03, -8.828786882875D-04,  4.408052942176D-05, -1.018626285421D-06,  7.671244985570D-09, &
@@ -447,7 +443,7 @@ contains
    end function impurity_radiation
 
    real(wp) function momentum_transfer_atoms(temperature, velocity)
-	 !function to calculate the effective momentum loss rate due to elastic ion-electron collisions
+	 !function to calculate the effective momentum loss rate due to elastic atom-ion collisions
       implicit none
       integer  :: m, n
       real(wp) :: temperature, velocity
@@ -481,7 +477,6 @@ contains
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       ionization_m = 0.0d+0
-         ! the total hydrogen molecule ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
@@ -499,13 +494,12 @@ contains
    end function ionization_m
 
   real(wp) function charge_exchange_Hmin( density, temperature )
-   ! function to calculate the total charge exchange rate coefficient on H⁻ [m^3/s]
+   ! function to calculate the charge exchange rate coefficient on H⁻ [m^3/s]
    implicit none
       integer  :: m, n
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       charge_exchange_Hmin = 0.0d+0
-         ! the total H⁻ charge exchange rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature*0.5d+0,minimum_temperature,0.1d+0))
          xm = 1.0d+0
@@ -529,7 +523,6 @@ real(wp) function ionization_Hmin( density, temperature )
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       ionization_Hmin = 0.0d+0
-         ! the total hydrogen molecule ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature*0.5d+0,minimum_temperature,0.1d+0))
          xm = 1.0d+0
@@ -570,7 +563,7 @@ real(wp) function ionization_Hmin( density, temperature )
    end function dissociation_m
 
    real(wp) function charge_exchange_m( temperature )
-   ! function to calculate the total charge_exchange rate coefficient [m^3/s]
+   ! function to calculate the total charge_exchange rate coefficient for molecules [m^3/s]
       implicit none
       integer  :: j
       real(wp) :: temperature
@@ -589,7 +582,7 @@ real(wp) function ionization_Hmin( density, temperature )
    end function charge_exchange_m
 
    real(wp) function dissociative_attachment( temperature )
-   ! function to calculate the total charge_exchange rate coefficient [m^3/s]
+   ! function to calculate the total rate for dissociative attachment of molecules
       implicit none
       integer  :: j
       real(wp) :: temperature
@@ -608,13 +601,12 @@ real(wp) function ionization_Hmin( density, temperature )
    end function dissociative_attachment
 
    real(wp) function dissociation_H2plus( density, temperature )
-   ! function to calculate the total  molecular ionization rate coefficient [m^3/s]
+   ! function to calculate the total  molecular dissociation of ionized molecules
    implicit none
       integer  :: m, n
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       dissociation_H2plus = 0.0d+0
-         ! the total hydrogen molecule ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
@@ -632,13 +624,12 @@ real(wp) function ionization_Hmin( density, temperature )
    end function dissociation_H2plus
 
    real(wp) function dissociative_recombination_H2plus( density, temperature )
-   ! function to calculate the total  molecular ionization rate coefficient [m^3/s]
+   ! function to calculate the total  molecular dissociative recombination of ionized molecules into atoms
    implicit none
       integer  :: m, n
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       dissociative_recombination_H2plus = 0.0d+0
-         ! the total hydrogen molecule ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
@@ -656,13 +647,12 @@ real(wp) function ionization_Hmin( density, temperature )
    end function dissociative_recombination_H2plus
 
    real(wp) function dissociative_ionization_H2plus( density, temperature )
-   ! function to calculate the total  molecular ionization rate coefficient [m^3/s]
+   ! function to calculate the total  molecular dissociative ionization of ionized molecules into ions
    implicit none
       integer  :: m, n
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       dissociative_ionization_H2plus = 0.0d+0
-         ! the total hydrogen molecule ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
@@ -680,13 +670,12 @@ real(wp) function ionization_Hmin( density, temperature )
    end function dissociative_ionization_H2plus
 
    real(wp) function energy_molecules( density, temperature )
-   ! function to calculate the total  molecular ionization rate coefficient [m^3/s]
+   ! function to calculate the total  molecular energy [finish]
    implicit none
       integer  :: m, n
       real(wp) :: density, temperature
       real(wp) :: ln_n, ln_T, xm, xn
       energy_molecules = 0.0d+0
-         ! the total hydrogen molecule ionization rate according to AMJUEL 4.3 reaction 2.1.5 [m^3 / s]
          ln_n = log(density*1.0d-14)
          ln_T = log(max(temperature,minimum_temperature,0.1d+0))
          xm = 1.0d+0
