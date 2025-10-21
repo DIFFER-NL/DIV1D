@@ -45,7 +45,7 @@ module physics_parameters
    real( wp ) :: recycling              = 0.95d+0     ! fraction of recycled neutrals coming from the target [-]
    real( wp ) :: atom_recycle_energy_fraction = 0.2  ! fraction of the energy retained in the neutral atom when recycled. See stangeby 2000 section 3.1 figure 3.1.	
    real( wp ) :: mol_rec 		= 0.0d0       ! fraction of recycled ions that are released as molecules
-   real( wp ) :: redistributed_fraction = 0.0d+0      ! fraction of recycled neutrals that is evenly redistributed along the SOL [-]
+   !real( wp ) :: redistributed_fraction = 0.0d+0      ! fraction of recycled neutrals that is evenly redistributed along the SOL [-]
    real( wp ) :: wall_association_probability = 0.0d+0! probability of atoms hitting the wall to associate
    real( wp ) :: neutral_residence_time = 1.0d+20     ! velocity with which neutrals are lost from the SOL [s/m]
    real( wp ) :: molecule_residence_time = 1.0d+20    ! velocity with which molecules are lost from the SOL [s/m]
@@ -152,7 +152,7 @@ module physics_parameters
 
 namelist /div1d_physics/ gamma, L, sintheta, mass, Gamma_X, q_parX, Q_core, Gamma_core, flux_expansion, flux_expansion_left, trans_expansion, trans_expansion_left, initial_n, initial_v, initial_vn, initial_T, initial_a, initial_m, initial_nb, initial_mb, density_ramp_rate , &
                                L_core_SOL, X_core_SOL, alpha_core_profile_Q, alpha_core_profile_n,  & 
-                               energy_loss_ion, neutral_energy,  ato_res_asy, mol_res_asy, neutral_residence_time,  molecule_residence_time, redistributed_fraction, recycling, wall_association_probability, atom_recycle_energy_fraction, impurity_concentration, impurity_Z, &
+                               energy_loss_ion, neutral_energy,  ato_res_asy, mol_res_asy, neutral_residence_time,  molecule_residence_time, recycling, wall_association_probability, atom_recycle_energy_fraction, impurity_concentration, impurity_Z, &
                                case_AMJUEL, charge_exchange_model, ionization_model, recombination_model, &
                                minimum_temperature, minimum_density, maximum_density, gas_puff_source, gas_puff_location, gas_puff_width, &
                                elm_start_time, elm_ramp_time, elm_time_between, elm_expelled_heat, elm_expelled_particles, &
@@ -471,24 +471,6 @@ contains
        ! write(*,*) "dgdt=0"  
       endif
  
-      ! ------------- redistribution fraction --------------! 
-      if (redistributed_fraction .lt. 0.0d+0) then
-        open(4, file = 'dyn_red_frc.dat', status= 'old')
-
-        do i = 0,ntime
-
-        read(4,*) dyn_red_frc(i) 
-        dyn_red_frc(i) = min(max(dyn_red_frc(i),0.0d+0),1.0d+0)
-        end do
-        close(4)
-        write(*,*) "dfRLdt=1"
-      else
-
-        do i = 0,ntime
-        dyn_red_frc(i) = min(max(redistributed_fraction,0.0d+0),1.0d+0)
-        end do
-       ! write(*,*) "dfRLdt=0"
-      endif
       ! %%%%%%%%%%%% end read time dependent parameters %%%%%%%% !
 
       ! correct the desired normalizations
