@@ -19,7 +19,7 @@ module physics_routines
    use constants, only : e_charge
    use reaction_rates
    use physics_parameters, only : gamma, mass, Gamma_X, q_parX, Gamma_core, Q_core, energy_loss_ion, recycling,	atom_recycle_energy_fraction, &
- 				redistributed_fraction, L, neutral_residence_time, molecule_residence_time, &
+ 				L, neutral_residence_time, molecule_residence_time, &
 				sintheta, minimum_density, maximum_density, minimum_temperature, density_ramp_rate, wide_PFR, sigma_nb,&
                                 gas_puff_source, gas_puff_location, gas_puff_width, initial_a, &
 				mol_rec, D_molecule_puff, D_neutral_puff, pump_rate_n, pump_rate_m, &
