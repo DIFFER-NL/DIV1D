@@ -16,7 +16,7 @@ extern void initialize_div1d_arrays_(double *E_density, double *E_velocity, doub
 		           double *E_x, double *E_xcb, double *E_delta_x, double *E_delta_xcb, double *E_B_field, double *E_B_field_cb, double *E_B_trans, double *E_B_trans_cb,
 			   double  *E_R_cc, double *E_R_cb, double *E_Area_extern, double *E_sintheta_cc, double *E_sintheta_cb, double *E_sol_width_pol, double *E_sol_width_pol_cb, double *E_volumes, 
 			   double *E_gas_puff_profile, double *E_core_source_profile_q, double *E_core_source_profile_n,
-		           int *init_grid_fortran, int *init_prof_fortran, int *Nx, int *E_i_omp, int *E_i_Xpoint, int *E_i_baffle, double *E_mid_point, double *E_X_omp);	 
+		           int *init_grid_fortran, int *init_prof_fortran, int *Nx, int *E_i_omp, int *E_i_Xpoint, int *E_i_baffle, double *E_mid_point, double *E_X_omp, double *E_A_int, double *E_A_wet);	 
 // #ifdef RUN_DIV1D
 // init_div1d_matlab ( var sizes, Nx )
 //	int nx

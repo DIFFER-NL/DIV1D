@@ -1,5 +1,5 @@
 
-module physics_routines
+module physics_routines_delay
 ! module containing general purpose routines implementing the equations
 
 ! License Notice
@@ -1364,7 +1364,6 @@ contains
       real(wp)   	    :: neutral_pump(5), molecule_pump(5), nbdot(10)
       real(wp)              :: puff_neut_eff(5), puff_mol_eff(5), puff_Ncmd(5), puff_Mcmd(5)
       real(wp)              :: alphaN, alphaM, tau_puff_neut, tau_puff_mol
-
       !real(wp) 		    :: leakage_fluxes_n(5), leakage_fluxes_m(5)
       real(wp) 		    :: atom_association_sink(5), molecule_association_source(5)
       ! In the above following comes from outside RHS: Gamma_core2sol, extern2core_flux, extern2core_mol
@@ -1662,26 +1661,20 @@ contains
 		
  	 ! ---------------------------------------ydot for the neutral background volumes-------------------------
 		! Calculate pump rates (in particles per second)
-		!write(100,*) 'rhs: D_neutral_puff =', D_neutral_puff(1:5,internal_istep_rhs)
-		!write(101,*) 'rhs: D_molecule_puff =', D_molecule_puff(1:5,internal_istep_rhs)
-                tau_puff_neut = 1e-4
-                tau_puff_mol = 1e-4
-                puff_neut_eff(1:5) = 0.5 * D_neutral_puff(1:5,internal_istep_rhs)
-                puff_mol_eff(1:5) = 0.5 * D_molecule_puff(1:5,internal_istep_rhs)
-                puff_Ncmd =  D_neutral_puff(1:5,internal_istep_rhs)
-                puff_Mcmd =  D_molecule_puff(1:5,internal_istep_rhs)
+		!write(*,*) 'rhs: D_neutral_puff =', D_neutral_puff(1:5,internal_istep_rhs)
+		!write(*,*) 'rhs: D_molecule_puff =', D_molecule_puff(1:5,internal_istep_rhs)
+                puff_neut_eff(1:5) = D_neutral_puff(1:5,internal_istep_rhs)
+                puff_mol_eff(1:5) = D_molecule_puff(1:5,internal_istep_rhs)
+                puff_Ncmd = D_neutral_puff(1:5,internal_istep_rhs)
+                puff_Mcmd = D_molecule_puff(1:5,internal_istep_rhs)
                 alphaN = D_delta_t / max(tau_puff_neut,D_delta_t)
                 alphaM = D_delta_t / max(tau_puff_mol,D_delta_t)
 
                 puff_neut_eff(1:5) = puff_neut_eff(1:5) + alphaN * (puff_Ncmd(1:5) - puff_neut_eff(1:5))
                 puff_mol_eff(1:5) = puff_mol_eff(1:5) + alphaM * (puff_Mcmd(1:5) - puff_mol_eff(1:5))
 
-                !nbdot(1:5)  = (puff_neut_eff(1:5)  + Source_extern      - neutral_pump  )/extern_neutral_volumes       ! neutrals
-                !nbdot(6:10) = (puff_mol_eff(1:5) + Source_extern_mol - molecule_pump ) /extern_neutral_volumes ! molecules   
-                !write(102,*) 'puff_neut_eff = ', puff_neut_eff(1:5)
-                !write(103,*) 'puff_mol_eff = ' , puff_mol_eff(1:5)   
-                nbdot(1:5)  = (D_neutral_puff(1:5,internal_istep_rhs)  + Source_extern 	- neutral_pump  )/extern_neutral_volumes       ! neutrals
-		nbdot(6:10) = (D_molecule_puff(1:5,internal_istep_rhs) + Source_extern_mol - molecule_pump ) /extern_neutral_volumes ! molecules
+	        nbdot(1:5)  = (puff_neut_eff(1:5)  + Source_extern 	- neutral_pump  )/extern_neutral_volumes       ! neutrals
+		nbdot(6:10) = (puff_mol_eff(1:5) + Source_extern_mol - molecule_pump ) /extern_neutral_volumes ! molecules
 		
 	        ! note these are fixed in this routine ! these are already considered in Source_extern
 		!nbdot(1:5) = nbdot(1:5) - extern2core_flux / extern_neutral_volumes 
@@ -1924,5 +1917,5 @@ contains
            return
    end subroutine error_report_timestep
 
-end module physics_routines
+end module physics_routines_delay
 

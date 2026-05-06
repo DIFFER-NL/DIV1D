@@ -66,7 +66,7 @@ program div1d
                              x, xcb, delta_x, delta_xcb, B_field, B_field_cb, B_trans, B_trans_cb, &
 			     R_cc, R_cb, Area_extern, sintheta_cc, sintheta_cb, sol_width_pol, sol_width_pol_cb, volumes, &
 			     gas_puff_profile, core_source_profile_Q, core_source_profile_n, & ! grid data     (IN/OUT)  
-                             init_grid_fortran, init_prof_fortran, Nx, i_omp, i_Xpoint, i_baffle, mid_point, X_omp )  
+                             init_grid_fortran, init_prof_fortran, Nx, i_omp, i_Xpoint, i_baffle, mid_point, X_omp, A_int, A_wet )  
    ! Note, here the allocated variables as known by the DIV1D program are passed and will be chagned by the init subroutine
 
    write(*,*) 'F starting with T(10) =',temperature(10)

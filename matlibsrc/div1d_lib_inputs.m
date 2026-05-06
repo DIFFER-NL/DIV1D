@@ -8,7 +8,7 @@ intinnum(1:30)  = 0;
 
 
 % set values
-intinnum(0+1) = 200; % Nx
+intinnum(0+1) = 500; % Nx
 intinnum(1+1) = 10; % nout
 intinnum(2+1) = 227; % method
 intinnum(3+1) = 10000; % itate_mod

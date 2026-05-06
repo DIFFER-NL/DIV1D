@@ -56,7 +56,7 @@ module grid_data
 contains
    subroutine initialize_grid(Nx, x, xcb, B_field, B_field_cb, B_trans, B_trans_cb, &
 		            R_cc, R_cb, Area_extern, sintheta_cc, sintheta_cb, sol_width_pol, sol_width_pol_cb, volumes, &
-			    gas_puff_profile, E_core_source_profile_Q, E_core_source_profile_n, i_omp, i_Xpoint, i_baffle, A_int, A_wet)
+			    gas_puff_profile, E_core_source_profile_Q, E_core_source_profile_n, i_omp, i_Xpoint, i_baffle, A_int)
       implicit none
       integer :: error
       integer, intent(in) :: Nx
@@ -75,7 +75,7 @@ contains
       real(wp) :: x(Nx), xcb(0:Nx), B_field(Nx), B_field_cb(0:Nx), B_trans(Nx), B_trans_cb(0:Nx), &
 		            Area_extern(Nx), R_cb(0:Nx), R_cc(Nx), sintheta_cc(Nx), sintheta_cb(0:Nx), &
 			    sol_width_pol(Nx), sol_width_pol_cb(0:Nx), volumes(Nx), &
-			    gas_puff_profile(Nx), E_core_source_profile_Q(Nx),E_core_source_profile_n(Nx), A_int(1:Nx), A_wet(2) 
+			    gas_puff_profile(Nx), E_core_source_profile_Q(Nx),E_core_source_profile_n(Nx), A_int(1:Nx) 
       !real( wp ), allocatable :: core_source_profile(:)
       write(*,*) 'point 1'
       ! define grid

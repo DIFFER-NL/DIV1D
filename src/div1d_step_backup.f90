@@ -77,48 +77,26 @@ module div1d_step
             end if
 		close(10 )
             ! allocate grid and plasma vectors
-	    !#define SAFE_ALLOC(var, dims) if (allocated(var)) deallocate(var); allocate(var dims)
-	    if (allocated(x)) then
-		    !deallocate(x)
-		    deallocate( x, xcb, delta_x, delta_xcb, B_field, B_field_cb, B_trans, B_trans_cb  )
-		    deallocate( R_cc, R_cb, Area_extern, sintheta_cc, sintheta_cb, sol_width_pol, sol_width_pol_cb, volumes, A_int )
-		    deallocate( Z_cc, Z_cb, nr_cc, nz_cc )
-			!allocate( Area_extern(Nx) )	    
-		    deallocate( gas_puff_profile , core_source_profile_Q, core_source_profile_n ) 
-		    deallocate( D_imp_con, D_neu, D_dneu, D_nb, D_mb, D_gas)
-		    deallocate( D_rec, D_qpar_x, D_red_frc, D_Q_core, D_Gamma_core ) 
-		    deallocate( D_neutral_puff, D_molecule_puff, D_core_fuelling, D_core_neutral_density )
-		    deallocate( y, ydot, ys )
-		    deallocate( density, velocity, temperature, neutral, neutral_velocity, molecule )
-		    deallocate( Gamma_n, Gamma_mom, pressure, q_parallel, Gamma_neutral, Gamma_mom_neutral, Gamma_molecule ) !, vesrz(1,3) )
-		    deallocate( Source_n, Source_v, Source_Q, Source_neutral, Source_vn, Source_molecule )
-		    deallocate( extern2sol_flux, core2sol_flux, extern2sol_mol, core2sol_mol, sol2extern_ion_flux )
-
-	    else
-		    allocate( x(Nx), xcb(0:Nx), delta_x(Nx-1), delta_xcb(Nx), B_field(Nx), B_field_cb(0:Nx), B_trans(Nx), B_trans_cb(0:Nx)  )
-		    allocate( R_cc(Nx), R_cb(0:Nx), Area_extern(Nx), sintheta_cc(Nx), sintheta_cb(0:Nx), sol_width_pol(Nx), sol_width_pol_cb(0:Nx), volumes(Nx), A_int(1:Nx) )
-		    allocate( Z_cc(Nx), Z_cb(0:Nx), nr_cc(Nx), nz_cc(Nx) )
-			!allocate( Area_extern(Nx) )	    
-		    allocate( gas_puff_profile(Nx) , core_source_profile_Q(Nx), core_source_profile_n(Nx) ) 
-		    allocate( D_imp_con(5,nout), D_neu(nout), D_dneu(nout), D_nb(5,nout), D_mb(5,nout), D_gas(nout))
-		    allocate( D_rec(nout), D_qpar_x(nout), D_red_frc(nout), D_Q_core(nout), D_Gamma_core(nout) ) 
-		    allocate( D_neutral_puff(5,nout), D_molecule_puff(5,nout), D_core_fuelling(nout), D_core_neutral_density(nout) )
-		    allocate( y(6*Nx+10), ydot(6*Nx+10), ys(6*Nx) )
-		    allocate( density(Nx), velocity(Nx), temperature(Nx), neutral(Nx), neutral_velocity(Nx), molecule(Nx) )
-		    allocate( Gamma_n(0:Nx), Gamma_mom(0:Nx), pressure(Nx), q_parallel(0:Nx), Gamma_neutral(0:Nx), Gamma_mom_neutral(0:Nx), Gamma_molecule(0:Nx) ) !, vesrz(1,3) )
-		    allocate( Source_n(Nx), Source_v(Nx), Source_Q(Nx), Source_neutral(Nx), Source_vn(Nx), Source_molecule(Nx) )
-		    allocate( extern2sol_flux(Nx), core2sol_flux(Nx), extern2sol_mol(Nx), core2sol_mol(Nx), sol2extern_ion_flux(Nx) )
-	    endif
-
-	    
-		    
+            allocate( x(Nx), xcb(0:Nx), delta_x(Nx-1), delta_xcb(Nx), B_field(Nx), B_field_cb(0:Nx), B_trans(Nx), B_trans_cb(0:Nx)  )
+	    allocate( R_cc(Nx), R_cb(0:Nx), Area_extern(Nx), sintheta_cc(Nx), sintheta_cb(0:Nx), sol_width_pol(Nx), sol_width_pol_cb(0:Nx), volumes(Nx), A_int(1:Nx) )
+	    allocate( Z_cc(Nx), Z_cb(0:Nx), nr_cc(Nx), nz_cc(Nx) )
+		!allocate( Area_extern(Nx) )	    
+	    allocate( gas_puff_profile(Nx) , core_source_profile_Q(Nx), core_source_profile_n(Nx) ) 
+            allocate( D_imp_con(5,nout), D_neu(nout), D_dneu(nout), D_nb(5,nout), D_mb(5,nout), D_gas(nout))
+            allocate( D_rec(nout), D_qpar_x(nout), D_red_frc(nout), D_Q_core(nout), D_Gamma_core(nout) ) 
+	    allocate( D_neutral_puff(5,nout), D_molecule_puff(5,nout), D_core_fuelling(nout), D_core_neutral_density(nout) )
+            allocate( y(6*Nx+10), ydot(6*Nx+10), ys(6*Nx) )
+	    allocate( density(Nx), velocity(Nx), temperature(Nx), neutral(Nx), neutral_velocity(Nx), molecule(Nx) )
+            allocate( Gamma_n(0:Nx), Gamma_mom(0:Nx), pressure(Nx), q_parallel(0:Nx), Gamma_neutral(0:Nx), Gamma_mom_neutral(0:Nx), Gamma_molecule(0:Nx) ) !, vesrz(1,3) )
+	    allocate( Source_n(Nx), Source_v(Nx), Source_Q(Nx), Source_neutral(Nx), Source_vn(Nx), Source_molecule(Nx) )
+	    allocate( extern2sol_flux(Nx), core2sol_flux(Nx), extern2sol_mol(Nx), core2sol_mol(Nx), sol2extern_ion_flux(Nx) )
             
 	    !write(*,*) "F Reading floatinnum in Fortran"
             !write(*,*) "F  floatinnum ", floatinnum(:)
             !write(*,*) "F  intinnum   ", intinnum(:)
             !write(*,*) "F  floatinphys", floatinphys(:)
             !write(*,*) "F  intinphys  ", intinphys(:)
-            write(*,*) "F Initialized settings in Fortran", init_grid_fortran
+            write(*,*) "F Initialized settings in Fortran"
             return  
         end subroutine initialize_div1d_settings
 
@@ -126,15 +104,14 @@ module div1d_step
                              E_x, E_xcb, E_delta_x, E_delta_xcb, E_B_field, E_B_field_cb, E_B_trans, E_B_trans_cb, &
 			     E_R_cc, E_R_cb, E_Area_extern, E_sintheta_cc, E_sintheta_cb, E_sol_width_pol, E_sol_width_pol_cb, E_volumes, &
 			     E_gas_puff_profile, E_core_source_profile_Q, E_core_source_profile_n, & ! grid data     (IN/OUT)  
-                             init_grid_fortran, init_prof_fortran, Nx, E_i_omp, E_i_Xpoint, E_i_baffle, E_mid_point, E_X_omp, E_A_int, E_A_wet )  bind(C,name="initialize_div1d_arrays_")
+                             init_grid_fortran, init_prof_fortran, Nx, E_i_omp, E_i_Xpoint, E_i_baffle, E_mid_point, E_X_omp )  bind(C,name="initialize_div1d_arrays_")
             ! use allocated vectors from the DIV1D program
             use grid_data,      only :  i_omp, i_Xpoint, i_baffle, mid_point, X_omp, x, xcb, delta_x, delta_xcb, B_field, B_field_cb, &
 					R_cc, R_cb, Area_extern, sintheta_cc, sintheta_cb, sol_width_pol, sol_width_pol_cb, volumes, &
-					gas_puff_profile, core_source_profile_Q, core_source_profile_n, A_int, A_wet, I_core_source_profile_n, I_core_source_profile_q
+					gas_puff_profile, core_source_profile_Q, core_source_profile_n
             use plasma_data,    only :  density, velocity, temperature, neutral, neutral_velocity, molecule, extern_neutral_density, extern_molecule_density
             ! this function is called in div1d_main.f90, libdiv1d.h, and test_libdiv1d.c
             implicit none
-
 	    ! define variables used in the interface of subroutine: initialize_div1d_arrays
             integer, intent(in) :: Nx, init_grid_fortran, init_prof_fortran
 	    integer :: E_i_omp, E_i_Xpoint(2), E_i_baffle(2) !, i_omp, i_Xpoint(2), mid_point
@@ -144,18 +121,14 @@ module div1d_step
 	    real(wp) :: E_sintheta_cc(Nx), E_sintheta_cb(0:Nx), E_sol_width_pol(Nx), E_sol_width_pol_cb(0:Nx), E_volumes(Nx)
 	    real(wp) :: E_gas_puff_profile(Nx), E_core_source_profile_Q(Nx),  E_core_source_profile_n(Nx)
             real(wp) :: E_density(Nx), E_velocity(Nx), E_temperature(Nx), E_neutral(Nx), E_neutral_velocity(Nx), E_molecule(Nx)
-	    real(wp) :: E_A_int(Nx), E_A_wet(2)
-	    integer :: i_tmp(2)
-	    real(wp) :: L_tmp, L_baffle_real
-	    real( wp ) :: normalization_core_profile = 0.0d+0 ! avoid possible divisions by zero
-            
-            write(*,*) 'F going to initialize grid', init_grid_fortran
+       
+            write(*,*) 'F going to initialize grid'
 
             if( init_grid_fortran .eq. 1 ) then
                 write(*,*) 'F  using internal DIV1D grid setup'
 		call initialize_grid(Nx, x, xcb, B_field, B_field_cb, B_trans, B_trans_cb, &
 		            R_cc, R_cb, Area_extern, sintheta_cc, sintheta_cb, sol_width_pol, sol_width_pol_cb, volumes, &
-			    gas_puff_profile, E_core_source_profile_Q, E_core_source_profile_n, i_omp, i_Xpoint, i_baffle, A_int, A_wet)
+			    gas_puff_profile, E_core_source_profile_Q, E_core_source_profile_n, i_omp, i_Xpoint, i_baffle, A_int)
 		E_i_omp		= i_omp
 		E_i_Xpoint	= i_Xpoint
 		E_mid_point	= mid_point
@@ -179,8 +152,6 @@ module div1d_step
 		E_gas_puff_profile	= gas_puff_profile
 		E_core_source_profile_Q	= core_source_profile_Q
 		E_core_source_profile_n	= core_source_profile_n
-		E_A_int = A_int
-		E_A_wet = A_wet
             else
                 write(*,*) 'F   using external grid'
 		i_omp		= E_i_omp
@@ -207,35 +178,6 @@ module div1d_step
 		gas_puff_profile	= E_gas_puff_profile
 		core_source_profile_Q	= E_core_source_profile_Q
 		core_source_profile_n	= E_core_source_profile_n
-		A_int = E_A_int
-		A_wet = E_A_wet
-                if(wide_core_profile == 0) then
-			i_tmp = i_Xpoint
-			L_tmp = 0.0d+0
-		else
-			i_tmp = i_baffle
-			L_tmp = L_baffle_real
-		endif
-		!write(*,*) 'point 3b', i_tmp
-		if( allocated(I_core_source_profile_n) .eqv. .false.) then
-                     allocate(I_core_source_profile_n(i_tmp(2)-i_tmp(1)+1))
-                     !write(*,*) 'point 3b.1', i_tmp(2)-i_tmp(1)+1
-                endif
-		if( allocated(I_core_source_profile_Q) .eqv. .false.) allocate(I_core_source_profile_Q(i_Xpoint(2)-i_Xpoint(1)+1))
-		I_core_source_profile_Q = (1.0d+0 - (x(i_Xpoint(1):i_Xpoint(2))/L_core_SOL)**2)**alpha_core_profile_Q 
-		I_core_source_profile_n = (1.0d+0 - (x(i_tmp(1):i_tmp(2))/(L_core_SOL+L_tmp))**2)**alpha_core_profile_n 
-
-		I_core_source_profile_Q = I_core_source_profile_Q * volumes(i_Xpoint(1):i_Xpoint(2))
-      		I_core_source_profile_n = I_core_source_profile_n * volumes(i_tmp(1):i_tmp(2))
-      		normalization_core_profile = sum(I_core_source_profile_Q) 
-      		I_core_source_profile_Q = I_core_source_profile_Q / normalization_core_profile
-		I_core_source_profile_n = I_core_source_profile_n / normalization_core_profile
-     	
-      		normalization_core_profile = sum(I_core_source_profile_n) 
-		I_core_source_profile_n = I_core_source_profile_n / normalization_core_profile
-	        core_source_profile_Q(i_Xpoint(1):i_Xpoint(2)) = I_core_source_profile_Q
-      		core_source_profile_n(i_tmp(1):i_tmp(2)) = I_core_source_profile_n
-                
              endif
 
              write(*,*) 'F going to initialize profile values'
@@ -351,9 +293,7 @@ module div1d_step
 
 	real(wp) :: E_core_density
 	real(wp) :: E_core_neutral_density(E_nout) !(can be input and output for now)
-	real(wp) :: E_Gamma_core2sol, E_sol2core_flux, E_sol2core_mol, E_Source_core  
-
-        real(wp) :: alphaM, tau_mol_eff, E_molecule_puff_eff(5,E_nout) 
+	real(wp) :: E_Gamma_core2sol, E_sol2core_flux, E_sol2core_mol, E_Source_core   
 	
 	! solution vectors
 	real(wp) :: yc, ys(6*Nx), yr(10) 
@@ -362,8 +302,6 @@ module div1d_step
 	real(wp) :: extern2core_shinethrough(Nx)
 	real(wp) :: extern2core_shinethrough_mol(Nx)
 	real(wp) :: zeroNx(Nx), zero3(3)
-	!real(wp) :: sol_neutral(Nx)
-
         extern2core_shinethrough(Nx) = 0.0d+0
         extern2core_shinethrough_mol(Nx) = 0.0d+0
 
@@ -437,19 +375,12 @@ module div1d_step
 	D_Q_core(1:E_nout) = E_Q_core
 	D_Gamma_core(1:E_nout) = E_Gamma_core     
 	D_neutral_puff(1:5,1:E_nout) = E_neutral_puff
-        E_molecule_puff_eff(1:5,1:E_nout) = 0
 	D_molecule_puff(1:5,1:E_nout) = E_molecule_puff
 	D_core_fuelling(1:E_nout) = E_core_fuelling
 	D_core_neutral_density(1:E_nout) = E_core_neutral_density
-
-        tau_mol_eff = 5e-4
-        alphaM = delta_t / max(delta_t,tau_mol_eff)
-
-        E_molecule_puff_eff(1:5,1:E_nout) = E_molecule_puff_eff + alphaM * (D_molecule_puff(1:5,1:E_nout) - E_molecule_puff_eff)        
+	
 	! add pumps as variable inputs? 
-        !write(200,*) 'molecule_puff_eff:' , E_molecule_puff_eff
-        !write(201,*) 'molecule_puff:' , D_molecule_puff
-	!write(*,*) 'D_imp_con' , D_imp_con
+
 	!write(*,*) 'D_Q(:)', D_Q_core
 	!write(*,*) 'D_G(:)', D_Gamma_core
 	!wite(*,*) 'D_rec', D_rec
@@ -457,7 +388,7 @@ module div1d_step
         istate = 1
         itask = 1 ! for normal computation in dvode_f90 till end_time
 	
-	!write(194,*) 'imp_con:' , E_imp_con
+
 
 
         write(*,*) 'F starting internal stepping loop'
@@ -465,9 +396,9 @@ module div1d_step
 	do internal_istep = 1, E_nout
         !internal_istep = istep ! pass istep to the physics_routine module
         !global_time = (internal_istep-1)*nout*delta_t
-        end_time = start_time + delta_t
+        end_time = start_time + delta_t	
         !write(*,*) 'F call nvt2y on internal_istep = ', internal_istep
-	!write(*,*) 'velocity', velocityi
+	!write(*,*) 'velocity', velocity
         call nvt2ys( Nx, density, velocity, temperature, neutral, neutral_velocity, molecule, ys)
 	call nr2yr( extern_neutral_density, extern_molecule_density, yr) 
 	call nc2yc( core_density,yc)
@@ -535,7 +466,7 @@ module div1d_step
 	call calculate_extern2core_fluxes(extern2core_mol,extern_molecule_density,core_ext_molecule_pump) ! these should be passed to the core model
 	! intermediate calculation to get the neutral shinethrough fluxes
 	call calculate_sol_extern_neutral_fluxes(extern2sol_flux, sol2extern_flux, zero3, & !Out
-					extern_neutral_density, neutral, neutral_residence_time, extern_neutral_ex)
+					extern_neutral_density, neutral, neutral_residence_time, extern_neutral_ex )
 	call calculate_core_ionization_neutral_flux(extern2core_shinethrough, extern2sol_flux, core_ionization_fraction )
         call calculate_core_ionization_neutral_flux(extern2core_shinethrough_mol, extern2sol_mol, core_ionization_fraction_mol )
  
@@ -576,9 +507,6 @@ module div1d_step
 	!write(*,*) 'F calc_sour : molecule reservoirs'
         ! molecules
 	E_sum_sol2extern_ion_mol = 0.5d+0*mol_rec*sum_sol2extern_ion_flux
-        !OPEN(UNIT=10, FILE='Source_n.txt', STATUS='OLD', ACTION='WRITE', FORM='FORMATTED', POSITION = 'APPEND')
-        !WRITE(UNIT=10, FMT=*) 'Source_n:', Source_n
-        !CLOSE(UNIT=10)
 	!write(*,*) 'E_sum_sol2extern_ion_mol', E_sum_sol2extern_ion_mol
 	!write(*,*) 'sol2extern_mol', sol2extern_mol
         !write(*,*) 'tar2extern_mol', tar2extern_mol
@@ -598,9 +526,6 @@ module div1d_step
         ! pass variables back through the interface
  	!write(*,*) 'F passback states, fluxes, sources'
 	!write(*,*) 'F passback : sol'
-	!OPEN(UNIT=10, FILE='Gamma_mom.txt', STATUS='OLD', ACTION='WRITE', FORM='FORMATTED', POSITION = 'APPEND')
-        !WRITE(UNIT=10, FMT=*) 'Gamma_mom:', Gamma_mom
-        !CLOSE(UNIT=10)
 	! SOL vars
         E_density       = density
         E_velocity      = velocity
@@ -644,8 +569,6 @@ module div1d_step
 	E_Gamma_core2sol = Gamma_core2sol
 	E_sol2core_flux = sol2core_flux
 	E_sol2core_mol = sol2core_mol
-        E_core2sol_flux = core2sol_flux
-        E_core2sol_mol = core2sol_mol
         E_Source_core = Source_core
 
         !E_end_time      = end_time

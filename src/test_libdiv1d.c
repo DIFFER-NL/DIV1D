@@ -64,11 +64,15 @@ intinnum[9] = 1; // evolve energy
 intinnum[10] = 1; // evolve neutral
 intinnum[11] = 1; // evolve neutral momentum
 intinnum[12] = 1; // evolve molecule
-intinnum[13] = 1; // evolve background
-intinnum[14] = 1; // evolve core
-intinnum[15] = 0; // evolve core neutral
-intinnum[16] = 1; // mol dens model
-intinnum[17] = 1; // D_new harmonic average of temperature for diffusion
+intinnum[13] = 0; // evolve background
+intinnum[14] = 0;
+intinnum[15] = 1;
+intinnum[16] = 0;
+intinnum[17] = 0;
+intinnum[18] = 1; // evolve core
+intinnum[19] = 0; // evolve core neutral
+intinnum[20] = 1; // mol dens model
+intinnum[21] = 1; // D_new harmonic average of temperature for diffusion
 // norms
 floatinnum[0] = 1.0*pow(10,19); // density norm
 floatinnum[1] = 1.0; // temperature norm
@@ -155,6 +159,7 @@ floatinphys[21] = pow(10,20) ;// gamma core
 floatinphys[22] = 2.2*pow(10,5) ;// q core
 floatinphys[23] = 0.0 ;// density ramp rate
 floatinphys[24] = 0.0 ;// gas puf src
+floatinphys[25] = 1000;
 
 // Q_CORE =  2.21735701291665e+05
 //  GAMMA_CORE = 1.0000e+20
@@ -202,6 +207,10 @@ floatinphys[71] = 0.0*pow(10,-12);
 floatinphys[72] = 0.0*pow(10,-12);
 floatinphys[73] = 0.0*pow(10,-12);  // imp con 1:5
 
+floatinphys[74] = 0.5; //core ionization fraction
+floatinphys[75] = 1; //asy temperature ato
+floatinphys[76] = 2; //asy temperature mol
+floatinphys[77] = 0.5; //wall association prob
 // reservoirs
 floatinphys[79] = pow(10,-22);
 floatinphys[80] = pow(10,-22);
@@ -277,7 +286,7 @@ int *call_from_externPtr = &call_from_extern;
  int E_i_omp, E_i_Xpoint[2]; 
  int *E_i_ompPtr = &E_i_omp;
  // int *E_i_XpointPtr = &E_i_Xpoint; // arrays are already pointer
- double E_mid_point, E_X_omp[2]; 
+ double E_mid_point, E_X_omp[2], E_A_int[Nx], E_A_wet[2]; 
  double *E_mid_pointPtr = &E_mid_point;
  int E_i_baffle[2];
  //double 
@@ -401,6 +410,8 @@ E_extern_molecule_density[1] = 6.44*pow(10,18);
 E_extern_molecule_density[2] = 1.87*pow(10,17);
 E_extern_molecule_density[3] = 6.44*pow(10,18);
 E_extern_molecule_density[4] = 3.89*pow(10,18);// initial mb(5)
+E_i_Xpoint[0] = 1;
+E_i_Xpoint[1] = 50;
 
 
   //#ifdef RUN_DIV1D  
@@ -464,6 +475,8 @@ E_extern_molecule_density[4] = 3.89*pow(10,18);// initial mb(5)
  E_Q_core[i] = 500.0*pow(10,3);
  E_Gamma_core[i] = 1.0*pow(10,20);
  E_core_neutral_density[i]= pow(10,14); 
+
+
 /*PUFF_RATE_MOLECULE =  0.00000000000000E+00  0.00000000000000E+00  4.34277978975998E+21
   6.31896200000000E+21  4.10031500000000E+21*/
 /* PUFF_RATE_NEUTRAL =  0.00000000000000E+00  0.00000000000000E+00  7.11753051696510E+20
@@ -478,9 +491,9 @@ E_neutral_puff[i][4] = 3.8*pow(10,20);
   E_molecule_puff[i][2] = 4.3*pow(10,21);
   E_molecule_puff[i][3] = 6.3*pow(10,21);
   E_molecule_puff[i][4] = 4.1*pow(10,21);
-E_core_fuelling[i] = 0.0;
+E_core_fuelling[i] = 1000.0;
  }
-
+ 
  printf("C number of cells Nx =  %d \n", Nx); 
  printf("C Initial conditions: \n");
  printf("C Density at i=3 = %4.1e \n", E_density[4]);
@@ -508,7 +521,7 @@ E_core_fuelling[i] = 0.0;
 		           E_x, E_xcb, E_delta_x, E_delta_xcb, E_B_field, E_B_field_cb, E_B_trans, E_B_trans_cb,
 			   E_R_cc, E_R_cb, E_Area_extern, E_sintheta_cc, E_sintheta_cb, E_sol_width_pol, E_sol_width_pol_cb, E_volumes,
 			   E_gas_puff_profile, E_core_source_profile_q, E_core_source_profile_n,
-		           init_grid_fortranPtr, init_prof_fortranPtr, NxPtr, E_i_ompPtr, E_i_Xpoint, E_i_baffle, E_mid_pointPtr, E_X_omp);
+		           init_grid_fortranPtr, init_prof_fortranPtr, NxPtr, E_i_ompPtr, E_i_Xpoint, E_i_baffle, E_mid_pointPtr, E_X_omp, E_A_int, E_A_wet);
 
  printf("C received information in xgrid at i = 3 = %4.1e \n",E_x[4]);
  printf("C received information in density at i = 199 = %4.1e \n",E_density[200]);

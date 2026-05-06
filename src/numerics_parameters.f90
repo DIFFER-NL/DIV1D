@@ -26,7 +26,7 @@ module numerics_parameters
    integer     :: mol_dens_model = 0
    integer :: D_new = 0 ! switch for old or new diffusion coefficient (what is old or new?)
    integer :: wide_core_profile = 0  !switch to widen the particle deposition profile from to the baffle entrances (in stead of the xpoints)
-   integer     :: ntime = 0  !10* 100
+   integer     :: ntime = 1000  !10* 100
    real( wp )  :: density_norm            = 0.0d+0   ! normalization of densities    (when = 0 initial_n is used) only used in normalization of solution vector y
    real( wp )  :: temperature_norm        = 0.0d+0   ! normalization of temperatures (when = 0 1 eV is used) only used to normalize solution vector y
    real( wp )  :: velocity_norm           = 0.0d+0   ! normalization of velocities   (when = 0 sound speed at 1 eV is used) only used in to normalize solution vector y
@@ -75,7 +75,6 @@ module numerics_parameters
    logical     :: renormalize = .false. ! redefine normalization every nout runs (might speed up ramps through multiple regimes) 
   
 
-   logical, private :: exists 
 
    ! logical :: switch_neutral_dynamics (this still requires a pump and possibly gas valves per external gas reservoir) to turn absolute densities of external gas reservoirs into initial conditions
    real( wp ) :: lax_switch = 1.0d+0 ! switch for lax flux, should be between 0 and 1.
@@ -103,18 +102,14 @@ contains
       implicit none
       integer :: error
       !if( istate_mod .eq. 0 ) istate_mod = ntime
-      inquire(file = "input.txt", exist=exists)
-      if(exists) then 
-        open(unit = 1, file = "input.txt")
-        read(1, div1d_numerics, IOSTAT = error)
-	  else 
-	    write(*,*)"Could not find or open: INPUT.TXT"
-	    stop
-	  end if
+      read(*, div1d_numerics, IOSTAT = error)
+	
       write(*,*) 'numerics read error =', error
 	ntime = nout_steps*nout+1 ! this +1 gives errors in reading ..
       ! write the entire namelist to the output file
       !write(11, div1d_numerics)
+
+      return
    end subroutine read_numerics_parameters
 
    subroutine extern_read_numerics_parameters(floatinnum, intinnum, loginnum)
@@ -137,11 +132,15 @@ contains
    evolve_neutral  = intinnum(11)  
    evolve_neutral_momentum  = intinnum(12) !  neutral momentum evolution 1 = yes, 0 = no (multiplier of ydot(4*Nx+1:5*Nx))
    evolve_molecule  = intinnum(13)  !  molecule density evolution 1 = yes, 0 = no (multiplier of ydot(5*Nx+1:6*Nx))
-   evolve_background = intinnum(14) !  background density evolution 1 = yes, 0 = no
-   evolve_core	    = intinnum(15)! evaluate core density evolution 1 = yes, 0 = no
-   evolve_core_neutral = intinnum(16) ! evolve core neutral density 0 = no (currently not implemented)
-   mol_dens_model = intinnum(17) ! this is  not used?
-    D_new = intinnum(18) ! switch for old or new diffusion coefficient
+   evolve_background(1) = intinnum(14) !  background density evolution 1 = yes, 0 = no
+   evolve_background(2) = intinnum(15)
+   evolve_background(3) = intinnum(16)
+   evolve_background(4) = intinnum(17)
+   evolve_background(5) = intinnum(18)
+   evolve_core	    = intinnum(19)! evaluate core density evolution 1 = yes, 0 = no
+   evolve_core_neutral = intinnum(20) ! evolve core neutral density 0 = no (currently not implemented)
+   mol_dens_model = intinnum(21) ! this is  not used?
+    D_new = intinnum(22) ! switch for old or new diffusion coefficient
    !NIAUSER = intinnum()          ! dimension of array IAUSER (must be set to Number of odes + 1)
    !NJAUSER = intinnum()          ! dimension of array JAUSER (must be equal to Number of nonzeros in Jacobian)
 
@@ -204,6 +203,7 @@ contains
    renormalize    = loginnum(4)  ! redefine normalization every nout runs (might speed up ramps through multiple regimes) 
    detect_nan 	  = loginnum(5)  ! .false. ! switch to turn on if NAN detected -> stop simulation
  
+   return
    end subroutine extern_read_numerics_parameters
 
 
