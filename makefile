@@ -1,22 +1,25 @@
 # makefile for div1d programme
 
 # Fortran compiler used
-FC = ifort         # for INTEL fortran compiler
+
+FC = ifx 	 # for new INTEL compiler
+#FC = ifort         # for INTEL fortran compiler
 # FC = gfortran      # for GNU   fortran compiler
 
 # compiler options
 
- FOPT_DVODE = -p -module obj -g -O3 -fPIC # for intel fortran compiler
+# FOPT_DVODE = -p -module obj -g -O3 -fPIC # for intel fortran compiler 
+FOPT_DVODE = -p -module obj -g -03 -fPIC -fpscomp logicals # for new ifx intel compiler
 # FOPT_DVODE =  -module obj -g -fPIC -check all -debug all # for intel fortran compiler with all checks and debugging info
 # FOPT_DVODE =  -Jobj -ffree-line-length-none -g -fbacktrace # for GNU fortran compiler with all checks and debugging info
 
- FOPT =  -module obj -g -fPIC -O3 # for intel fortran compiler
+ FOPT =  -module obj -g -fPIC -O3 -fpscomp logicals # for intel fortran compiler
 # FOPT =  -module obj -g -fPIC -check all -debug all # for intel fortran compiler with all checks and debugging info
 # FOPT =  -Jobj -ffree-line-length-none -g -fbacktrace # for GNU fortran compiler with all checks and debugging info
 # FOPT = -p -module obj -g -O3 # for intel fortran compiler and profiling with gprof
 
 #LOPT = -module obj -g -03  -fPIC
-LOPT = -module obj -g fPIC -check all -debug all
+LOPT = -module obj -g fPIC -check all -debug all -fpscomp logicals
 
 OBJECTS = obj/constants.o \
           obj/physics_routines.o \
